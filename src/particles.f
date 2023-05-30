@@ -2,7 +2,7 @@
       SUBROUTINE CREATE_MESH(NX,NY,NZ,NL_MESH,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0)
+     &            U4DM,MASAP,NPART,LADO0,REFINE_THR,PARCHLIM,BORGRID)
 ************************************************************************
 *     Creats a mesh hierarchy for the given particle distribution
 ************************************************************************
@@ -20,6 +20,7 @@
       REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
      &       U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
       REAL LADO0
+      INTEGER REFINE_THR,PARCHLIM,BORGRID
 
 *     COMMON VARIABLES
       real DX,DY,DZ
@@ -35,15 +36,15 @@
       common /cr0/ cr0amr, cr0amr1
 
 *     LOCAL VARIABLES
-      INTEGER PLEV(NDM)
+C      INTEGER PLEV(NDM)
       !REAL,ALLOCATABLE::U1(:,:,:)
       !REAL,ALLOCATABLE::U11(:,:,:,:)
       INTEGER,ALLOCATABLE::CR0(:,:,:)
       INTEGER,ALLOCATABLE::CR01(:,:,:,:)
       INTEGER,ALLOCATABLE::CONTA1(:,:,:)
       INTEGER,ALLOCATABLE::CONTA11(:,:,:,:)
-      REAL MAP,XL,YL,ZL,DXPA,DYPA,DZPA
-      INTEGER I,IX,JY,KZ,REFINE_THR,REFINE_COUNT,BOR,MIN_PATCHSIZE
+      REAL XL,YL,ZL,DXPA,DYPA,DZPA
+      INTEGER I,IX,JY,KZ,REFINE_COUNT,BOR,MIN_PATCHSIZE
       INTEGER INI_EXTENSION,NBIS,IRPA,BORAMR,LOW1,LOW2,IPATCH,IPARE
       INTEGER INMAX(3),INMAX2(2),I1,I2,J1,J2,K1,K2,N1,N2,N3,IR,MARCA
       INTEGER NP1,NP2,NP3,BASINT,NPALEV3,II,JJ,KK
@@ -55,27 +56,25 @@
       INTEGER,ALLOCATABLE::LVAL(:,:)
 
 !     hard-coded parameters (for now, at least)
-      REFINE_THR=3
-      BOR=8
       BORAMR=0
-      INI_EXTENSION=2 !initial extension of a patch around a cell (on each direction)
-      MIN_PATCHSIZE=14 !minimum size (child cells) to be accepted
+      INI_EXTENSION=0 !initial extension of a patch around a cell (on each direction)
       NPALEV3=(INT(NAMRX/5)**3)+1
       write(*,*) 'NPALEV3=',NPALEV3
 
-      MAP=MAXVAL(MASAP(1:SUM(NPART)))
+      BOR=BORGRID
+      MIN_PATCHSIZE=PARCHLIM
 
-      PLEV=0
-!$OMP PARALLEL DO SHARED(NPART,PLEV,MAP,MASAP),PRIVATE(I),DEFAULT(NONE)
-      DO I=1,SUM(NPART)
-       PLEV(I)=LOG(MAP/MASAP(I)+.5)/LOG(8.)
-      END DO
-      WRITE(*,*) 'Particle levels: min and max values:', MINVAL(PLEV),
-     &           MAXVAL(PLEV)
+C      PLEV=0
+C!$OMP PARALLEL DO SHARED(NPART,PLEV,MAP,MASAP),PRIVATE(I),DEFAULT(NONE)
+C      DO I=1,SUM(NPART)
+C       PLEV(I)=LOG(MAP/MASAP(I)+.5)/LOG(8.)
+C      END DO
+C      WRITE(*,*) 'Particle levels: min and max values:', MINVAL(PLEV),
+C     &           MAXVAL(PLEV)
 
-      XL=-FLOAT(NMAX)*DX/2.
-      YL=-FLOAT(NMAY)*DY/2.
-      ZL=-FLOAT(NMAZ)*DZ/2.
+      XL=-FLOAT(NX)*DX/2.
+      YL=-FLOAT(NY)*DY/2.
+      ZL=-FLOAT(NZ)*DZ/2.
 
 *     FIRST LEVEL OF REFINEMENT ========================================
       IR=1
@@ -98,7 +97,7 @@
       END DO
 
 !$OMP PARALLEL DO SHARED(NPART,RXPA,RYPA,RZPA,XL,YL,ZL,DX,DY,DZ,
-!$OMP+                   NX,NY,NZ,PLEV,REFINE_THR),
+!$OMP+                   NX,NY,NZ,REFINE_THR),
 !$OMP+            PRIVATE(I,IX,JY,KZ), DEFAULT(NONE)
 !$OMP+            REDUCTION(+: CONTA1)
       DO I=1,SUM(NPART)
@@ -112,14 +111,16 @@
        IF (KZ.LT.1) KZ=1
        IF (KZ.GT.NZ) KZ=NZ
 
-       !U1(IX,JY,KZ)=U1(IX,JY,KZ)+MASAP(I)
+       CONTA1(IX,JY,KZ)=CONTA1(IX,JY,KZ)+1
 
-       IF (PLEV(I).EQ.0) THEN
-        CONTA1(IX,JY,KZ)=CONTA1(IX,JY,KZ)+1
-       ELSE
-        CONTA1(IX,JY,KZ)=CONTA1(IX,JY,KZ)+REFINE_THR
-       END IF
+C       IF (PLEV(I).EQ.0) THEN
+C        CONTA1(IX,JY,KZ)=CONTA1(IX,JY,KZ)+1
+C       ELSE
+C        CONTA1(IX,JY,KZ)=CONTA1(IX,JY,KZ)+REFINE_THR
+C       END IF
       END DO
+
+      write(*,*) 'total number of particles,',sum(conta1)
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,BOR,CONTA1,CR0),
 !$OMP+            PRIVATE(IX,JY,KZ), DEFAULT(NONE)
@@ -137,7 +138,8 @@
       END DO
 
       !WRITE(*,*) 'TOTAL DM MASS: ',SUM(U1*9.18E18)
-      !WRITE(*,*) 'PARTICLE COUNT CHECK: ',SUM(CONTA1),SUM(NPART)
+      WRITE(*,*) 'PARTICLE COUNT CHECK: ',SUM(CONTA1),SUM(NPART)
+      write(*,*) 'maxval of conta1',maxval(conta1)
       REFINE_COUNT=COUNT(CR0.GE.REFINE_THR)
       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
 
@@ -219,14 +221,10 @@
 
        NBIS=MIN(N1,N2,N3)
        IF (NBIS.LE.MIN_PATCHSIZE) THEN
-        DO II=I1,I2
-        DO JJ=J1,J2
-        DO KK=K1,K2
-         IF (CR0(II,JJ,KK).GT.0) CR0(II,JJ,KK)=0
-        END DO
-        END DO
-        END DO
-        CONTA1(I1:I2,J1:J2,K1:K2)=0
+C        CR0(I1:I2,J1:J2,K1:K2)=0
+C        CONTA1(I1:I2,J1:J2,K1:K2)=0
+        CR0(IX,JY,KZ)=0
+        CONTA1(IX,JY,KZ)=0
        ELSE
         IPATCH=IPATCH+1
 *       WRITE(*,*) IPATCH,N1,N2,N3,
@@ -314,7 +312,7 @@
 
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHRX,PATCHRY,PATCHRZ,DXPA,DYPA,
 !$OMP+                   DZPA,PATCHNX,PATCHNY,PATCHNZ,NPART,RXPA,RYPA,
-!$OMP+                   RZPA,CONTA11,REFINE_THR,IRPA,PLEV,BORAMR,CR01),
+!$OMP+                   RZPA,CONTA11,REFINE_THR,IRPA,BORAMR,CR01),
 !$OMP+            PRIVATE(IPATCH,XL,YL,ZL,N1,N2,N3,I,IX,JY,KZ),
 !$OMP+            DEFAULT(NONE)
        DO IPATCH=LOW1,LOW2 != = = = = = = = = = = = = = = = = = = = = =
@@ -334,12 +332,13 @@
          IF (IX.GE.1.AND.IX.LE.N1.AND.
      &       JY.GE.1.AND.JY.LE.N2.AND.
      &       KZ.GE.1.AND.KZ.LE.N3) THEN !*****************************
-          !U1(IX,JY,KZ)=U1(IX,JY,KZ)+MASAP(I)
-          IF (PLEV(I).LE.IRPA) THEN
            CONTA11(IX,JY,KZ,IPATCH)=CONTA11(IX,JY,KZ,IPATCH)+1
-          ELSE
-           CONTA11(IX,JY,KZ,IPATCH)=CONTA11(IX,JY,KZ,IPATCH)+REFINE_THR
-          END IF
+          !U1(IX,JY,KZ)=U1(IX,JY,KZ)+MASAP(I)
+C          IF (PLEV(I).LE.IRPA) THEN
+C           CONTA11(IX,JY,KZ,IPATCH)=CONTA11(IX,JY,KZ,IPATCH)+1
+C          ELSE
+C           CONTA11(IX,JY,KZ,IPATCH)=CONTA11(IX,JY,KZ,IPATCH)+REFINE_THR
+C          END IF
          END IF !*****************************************************
         END DO
 
@@ -495,8 +494,10 @@ c       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
 
          NBIS=MIN(N1,N2,N3)
          IF (NBIS.LE.MIN_PATCHSIZE) THEN
-          CR01(I1:I2,J1:J2,K1:K2,IPARE)=0
-          CONTA11(I1:I2,J1:J2,K1:K2,IPARE)=0
+C          CR01(I1:I2,J1:J2,K1:K2,IPARE)=0
+C          CONTA11(I1:I2,J1:J2,K1:K2,IPARE)=0
+           CR01(IX,JY,KZ,IPARE)=0
+           CONTA11(IX,JY,KZ,IPARE)=0
          ELSE
           IPATCH=IPATCH+1
 c          WRITE(*,*) 'new,pare:',IPATCH,IPARE

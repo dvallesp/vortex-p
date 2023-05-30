@@ -279,7 +279,7 @@
 
 
 * ===========  this is global for a given output ============================
-      LADO0=MAX(DDXR-DDXL,DDYR-DDYL,DDZR-DDZL)
+      !LADO0=MAX(DDXR-DDXL,DDYR-DDYL,DDZR-DDZL)
 
 *     GRID BUILDER
       LADO=LADO0-(LADO0/NX) ! from leftmost center to rightmost center
@@ -304,9 +304,10 @@
 
 * ===========  READ DATA FROM THE SIMULATION ============================
 
-       CALL READ_GADGET(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,NL,
-     &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
-     &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
+       CALL READ_GADGET(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,
+     &            NL,REFINE_THR,PARCHLIM,BORGRID,
+     &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
+     &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
 
 
