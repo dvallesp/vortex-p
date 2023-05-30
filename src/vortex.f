@@ -147,9 +147,13 @@
        INTEGER MAXIT
        COMMON /SOR/ PRECIS,MAXIT
 
+       REAL DDXL,DDXR,DDYL,DDYR,DDZL,DDZR
+       COMMON /DOM_DECOMP/ DDXL,DDXR,DDYL,DDYR,DDZL,DDZR
+
 *      LOCAL VARIABLES
        INTEGER I,J,K,LOW1,LOW2,II,JJ,IX,JY,KZ,NL,IR,N1,N2,N3,FILT_MAXIT
        INTEGER NFILE,FIRST,EVERY,IFI,LAST,BOR,NL_PARTICLE_GRID
+       INTEGER FILES_PER_SNAP,NL_INPUT,PARCHLIM,BORGRID,REFINE_THR
        real ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
        REAL OMEGA0,ACHE,FDM
        COMMON /COSMO/ OMEGA0,ACHE,FDM
@@ -185,31 +189,59 @@
 ****************************************************
        OPEN(1,FILE='vortex.dat',STATUS='UNKNOWN',ACTION='READ')
 
-       READ(1,*)
-       READ(1,*)
-       READ(1,*) FIRST,LAST,EVERY
-       READ(1,*)
+       READ(1,*) !***********************************************************************
+       READ(1,*) !*                  VORTEX-GADGET PARAMETERS FILE                      *
+       READ(1,*) !***********************************************************************
+       READ(1,*) !*       General parameters block                                      *
+       READ(1,*) !***********************************************************************
+       READ(1,*) !Files: first, last, every, num files per snapshot -------------------->
+       READ(1,*) FIRST,LAST,EVERY,FILES_PER_SNAP
+       READ(1,*) !Cells per direction (NX,NY,NZ) --------------------------------------->
        READ(1,*) NX,NY,NZ
-       READ(1,*)
-       READ(1,*) ZI,LADO0
-       READ(1,*)
-       READ(1,*) OMEGA0,ACHE,FDM
-       READ(1,*)
-       READ(1,*) NL
-       READ(1,*)
-       READ(1,*) PRECIS, MAXIT, BOR
-       READ(1,*)
-       READ(1,*) ERR_THR
-       READ(1,*)
+       READ(1,*) !Max box sidelength (in input length units) --------------------------->
+       READ(1,*) LADO0
+       READ(1,*) !Output flags (1=yes; 0=no): verbose, write div/rot, write pot, write v>
        READ(1,*) FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
      &           FLAG_W_VELOCITIES
-       READ(1,*)
-       READ(1,*) FLAG_FILTER, FLAG_W_FILTLEN, FILT_TOL, FILT_STEP,
-     &           FILT_MAXIT
-       READ(1,*)
-       READ(1,*) FLAG_PARTICLES, NL_PARTICLE_GRID
+       READ(1,*) !Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
+       READ(1,*) DDXL,DDXR,DDYL,DDYR,DDZL,DDZR
+       READ(1,*) !***********************************************************************
+       READ(1,*) !*       Mesh creation parameters                                      *
+       READ(1,*) !***********************************************************************
+       READ(1,*) !Number of levels ----------------------------------------------------->
+       READ(1,*) NL_INPUT
+       NL=NL_INPUT
+       IF (NL.GT.NLEVELS) THEN
+        WRITE(*,*) 'Fatal ERROR: NLEVELS too small in parameters file',
+     &             NL,NLEVELS
+        STOP
+       END IF
+       READ(1,*) !Number of particles for a cell to be refinable ----------------------->
+       READ(1,*) REFINE_THR
+       READ(1,*) !Minimum size of a refinement patch to be accepted -------------------->
+       READ(1,*) PARCHLIM
+       READ(1,*) !Cells not to be refined from the border ------------------------------>
+       READ(1,*) BORGRID
+       READ(1,*) !***********************************************************************
+       READ(1,*) !*       Poisson solver                                                *
+       READ(1,*) !***********************************************************************
+       READ(1,*) !SOR presion parameter, SOR max iter, border for AMR patches ---------->
+       READ(1,*) PRECIS, MAXIT, BOR
+       READ(1,*) !Error threshold ------------------------------------------------------>
+       READ(1,*) ERR_THR
+       READ(1,*) !***********************************************************************
+       READ(1,*) !*       Multifiltering                                                *
+       READ(1,*) !***********************************************************************
+       READ(1,*) !Multiscale filter: apply filter -------------------------------------->
+       READ(1,*) FLAG_FILTER
+       READ(1,*) !Output filtering lengths (separate file) ----------------------------->
+       READ(1,*) FLAG_W_FILTLEN
+       READ(1,*) !Filtering parameters: tolerance, growing step, max. num. of its. ----->
+       READ(1,*) FILT_TOL, FILT_STEP, FILT_MAXIT
 
        CLOSE(1)
+
+       STOP
 
 
 **************************************************************
@@ -277,10 +309,14 @@
        ELSE
         ! HERE WE WILL CALL THE LEER_PARTICLES(), CREATE_MESH(),
         ! AND INTERPOLATE_PARTICLES() ROUTINES.
-        CALL LEER_PARTICLES(ITER,NX,NY,NZ,T,ZETA,NL,NL_PARTICLE_GRID,
-     &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
-     &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,NPART,RXPA,
-     &            RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
+C        CALL LEER_PARTICLES(ITER,NX,NY,NZ,T,ZETA,NL,NL_PARTICLE_GRID,
+C     &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
+C     &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,NPART,RXPA,
+C     &            RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
+        CALL READ_GADGET(ITER,NX,NY,NZ,T,ZETA,NL,
+     &            NL_PARTICLE_GRID,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
+     &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
        END IF
 
 

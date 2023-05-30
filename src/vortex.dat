@@ -1,21 +1,42 @@
-*************PARAMETERS FOR VORTEX**********
-files: first, last, every ---50-4050------------->
-4000,4000,50
-cells on each direction,nx,ny,nz --------->
+***********************************************************************
+*                  VORTEX-GADGET PARAMETERS FILE                      *
+***********************************************************************
+*       General parameters block                                      *
+***********************************************************************
+Files: first, last, every, num files per snapshot -------------------->
+144,144,1,2
+Cells per direction (NX,NY,NZ) --------------------------------------->
 128,128,128
-initial redshift, box size --------------->
-100.0,40.0
-matter density parameter, dimensionless hubble param., fraction of DM -->
-0.31,0.678,0.845
-numero de nivels  ------------------------>
+Max box sidelength (in input length units) --------------------------->
+40.0
+Output flags (1=yes; 0=no): verbose, write div/rot, write pot, write v>
+1,1,1,1
+Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
+480.e3,520.e3,480.e3,520.e3,480.e3,520.e3
+***********************************************************************
+*       Mesh creation parameters                                      *
+***********************************************************************
+Number of levels ----------------------------------------------------->
 9
+Number of particles for a cell to be refinable ----------------------->
+40
+Minimum size of a refinement patch to be accepted -------------------->
+12
+Cells not to be refined from the border ------------------------------>
+32
+***********************************************************************
+*       Poisson solver                                                *
+***********************************************************************
 SOR presion parameter, SOR max iter, border for AMR patches ---------->
 1e-9,1000,2
-Error threshold ---------->
+Error threshold ------------------------------------------------------>
 0.05
-flags_writing (1=yes; 0=no): verbose, write_divrot, write_potentials, write_velocities---------------->
-1,1,1,1
-multiscale filter: apply filter, write lengths, tolerance, step, maxit ------------------->
-0,1,0.1,1.05,200
-particles (1=yes; 0=no, work with gas), number of levels of the particle grid ------------->
-1,12
+***********************************************************************
+*       Multifiltering                                                *
+***********************************************************************
+Multiscale filter: apply filter -------------------------------------->
+0
+Output filtering lengths (separate file) ----------------------------->
+0
+Filtering parameters: tolerance, growing step, max. num. of its. ----->
+0.1,1.05,200
