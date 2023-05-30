@@ -120,8 +120,6 @@ C        CONTA1(IX,JY,KZ)=CONTA1(IX,JY,KZ)+REFINE_THR
 C       END IF
       END DO
 
-      write(*,*) 'total number of particles,',sum(conta1)
-
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,BOR,CONTA1,CR0),
 !$OMP+            PRIVATE(IX,JY,KZ), DEFAULT(NONE)
       DO IX=1,NX
@@ -139,7 +137,7 @@ C       END IF
 
       !WRITE(*,*) 'TOTAL DM MASS: ',SUM(U1*9.18E18)
       WRITE(*,*) 'PARTICLE COUNT CHECK: ',SUM(CONTA1),SUM(NPART)
-      write(*,*) 'maxval of conta1',maxval(conta1)
+      WRITE(*,*) 'Max. number of particles in 1 cell',maxval(conta1)
       REFINE_COUNT=COUNT(CR0.GE.REFINE_THR)
       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
 
@@ -169,7 +167,7 @@ C       END IF
        DO WHILE (MARCA.EQ.1) !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         MARCA=0
         IF (N1.LE.NAMRX-2.AND.I1.GT.BOR+1) THEN
-         IF (COUNT(CONTA1(I1-1,J1:J2,K1:K2).GE.REFINE_THR).GT.0) THEN
+         IF (COUNT(CR0(I1-1,J1:J2,K1:K2).GE.REFINE_THR).GT.0) THEN
           I1=I1-1
           N1=2*(I2-I1+1)
           MARCA=1
@@ -178,7 +176,7 @@ C       END IF
 
         IF (N1.LE.NAMRX-2.AND.I2.LT.NX-BOR) THEN
          !IF (IPATCH.EQ.153) WRITE(*,*) IX,JY,KZ,I1,I2,J1,J2,K1,K2
-         IF (COUNT(CONTA1(I2+1,J1:J2,K1:K2).GE.REFINE_THR).GT.0) THEN
+         IF (COUNT(CR0(I2+1,J1:J2,K1:K2).GE.REFINE_THR).GT.0) THEN
           I2=I2+1
           N1=2*(I2-I1+1)
           MARCA=1
@@ -186,7 +184,7 @@ C       END IF
         END IF
 
         IF (N2.LE.NAMRY-2.AND.J1.GT.BOR+1) THEN
-         IF (COUNT(CONTA1(I1:I2,J1-1,K1:K2).GE.REFINE_THR).GT.0) THEN
+         IF (COUNT(CR0(I1:I2,J1-1,K1:K2).GE.REFINE_THR).GT.0) THEN
           J1=J1-1
           N2=2*(J2-J1+1)
           MARCA=1
@@ -194,7 +192,7 @@ C       END IF
         END IF
 
         IF (N2.LE.NAMRY-2.AND.J2.LT.NY-BOR) THEN
-         IF (COUNT(CONTA1(I1:I2,J2+1,K1:K2).GE.REFINE_THR).GT.0) THEN
+         IF (COUNT(CR0(I1:I2,J2+1,K1:K2).GE.REFINE_THR).GT.0) THEN
           J2=J2+1
           N2=2*(J2-J1+1)
           MARCA=1
@@ -202,7 +200,7 @@ C       END IF
         END IF
 
         IF (N3.LE.NAMRZ-2.AND.K1.GT.BOR+1) THEN
-         IF (COUNT(CONTA1(I1:I2,J1:J2,K1-1).GE.REFINE_THR).GT.0) THEN
+         IF (COUNT(CR0(I1:I2,J1:J2,K1-1).GE.REFINE_THR).GT.0) THEN
           K1=K1-1
           N3=2*(K2-K1+1)
           MARCA=1
@@ -210,7 +208,7 @@ C       END IF
         END IF
 
         IF (N3.LE.NAMRZ-2.AND.K2.LT.NZ-BOR) THEN
-         IF (COUNT(CONTA1(I1:I2,J1:J2,K2+1).GE.REFINE_THR).GT.0) THEN
+         IF (COUNT(CR0(I1:I2,J1:J2,K2+1).GE.REFINE_THR).GT.0) THEN
           K2=K2+1
           N3=2*(K2-K1+1)
           MARCA=1
@@ -222,15 +220,13 @@ C       END IF
        NBIS=MIN(N1,N2,N3)
        IF (NBIS.LE.MIN_PATCHSIZE) THEN
 C        CR0(I1:I2,J1:J2,K1:K2)=0
-C        CONTA1(I1:I2,J1:J2,K1:K2)=0
         CR0(IX,JY,KZ)=0
-        CONTA1(IX,JY,KZ)=0
        ELSE
         IPATCH=IPATCH+1
 *       WRITE(*,*) IPATCH,N1,N2,N3,
 *     &             COUNT(CONTA1(I1:I2,J1:J2,K1:K2).GE.REFINE_THR)
-        CONTA1(I1:I2,J1:J2,K1:K2)=0
         CR0(I1:I2,J1:J2,K1:K2)=-1
+        CONTA1(I1:I2,J1:J2,K1:K2)=0
 
         PATCHNX(IPATCH)=N1
         PATCHNY(IPATCH)=N2
@@ -270,11 +266,16 @@ C        CONTA1(I1:I2,J1:J2,K1:K2)=0
       END DO
 
       !DEALLOCATE(U1)
-      DEALLOCATE(CONTA1)
-      DEALLOCATE(CR0)
 
       WRITE(*,*) 'At l=',1,', patches:', NPATCH(IR)
       WRITE(*,*) '  --> l=',0,' cells refined:', COUNT(CR0AMR.EQ.0)
+      WRITE(*,*) '    ... max num. of particles at an unrefined cell:',
+     &           MAXVAL(CONTA1)
+      WRITE(*,*) '    ... refinable cells not refined:',
+     &           COUNT(CONTA1.GE.REFINE_THR)
+
+      DEALLOCATE(CONTA1)
+      DEALLOCATE(CR0)
 *     END FIRST LEVEL OF REFINEMENT ====================================
 
 *     START SUBSEQUENT LEVELS OF REFINEMENT ============================
@@ -437,7 +438,7 @@ c       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
          DO WHILE (MARCA.EQ.1) !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           MARCA=0
           IF (N1.LE.NAMRX-2.AND.I1.GT.BORAMR+1) THEN
-           IF (COUNT(CONTA11(I1-1,J1:J2,K1:K2,IPARE).GE.REFINE_THR)
+           IF (COUNT(CR01(I1-1,J1:J2,K1:K2,IPARE).GE.REFINE_THR)
      &        .GT.0) THEN
             I1=I1-1
             N1=2*(I2-I1+1)
@@ -446,7 +447,7 @@ c       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
           END IF
 
           IF (N1.LE.NAMRX-2.AND.I2.LT.NP1-BORAMR) THEN
-           IF (COUNT(CONTA11(I2+1,J1:J2,K1:K2,IPARE).GE.REFINE_THR)
+           IF (COUNT(CR01(I2+1,J1:J2,K1:K2,IPARE).GE.REFINE_THR)
      &        .GT.0) THEN
             I2=I2+1
             N1=2*(I2-I1+1)
@@ -455,7 +456,7 @@ c       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
           END IF
 
           IF (N2.LE.NAMRY-2.AND.J1.GT.BORAMR+1) THEN
-           IF (COUNT(CONTA11(I1:I2,J1-1,K1:K2,IPARE).GE.REFINE_THR)
+           IF (COUNT(CR01(I1:I2,J1-1,K1:K2,IPARE).GE.REFINE_THR)
      &        .GT.0) THEN
             J1=J1-1
             N2=2*(J2-J1+1)
@@ -464,7 +465,7 @@ c       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
           END IF
 
           IF (N2.LE.NAMRY-2.AND.J2.LT.NP2-BORAMR) THEN
-           IF (COUNT(CONTA11(I1:I2,J2+1,K1:K2,IPARE).GE.REFINE_THR)
+           IF (COUNT(CR01(I1:I2,J2+1,K1:K2,IPARE).GE.REFINE_THR)
      &        .GT.0) THEN
             J2=J2+1
             N2=2*(J2-J1+1)
@@ -473,7 +474,7 @@ c       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
           END IF
 
           IF (N3.LE.NAMRZ-2.AND.K1.GT.BORAMR+1) THEN
-           IF (COUNT(CONTA11(I1:I2,J1:J2,K1-1,IPARE).GE.REFINE_THR)
+           IF (COUNT(CR01(I1:I2,J1:J2,K1-1,IPARE).GE.REFINE_THR)
      &        .GT.0) THEN
             K1=K1-1
             N3=2*(K2-K1+1)
@@ -482,7 +483,7 @@ c       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
           END IF
 
           IF (N3.LE.NAMRZ-2.AND.K2.LT.NP3-BORAMR) THEN
-           IF (COUNT(CONTA11(I1:I2,J1:J2,K2+1,IPARE).GE.REFINE_THR)
+           IF (COUNT(CR01(I1:I2,J1:J2,K2+1,IPARE).GE.REFINE_THR)
      &        .GT.0) THEN
             K2=K2+1
             N3=2*(K2-K1+1)
@@ -497,7 +498,6 @@ c       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
 C          CR01(I1:I2,J1:J2,K1:K2,IPARE)=0
 C          CONTA11(I1:I2,J1:J2,K1:K2,IPARE)=0
            CR01(IX,JY,KZ,IPARE)=0
-           CONTA11(IX,JY,KZ,IPARE)=0
          ELSE
           IPATCH=IPATCH+1
 c          WRITE(*,*) 'new,pare:',IPATCH,IPARE
@@ -616,6 +616,43 @@ C        WRITE(*,*) LVAL(I,IPARE)
        WRITE(*,*) 'At l=',IR,', patches:', NPATCH(IR)
        WRITE(*,*) '  --> l=',IRPA,' cells refined:',
      &            COUNT(CR0AMR1(:,:,:,LOW1:LOW2).EQ.0)
+
+       K1=0
+!$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
+!$OMP+                   CONTA11),
+!$OMP+            PRIVATE(IPATCH,N1,N2,N3,K2),
+!$OMP+            REDUCTION(MAX:K1)
+!$OMP+            DEFAULT(NONE)
+       DO IPATCH=LOW1,LOW2 
+        N1=PATCHNX(IPATCH)
+        N2=PATCHNY(IPATCH)
+        N3=PATCHNZ(IPATCH)
+
+        K2=MAXVAL(CONTA11(1:N1,1:N2,1:N3,IPATCH)*
+     &            CR0AMR1(1:N1,1:N2,1:N3,IPATCH))
+        K1=MAX(K1,K2)
+       END DO
+
+       WRITE(*,*) '    ... max num. of particles at an unrefined cell:',
+     &               K1
+
+       K1=0
+!$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
+!$OMP+                   CONTA11,REFINE_THR),
+!$OMP+            PRIVATE(IPATCH,N1,N2,N3,K2),
+!$OMP+            REDUCTION(+:K1)
+!$OMP+            DEFAULT(NONE)
+       DO IPATCH=LOW1,LOW2 
+        N1=PATCHNX(IPATCH)
+        N2=PATCHNY(IPATCH)
+        N3=PATCHNZ(IPATCH)
+ 
+        K2=COUNT(CONTA11(1:N1,1:N2,1:N3,IPATCH)*
+     &           CR0AMR1(1:N1,1:N2,1:N3,IPATCH).GE.REFINE_THR)
+        K1=K1+K2
+       END DO
+
+       WRITE(*,*) '    ... refinable cells not refined:', K1
 
        DEALLOCATE(CR01, CONTA11)
 
