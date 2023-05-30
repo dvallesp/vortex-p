@@ -486,7 +486,7 @@ c           SOLAP(:,:,:,I)=SCR4_INT(:,:,:)
 
 
 ***********************************************************************
-       SUBROUTINE READ_GADGET(ITER,NX,NY,NZ,T,ZETA,NL,
+       SUBROUTINE READ_GADGET(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,
      &            NL_PARTICLE_GRID,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
@@ -508,11 +508,12 @@ c           SOLAP(:,:,:,I)=SCR4_INT(:,:,:)
 *     CR0AMR: whether a cell is refined (=0) or it isn't (=1)
 ***********************************************************************
 
+       USE gadget_read
        IMPLICIT NONE
 
        INCLUDE 'vortex_parameters.dat'
 
-       INTEGER NX,NY,NZ,ITER,NDXYZ,LOW1, LOW2
+       INTEGER NX,NY,NZ,ITER,NDXYZ,LOW1,LOW2,FILES_PER_SNAP
        real T,AAA,BBB,CCC,MAP,ZETA,LADO0
        INTEGER I,J,K,IX,NL,IR,IRR,N1,N2,N3,NL_PARTICLE_GRID
 
@@ -527,11 +528,7 @@ c           SOLAP(:,:,:,I)=SCR4_INT(:,:,:)
        INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
        real PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
 
-       CHARACTER*9 FILNOM1,FILNOM2, FILNOM4
-       CHARACTER*10 FILNOM3
-
-       CHARACTER*24 FIL1,FIL2,FIL4
-       CHARACTER*25 FIL3
+       CHARACTER*200 FIL1,FIL2
 
 !      this might be only for testing
        real U1(1:NMAX,1:NMAY,1:NMAZ)
@@ -559,93 +556,75 @@ c           SOLAP(:,:,:,I)=SCR4_INT(:,:,:)
        INTEGER NUM,OMP_GET_NUM_THREADS,NUMOR, FLAG_PARALLEL
        COMMON /PROCESADORES/ NUM
 
-*      READING DATA
-       CALL NOMFILE(ITER,FILNOM1,FILNOM2,FILNOM3)
-       WRITE(*,*) 'Reading iteration: ',ITER,' ',FILNOM1, ' ', FILNOM2, ' ',
-     &            FILNOM3
+       CHARACTER*3 ITER_STRING
+       CHARACTER*1 IFILE_STRING
+       INTEGER IFILE
 
-       FIL1='simu_masclet/'//FILNOM1
-       FIL2='simu_masclet/'//FILNOM2
-       FIL3='simu_masclet/'//FILNOM3
+       ! Scratch variables for reading
+       REAL*4,ALLOCATABLE::SCR4(:)
+       REAL*4,ALLOCATABLE::SCR42(:,:)
+       integer npart_gadget(6),nall(6),blocksize
+       real*8 massarr(6)
+       integer basint1,basint2,basint3,basint4,basint5,basint6,basint7
+       real*4 bas41,bas42,bas43,bas44,bas45,bas46,bas47
+       real*8 bas81,bas82,bas83,bas84,bas85,bas86,bas87
+       character*4 blocklabel
+       ! End scratch variables for reading
+
+       real xmin,ymin,zmin,xmax,ymax,zmax
 
        NPART(:)=0
 
-       OPEN (33,FILE=FIL3,STATUS='UNKNOWN',ACTION='READ')
+       LOW2=0
+       DO IFILE=0,FILES_PER_SNAP-1 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*      pointers and general data (grids file)
-       READ(33,*) IRR,T,NL,MAP
-       READ(33,*) ZETA
-       READ(33,*) IR,NPART(0)
-       WRITE(*,*) 'IR,NPART(IR)=', IR,NPART(IR)
-       DO IR=1,NL
-       READ(33,*) IRR,NPATCH(IR),NPART(IR)
-       READ(33,*)
-       WRITE(*,*) 'IR,NPATCH(IR),NPART(IR)=', IR,NPATCH(IR),NPART(IR)
+*       READING DATA
+        WRITE(ITER_STRING,'(I3.3)') ITER
+        FIL1='./simulation/snapdir_'//ITER_STRING//'/snap_'//ITER_STRING
+        IF (FILES_PER_SNAP.EQ.1) THEN
+          FIL2=FIL1
+        ELSE
+          WRITE(IFILE_STRING,'(I1.1)') IFILE
+          FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
+        END IF
 
-       IF (IR.NE.IRR) WRITE(*,*)'Warning: fail in restart'
-       LOW1=SUM(NPATCH(0:IR-1))+1
-       LOW2=SUM(NPATCH(0:IR))
-       DO I=LOW1,LOW2
-        READ(33,*)
-        READ(33,*)
-        READ(33,*)
-        READ(33,*)
-       END DO
-       END DO
-       CLOSE(33)
+        WRITE(*,*) 'Reading iteration file: ',ITER,' ',
+     &              TRIM(ADJUSTL(FIL2))
 
-*      DARK MATTER
-       OPEN (32,FILE=FIL2,
-     &       STATUS='UNKNOWN',ACTION='READ',FORM='UNFORMATTED')
-        READ(32)
-        IR=0
-        LOW1=1
-        LOW2=NPART(IR)
+        CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
+     &                  basint1,basint2,nall,basint3,basint4,bas83,
+     &                  bas84,bas85,bas86,blocksize)
+        write(*,*) npart_gadget(1), 'gas particles'
+        LOW1=LOW2+1
+        LOW2=LOW1+NPART_GADGET(1)-1
+        
+        ALLOCATE(SCR42(3,SUM(NPART_GADGET(1:6))))
+        WRITE(*,*) 'Reading positions ...'
+        CALL read_float3(FIL2,'POS ',SCR42,blocksize)
+        WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
+        RXPA(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
+        RYPA(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
+        RZPA(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
 
-        READ(32) !(((U1(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-        READ(32) (RXPA(I),I=LOW1,LOW2)
-        READ(32) (RYPA(I),I=LOW1,LOW2)
-        READ(32) (RZPA(I),I=LOW1,LOW2)
-        READ(32) (U2DM(I),I=LOW1,LOW2)
-        READ(32) (U3DM(I),I=LOW1,LOW2)
-        READ(32) (U4DM(I),I=LOW1,LOW2)
-        READ(32) !particle ID
-        MASAP(LOW1:LOW2)=MAP
-*        WRITE(*,*) 'RXPA=',MINVAL(RXPA(LOW1:LOW2)),
-*     &                       MAXVAL(RXPA(LOW1:LOW2))
-*        WRITE(*,*) 'RYPA=',MINVAL(RYPA(LOW1:LOW2)),
-*     &                       MAXVAL(RYPA(LOW1:LOW2))
-*        WRITE(*,*) 'RZPA=',MINVAL(RZPA(LOW1:LOW2)),
-*     &                       MAXVAL(RZPA(LOW1:LOW2))
-*        WRITE(*,*) 'U2DM=',MINVAL(U2DM(LOW1:LOW2)),
-*     &                       MAXVAL(U2DM(LOW1:LOW2))
-*        WRITE(*,*) 'U3DM=',MINVAL(U3DM(LOW1:LOW2)),
-*     &                       MAXVAL(U3DM(LOW1:LOW2))
-*        WRITE(*,*) 'U4DM=',MINVAL(U4DM(LOW1:LOW2)),
-*     &                       MAXVAL(U4DM(LOW1:LOW2))
-*        WRITE(*,*) 'MASAP=',MINVAL(MASAP(LOW1:LOW2)),
-*     &                       MAXVAL(MASAP(LOW1:LOW2))
+        WRITE(*,*) 'Reading velocities ...'
+        CALL read_float3(FIL2,'VEL ',SCR42,blocksize)
+        WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
+        U2DM(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
+        U3DM(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
+        U4DM(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
 
-       DO IR=1,NL
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-         READ(32)
-        END DO
-        LOW1=SUM(NPART(0:IR-1))+1
-        LOW2=SUM(NPART(0:IR))
-*        WRITE(*,*) 'LEVEL,LOW1,LOW2=',IR,LOW1,LOW2
-        READ(32) (RXPA(I),I=LOW1,LOW2)
-        READ(32) (RYPA(I),I=LOW1,LOW2)
-        READ(32) (RZPA(I),I=LOW1,LOW2)
-        READ(32) (U2DM(I),I=LOW1,LOW2)
-        READ(32) (U3DM(I),I=LOW1,LOW2)
-        READ(32) (U4DM(I),I=LOW1,LOW2)
-        READ(32) (MASAP(I),I=LOW1,LOW2)
-        READ(32) ! particle ID
-       END DO
+        DEALLOCATE(SCR42)
 
-       CLOSE(32)
+        allocate(scr4(SUM(NPART_GADGET(1:6))))
+        WRITE(*,*) 'Reading masses ...'
+        CALL read_float(FIL2,'MASS',SCR4,blocksize)
+        WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+        MASAP(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+        DEALLOCATE(SCR4)
+
+       END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       WRITE(*,*) 'Total number of gas particles',LOW2
+       NPART(0)=LOW2 !Retrocompatibility with general reader
 
        LOW1=1
        LOW2=SUM(NPART(0:NL))
@@ -663,10 +642,10 @@ c           SOLAP(:,:,:,I)=SCR4_INT(:,:,:)
      &                       MAXVAL(U4DM(LOW1:LOW2))
        WRITE(*,*) 'MASAP=',MINVAL(MASAP(LOW1:LOW2)),
      &                       MAXVAL(MASAP(LOW1:LOW2))
-
-       NPATCH(0:IR)=0
+       STOP
 
        WRITE(*,*) 'Routine create mesh ------------------------------'
+       NPATCH(0:IR)=0
        CALL CREATE_MESH(NX,NY,NZ,NL_PARTICLE_GRID,NPATCH,
      &            PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,

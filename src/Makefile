@@ -6,8 +6,8 @@ ifeq ($(COMP),1)
 endif
 
 ifeq ($(COMP),999)
-        FC=gfortran
-        FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium
+ FC=gfortran
+ FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium
 endif
 
 
@@ -15,7 +15,7 @@ endif
 
 EXEC=$(NAME)
 
-OBJ=vortex.o
+OBJ=read_gadget.o vortex.o
 
 
 $(NAME): $(OBJ)
