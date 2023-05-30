@@ -491,7 +491,7 @@ c           SOLAP(:,:,:,I)=SCR4_INT(:,:,:)
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
 ***********************************************************************
-*     Reads the DM particles of the simulation, builds a set of AMR
+*     Reads the GAS particles of the simulation, builds a set of AMR
 *     grids and interpolates a continuous velocity field.
 *     This subroutine may be changed for different simulation codes.
 *     In particular, after mesh-building and interpolation, in any

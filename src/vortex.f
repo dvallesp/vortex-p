@@ -156,6 +156,8 @@
        INTEGER FILES_PER_SNAP,NL_INPUT,PARCHLIM,BORGRID,REFINE_THR
        real ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
        REAL OMEGA0,ACHE,FDM
+       REAL CIO_XC0,CIO_YC0,CIO_ZC0,LADO_BKP,LADO0_BKP
+       REAL CIO_XC,CIO_YC,CIO_ZC
        COMMON /COSMO/ OMEGA0,ACHE,FDM
        LOGICAL FILE_EXISTS
        CHARACTER*14 FILE5
@@ -241,8 +243,12 @@
 
        CLOSE(1)
 
-       STOP
+       ! center of the domain (in input length units)
+       CIO_XC0=0.5*(DDXL+DDXR)
+       CIO_YC0=0.5*(DDYL+DDYR)
+       CIO_ZC0=0.5*(DDZL+DDZR)
 
+       LADO0_BKP=LADO0
 
 **************************************************************
 *     ...PARALLEL RUNNING...
@@ -255,8 +261,26 @@
 !$OMP END PARALLEL
 **************************************************************
 
+       NFILE=INT((LAST-FIRST)/EVERY) + 1
+       WRITE(*,*) 'NFILE=',NFILE
+
+* === first, we check that no output files will be overwritten
+       DO IFI=1,NFILE
+        ITER=FIRST+EVERY*(IFI-1)
+        CALL NOMFILE2(ITER,FILE5)
+        FILERR5='./output_files/'//FILE5
+        INQUIRE(FILE=FILERR5,EXIST=FILE_EXISTS)
+        IF (FILE_EXISTS) THEN
+         WRITE(*,*) 'The file ', FILERR5, 'already exists'
+         STOP 'Program will terminate'
+        END IF
+       END DO
+* === end of check ===========================================
+
 
 * ===========  this is global for a given output ============================
+      LADO0=MAX(DDXR-DDXL,DDYR-DDYL,DDZR-DDZL)
+
 *     GRID BUILDER
       LADO=LADO0-(LADO0/NX) ! from leftmost center to rightmost center
 
@@ -266,24 +290,6 @@
 *     KKK coeficients of Fourier series (coarse grid)
       CALL MOMENTO(DX,NX,NY,NZ,KKK) ! once in the code
 *============================================================================
-
-
-       NFILE=INT((LAST-FIRST)/EVERY) + 1
-       WRITE(*,*) 'NFILE=',NFILE
-
-* === first, we check that no output files will be overwritten
-      DO IFI=1,NFILE
-        ITER=FIRST+EVERY*(IFI-1)
-        CALL NOMFILE2(ITER,FILE5)
-        FILERR5='./output_files/'//FILE5
-        INQUIRE(FILE=FILERR5,EXIST=FILE_EXISTS)
-        IF (FILE_EXISTS) THEN
-          WRITE(*,*) 'The file ', FILERR5, 'already exists'
-          STOP 'Program will terminate'
-        END IF
-      END DO
-* === end of check ===========================================
-
 
 *////////////////////////////////////
        DO IFI=1,NFILE
@@ -295,29 +301,14 @@
        CALL NOMFILE2(ITER,FILE5)
        FILERR5='./output_files/'//FILE5
 
+       STOP
+
 * ===========  READ DATA FROM THE SIMULATION ============================
 
-       NX=NMAX
-       NY=NMAY
-       NZ=NMAZ
-
-*      READING DATA
-       IF (FLAG_PARTICLES.EQ.0) THEN
-        CALL LEER(ITER,NX,NY,NZ,T,ZETA,NL,NPATCH,
-     &            PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
-     &            PATCHRX,PATCHRY,PATCHRZ)
-       ELSE
-        ! HERE WE WILL CALL THE LEER_PARTICLES(), CREATE_MESH(),
-        ! AND INTERPOLATE_PARTICLES() ROUTINES.
-C        CALL LEER_PARTICLES(ITER,NX,NY,NZ,T,ZETA,NL,NL_PARTICLE_GRID,
-C     &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
-C     &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,NPART,RXPA,
-C     &            RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
-        CALL READ_GADGET(ITER,NX,NY,NZ,T,ZETA,NL,
+       CALL READ_GADGET(ITER,NX,NY,NZ,T,ZETA,NL,
      &            NL_PARTICLE_GRID,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
-       END IF
 
 
 *      INITIALIZE VARIABLES TO ZERO
