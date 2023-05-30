@@ -2,5 +2,7 @@ old
 *.sh
 *.png
 *.x
+*.o
+*.mod
 simu_masclet
 .DS_Store
