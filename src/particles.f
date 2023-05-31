@@ -680,8 +680,6 @@ C        WRITE(*,*) LVAL(I,IPARE)
       RETURN
       END
 
-
-
 ************************************************************************
       SUBROUTINE INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
@@ -771,12 +769,12 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
       MEDIOLADO0=0.5*LADO0
       PI=ACOS(-1.0)
-      RHOB0=MAXVAL(MASAP)/FDM/DX**3
-      ! to get overdensity from mass in a sphere (multiply by mass in
-      ! code units, divide by radius squared)
-      CONSTA_DENS=1/(4*PI/3)/RHOB0
-      WRITE(*,*) 'Bkg density (code units), mass to overdensity const',
-     &            RHOB0,CONSTA_DENS
+C      RHOB0=MAXVAL(MASAP)/FDM/DX**3
+C      ! to get overdensity from mass in a sphere (multiply by mass in
+C      ! code units, divide by radius squared)
+C      CONSTA_DENS=1/(4*PI/3)/RHOB0
+C      WRITE(*,*) 'Bkg density (code units), mass to overdensity const',
+C     &            RHOB0,CONSTA_DENS
 
       CALL VEINSGRID_ALL_L(NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &                     PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,

@@ -324,8 +324,6 @@
        END DO
        NL=IR-1
 
-       STOP
-
        CALL GRIDAMR(NX,NY,NZ,NL,NPATCH,
      &                   PATCHNX,PATCHNY,PATCHNZ,
      &                   PATCHX,PATCHY,PATCHZ,
@@ -337,6 +335,8 @@
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
      &            U4DM,MASAP,NPART,LADO0,8,16)
+
+       STOP
 
        WRITE(*,*) 'Locating particles onto the grid'
        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
