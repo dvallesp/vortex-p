@@ -72,9 +72,9 @@
        real  POT1(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)   !field to solve
        COMMON /UAMR/ U11,POT1
 
-       real dens0(1:NMAX,1:NMAY,1:NMAZ)
-       real dens1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
-       common /dens/ dens0,dens1
+       !real dens0(1:NMAX,1:NMAY,1:NMAZ)
+       !real dens1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+       !common /dens/ dens0,dens1
 
        integer cr0amr(1:NMAX,1:NMAY,1:NMAZ)
        integer cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)

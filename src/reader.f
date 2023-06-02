@@ -112,9 +112,9 @@
        CHARACTER*200 FIL1,FIL2
 
 !      this might be only for testing
-       real U1(1:NMAX,1:NMAY,1:NMAZ)
-       real U11(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
-       common /dens/ u1,u11
+       !real U1(1:NMAX,1:NMAY,1:NMAZ)
+       !real U11(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+       !common /dens/ u1,u11
 
        real U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
        real U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
@@ -334,7 +334,7 @@
        CALL INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,8,16)
+     &            U4DM,MASAP,NPART,LADO0)
 
        STOP
 

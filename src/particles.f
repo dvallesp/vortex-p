@@ -681,7 +681,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
       END
 
 ************************************************************************
-      SUBROUTINE INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
+      SUBROUTINE INTERPOLATE_VELOCITIES_old(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
      &            U4DM,MASAP,NPART,LADO0,BUF,BUFAMR)
@@ -2545,4 +2545,190 @@ c        end if
         endif
       endif
       goto 1
+      END
+
+
+************************************************************************
+      SUBROUTINE INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
+     &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
+     &            U4DM,MASAP,NPART,LADO0)
+************************************************************************
+*     Compute the velocity field on the grid
+************************************************************************
+
+      IMPLICIT NONE
+
+      INCLUDE 'vortex_parameters.dat'
+
+*     function parameters
+      INTEGER NX,NY,NZ,NL
+      INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
+      INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
+      INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
+      REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
+      REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
+     &       U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
+      REAL LADO0
+
+*     COMMON VARIABLES
+      REAL DX,DY,DZ
+      COMMON /ESPACIADO/ DX,DY,DZ
+
+      REAL  RADX(0:NMAX+1),RADMX(0:NMAX+1),
+     &      RADY(0:NMAY+1),RADMY(0:NMAY+1),
+     &      RADZ(0:NMAZ+1),RADMZ(0:NMAZ+1)
+      COMMON /GRID/  RADX,RADMX,RADY,RADMY,RADZ,RADMZ
+
+      REAL RX(-2:NAMRX+3,NPALEV)
+      REAL RY(-2:NAMRX+3,NPALEV)
+      REAL RZ(-2:NAMRX+3,NPALEV)
+      REAL RMX(-2:NAMRX+3,NPALEV)
+      REAL RMY(-2:NAMRX+3,NPALEV)
+      REAL RMZ(-2:NAMRX+3,NPALEV)
+      COMMON /MINIGRIDS/ RX,RY,RZ,RMX,RMY,RMZ
+
+      INTEGER cr0amr(1:NMAX,1:NMAY,1:NMAZ)
+      INTEGER cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+      COMMON /cr0/ cr0amr, cr0amr1
+      INTEGER solap(NAMRX,NAMRY,NAMRZ,NPALEV)
+
+      REAL U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL U4(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL U12(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      REAL U13(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      REAL U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      COMMON /VELOC/ U2,U3,U4,U12,U13,U14
+
+      !real u1(1:NMAX,1:NMAY,1:NMAZ)
+      !real u11(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+      !common /dens/ u1,u11
+
+      REAL OMEGA0,ACHE,FDM,RHOB0
+      COMMON /COSMO/ OMEGA0,ACHE,FDM
+
+      REAL L0(NMAX,NMAY,NMAZ)
+      REAL L1(NAMRX,NAMRY,NAMRZ,NPALEV)
+
+      INTEGER IX,JY,KZ,IR,I,IPATCH,LOW1,LOW2,MARCA,CONTA,KPARTICLES
+      INTEGER N1,N2,N3,RINT,MINI,MINJ,MINK,MAXI,MAXJ,MAXK,II,JJ,KK
+      INTEGER INSI,INSJ,INSK,BASINT,CONTA2,CONTA_PA,I1,I2,J1,J2,K1,K2
+      INTEGER CONTA3,JPATCH,J,K,SCR_PAR(NMAX),SCR_IDX(NMAX),IXPAR
+      REAL DXPA,DYPA,DZPA,BASX,BASY,BASZ,BAS,RBAS,BASXX,BASYY,BASZZ
+      REAL XL,YL,ZL,XR,YR,ZR,MEDIOLADO0,WBAS,CONSTA_DENS,PI
+      REAL,ALLOCATABLE::DIST(:),MINS(:),U2INS(:),U3INS(:),U4INS(:)
+      REAL,ALLOCATABLE::RXPA_PA(:),RYPA_PA(:),RZPA_PA(:),U2DM_PA(:),
+     &                  U3DM_PA(:),U4DM_PA(:),MASAP_PA(:)
+      INTEGER,ALLOCATABLE::INDICES_PA(:),IXPA_PA(:),JYPA_PA(:),
+     &                     KZPA_PA(:)
+      REAL FUIN,U(2,2,2),UW(2,2,2)
+
+      !INTEGER,ALLOCATABLE::SCRINT(:,:,:)
+      real t1,t2
+      INTEGER IXPA(NDM),JYPA(NDM),KZPA(NDM)
+
+      KPARTICLES=32 !NUMBER OF PARTICLES INSIDE THE KERNEL
+
+      MEDIOLADO0=0.5*LADO0
+      PI=ACOS(-1.0)
+C      RHOB0=MAXVAL(MASAP)/FDM/DX**3
+C      ! to get overdensity from mass in a sphere (multiply by mass in
+C      ! code units, divide by radius squared)
+C      CONSTA_DENS=1/(4*PI/3)/RHOB0
+C      WRITE(*,*) 'Bkg density (code units), mass to overdensity const',
+C     &            RHOB0,CONSTA_DENS
+
+      CALL VEINSGRID_ALL_L(NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &                     PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
+     &                     SOLAP)
+
+      write(*,*) 'veinsgrid done!'
+
+
+
+
+      stop
+
+*     refill refined and overlapping cells
+      DO IR=NL,1,-1
+        CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
+     &    U12(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
+        CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
+     &    U13(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
+        CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
+     &    U14(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
+
+        LOW1=SUM(NPATCH(0:IR-1))+1
+        LOW2=SUM(NPATCH(0:IR))
+        DO ipatch=LOW1,LOW2
+          !WRITE(*,*) 'FINISHING PATCH', IPATCH
+          N1 = PATCHNX(IPATCH)
+          N2 = PATCHNY(IPATCH)
+          N3 = PATCHNZ(IPATCH)
+          JPATCH = PARE(IPATCH)
+          DO I=1,N1,2
+          DO J=1,N2,2
+          DO K=1,N3,2
+            II = PATCHX(ipatch) + int((I-1)/2)
+            JJ = PATCHY(ipatch) + int((J-1)/2)
+            KK = PATCHZ(ipatch) + int((K-1)/2)
+            if (jpatch.ne.0) then
+             uw(1:2,1:2,1:2) = u(1:2,1:2,1:2)
+             u(1:2,1:2,1:2) = u12(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             u12(II,JJ,KK,JPATCH) = FUIN
+
+             u(1:2,1:2,1:2) = u13(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             u13(II,JJ,KK,JPATCH) = FUIN
+
+             u(1:2,1:2,1:2) = u14(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             u14(II,JJ,KK,JPATCH) = FUIN
+            else
+             uw(1:2,1:2,1:2) = u(1:2,1:2,1:2)
+             u(1:2,1:2,1:2) = u12(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             u2(II,JJ,KK) = FUIN
+
+             u(1:2,1:2,1:2) = u13(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             u3(II,JJ,KK) = FUIN
+
+             u(1:2,1:2,1:2) = u14(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             u4(II,JJ,KK) = FUIN
+            end if
+          END DO
+          END DO
+          END DO
+        END DO
+      END DO !IR=NL,1,-1
+
+      write(*,*) 'At level', 0
+      write(*,*) 'vx min,max',minval(u2),maxval(u2)
+      write(*,*) 'vy min,max',minval(u3),maxval(u3)
+      write(*,*) 'vz min,max',minval(u4),maxval(u4)
+
+      DO IR=1,NL
+       low1=sum(npatch(0:ir-1))+1
+       low2=sum(npatch(0:ir))
+       write(*,*) 'vx min, max',minval(u12(:,:,:,low1:low2)),
+     &                          maxval(u12(:,:,:,low1:low2))
+       write(*,*) 'vy min, max',minval(u13(:,:,:,low1:low2)),
+     &                          maxval(u13(:,:,:,low1:low2))
+       write(*,*) 'vz min, max',minval(u14(:,:,:,low1:low2)),
+     &                          maxval(u14(:,:,:,low1:low2))
+      END DO
+
+      CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
+     &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
+     &                          PATCHRY,PATCHRZ,PARE,CR0AMR,CR0AMR1,
+     &                          SOLAP)
+
+      RETURN
       END
