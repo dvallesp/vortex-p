@@ -2557,6 +2557,7 @@ c        end if
 *     Compute the velocity field on the grid
 ************************************************************************
 
+      use kdtree
       IMPLICIT NONE
 
       INCLUDE 'vortex_parameters.dat'
@@ -2615,6 +2616,7 @@ c        end if
       INTEGER N1,N2,N3,RINT,MINI,MINJ,MINK,MAXI,MAXJ,MAXK,II,JJ,KK
       INTEGER INSI,INSJ,INSK,BASINT,CONTA2,CONTA_PA,I1,I2,J1,J2,K1,K2
       INTEGER CONTA3,JPATCH,J,K,SCR_PAR(NMAX),SCR_IDX(NMAX),IXPAR
+      INTEGER NPART_TOT
       REAL DXPA,DYPA,DZPA,BASX,BASY,BASZ,BAS,RBAS,BASXX,BASYY,BASZZ
       REAL XL,YL,ZL,XR,YR,ZR,MEDIOLADO0,WBAS,CONSTA_DENS,PI
       REAL,ALLOCATABLE::DIST(:),MINS(:),U2INS(:),U3INS(:),U4INS(:)
@@ -2627,6 +2629,9 @@ c        end if
       !INTEGER,ALLOCATABLE::SCRINT(:,:,:)
       real t1,t2
       INTEGER IXPA(NDM),JYPA(NDM),KZPA(NDM)
+
+      TYPE(KDTREE_TYPE) TREE
+      REAL,ALLOCATABLE::ARR(:,:)
 
       KPARTICLES=32 !NUMBER OF PARTICLES INSIDE THE KERNEL
 
@@ -2643,12 +2648,31 @@ C     &            RHOB0,CONSTA_DENS
      &                     PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
      &                     SOLAP)
 
-      write(*,*) 'veinsgrid done!'
+      WRITE(*,*) 'Building KDTree...'
+
+      NPART_TOT=SUM(NPART)
+      ALLOCATE(ARR(3,NPART_TOT))
+
+!$OMP PARALLEL DO SHARED(NPART_TOT,RXPA,RYPA,RZPA,ARR),
+!$OMP+            PRIVATE(I),
+!$OMP+            DEFAULT(NONE)
+      DO I=1,NPART_TOT 
+       ARR(1,I)=RXPA(I)
+       ARR(2,I)=RYPA(I)
+       ARR(3,I)=RZPA(I)
+      END DO
+
+      CALL TREE%BUILD(ARR)
+
+      DEALLOCATE(ARR)
+
+      WRITE(*,*) 'KDTree built'
+      
 
 
 
 
-      stop
+      STOP
 
 *     refill refined and overlapping cells
       DO IR=NL,1,-1
