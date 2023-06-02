@@ -213,7 +213,7 @@
        NPART(0)=LOW2 !Retrocompatibility with general reader
 
        LOW1=1
-       LOW2=SUM(NPART(0:NL))
+       LOW2=SUM(NPART(0:NLEVELS))
        WRITE(*,*)
        WRITE(*,*) 'Input particles:',LOW2
        xmin=minval(RXPA(LOW1:LOW2))
