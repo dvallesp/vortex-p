@@ -1,9 +1,8 @@
-* This file contains routines adapted from
+************************************************************************
+      subroutine select(k,arr_in,n,outval) ! DEPECRATED, UNUSED
+* adapted from
 * Numerical Recipes in Fortran 90, Vol.2
 * by Press, Teukoslky et al.
-
-************************************************************************
-      subroutine select(k,arr_in,n,outval)
 ************************************************************************
       !USE nrtype; USE nrutil, ONLY : assert,swap
       IMPLICIT NONE
@@ -78,6 +77,62 @@
        b=swp
       end if
       END SUBROUTINE masked_swap_rs
+
+**********************************************************************
+      SUBROUTINE ARGSORT(N,ARRAY,INDX)
+**********************************************************************
+*      Return the indices which make ARRAY sorted in increasing order.
+*      Uses MERGE SORT
+*      Rewritten from the idea of the algorithm (LGPL-3.0 License) in
+*       https://github.com/Astrokiwi/simple_fortran_argsort/blob/master/LICENSE
+**********************************************************************
+      INTEGER N
+      REAL*4 ARRAY(N)
+      INTEGER INDX(N)
+
+      INTEGER TEMPINT(N)
+
+      INTEGER DELTA
+      INTEGER I,J,III,K,KKK
+
+      DO I=1,N
+       INDX(I)=I
+      END DO
+
+      IF (N.EQ.1) RETURN
+
+      DELTA=1
+      DO WHILE (DELTA.LT.N)
+       DO III=1,N-DELTA,DELTA*2
+        I1=III
+        I2=III+DELTA
+        KKK=MIN(DELTA*2,N-III+1)
+        K=1
+
+        DO WHILE (I1.LT.III+DELTA.AND.I2.LT.III+KKK)
+         IF (ARRAY(INDX(I1)).LT.ARRAY(INDX(I2))) THEN
+          TEMPINT(K)=INDX(I1)
+          I1=I1+1
+          K=K+1
+         ELSE
+          TEMPINT(K)=INDX(I2)
+          I2=I2+1
+          K=K+1
+         END IF
+        END DO
+
+        IF (I1.LT.III+DELTA) THEN
+         TEMPINT(K:KKK)=INDX(I1:III+DELTA-1)
+        ELSE
+         TEMPINT(K:KKK)=INDX(I2:III+KKK-1)
+        ENDIF
+        INDX(III:III+KKK-1)=TEMPINT(1:KKK)
+       END DO
+       DELTA=DELTA*2
+      END DO
+
+      RETURN
+      END SUBROUTINE      
 
 ***************************
 *     PARALLEL MAX AND MIN
