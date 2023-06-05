@@ -292,15 +292,15 @@ contains
   subroutine kdtree_range_search(this, x, ngb_idx, radius, ngb_dist, ngb_bunch)
 
     class(kdtree_type), intent(in) :: this
-    real(8), intent(in) :: x(:)
+    real(4), intent(in) :: x(:)
     integer, intent(inout), allocatable :: ngb_idx(:)
-    real(8), intent(in) :: radius
-    real(8), intent(inout), allocatable, optional :: ngb_dist(:)
+    real(4), intent(in) :: radius
+    real(4), intent(inout), allocatable, optional :: ngb_dist(:)
     integer, intent(in), optional :: ngb_bunch
 
     integer nb, n, i
     logical finished
-    real(8), allocatable :: ngb_dist_(:)
+    real(4), allocatable :: ngb_dist_(:)
     integer, allocatable :: final_ngb_idx(:)
 
     if (present(ngb_bunch)) then
