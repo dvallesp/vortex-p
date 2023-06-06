@@ -1448,7 +1448,7 @@ c     &                               maxval(u14(:,:,:,low1:low2))
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,CR0AMR,CR0AMR1,
-     &                          SOLAP)
+     &                          SOLAP,L0,L1)
 
       RETURN
       END
@@ -2726,6 +2726,17 @@ C     &            RHOB0,CONSTA_DENS
 *     BASE GRID
 ************************
 
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,L0),
+!$OMP+            PRIVATE(IX,JY,KZ),
+!$OMP+            DEFAULT(NONE)
+      DO KZ=1,NZ
+      DO JY=1,NY
+      DO IX=1,NX
+       L0(IX,JY,KZ)=0.
+      END DO 
+      END DO 
+      END DO
+
 *     1. outside the domain where there are particles, we go 4 cells
 *        by 4 cells, and then will interpolate. (outside [I1,I2]).
       STEP=4
@@ -2788,6 +2799,13 @@ C     &            RHOB0,CONSTA_DENS
       END DO
       write(*,*) 'step 1 done'
 
+      open(89,file='caca1.dat',form='unformatted')
+      write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      close(89) 
+
       ! Fill the blanks by interpolation
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
@@ -2796,18 +2814,18 @@ C     &            RHOB0,CONSTA_DENS
 !$OMP+                    BASZ),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
       DO KZ=1,NZ
-       KK=INT(KZ/STEP)*STEP
+       KK=INT((KZ-1)/STEP)*STEP+1
        KKP1=MOD(KK+STEP,NZ)
        BASZ=(RADZ(KZ)-RADZ(KK))/(STEP*DZ)
       DO JY=1,NY
-       JJ=INT(JY/STEP)*STEP
+       JJ=INT((JY-1)/STEP)*STEP+1
        JJP1=MOD(JJ+STEP,NY)
        BASY=(RADY(JY)-RADY(JJ))/(STEP*DY)
       DO IX=1,NX
        IF (IX.GE.I1.AND.IX.LE.I2.AND.
      &     JY.GE.J1.AND.JY.LE.J2.AND.
      &     KZ.GE.K1.AND.KZ.LE.K2) CYCLE
-       II=INT(IX/STEP)*STEP
+       II=INT((IX-1)/STEP)*STEP+1
        IIP1=MOD(II+STEP,NX)
        BASX=(RADX(IX)-RADX(II))/(STEP*DX)
 
@@ -2853,6 +2871,13 @@ C     &            RHOB0,CONSTA_DENS
       END DO
       END DO
       write(*,*) 'step 1-interp done'
+
+      open(89,file='caca1int.dat',form='unformatted')
+      write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      close(89) 
 
       ! 2. inside this domain, but outside the region defined by the
       ! 5-95 percentiles around each position, we go 2 cells by 2 cells.
@@ -2917,6 +2942,13 @@ C     &            RHOB0,CONSTA_DENS
       END DO
       write(*,*) 'step 2 done'
 
+      open(89,file='caca2.dat',form='unformatted')
+      write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      close(89) 
+
       ! Fill the blanks by interpolation
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,II1,II2,JJ1,JJ2,KK1,KK2,RADX,
@@ -2926,18 +2958,18 @@ C     &            RHOB0,CONSTA_DENS
 !$OMP+                    BASZ),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
       DO KZ=K1,K2
-       KK=INT(KZ/STEP)*STEP
+       KK=K1+INT((KZ-K1)/STEP)*STEP
        KKP1=MOD(KK+STEP,NZ)
        BASZ=(RADZ(KZ)-RADZ(KK))/(STEP*DZ)
       DO JY=J1,J2
-       JJ=INT(JY/STEP)*STEP
+       JJ=J1+INT((JY-J1)/STEP)*STEP
        JJP1=MOD(JJ+STEP,NY)
        BASY=(RADY(JY)-RADY(JJ))/(STEP*DY)
       DO IX=I1,I2
        IF (IX.GE.II1.AND.IX.LE.II2.AND.
      &     JY.GE.JJ1.AND.JY.LE.JJ2.AND.
      &     KZ.GE.KK1.AND.KZ.LE.KK2) CYCLE
-       II=INT(IX/STEP)*STEP
+       II=I1+INT((IX-I1)/STEP)*STEP
        IIP1=MOD(II+STEP,NX)
        BASX=(RADX(IX)-RADX(II))/(STEP*DX)
 
@@ -2983,6 +3015,13 @@ C     &            RHOB0,CONSTA_DENS
       END DO
       END DO
       write(*,*) 'step 2 interp done'
+
+      open(89,file='caca2int.dat',form='unformatted')
+      write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      close(89) 
 
       ! 3. inside this region, we go cell by cell. (inside [II1,II2])
 
@@ -3044,7 +3083,7 @@ C     &            RHOB0,CONSTA_DENS
       write(*,*) 'step 3 done'
       
 
-      open(89,file='caca.dat',form='unformatted')
+      open(89,file='caca3.dat',form='unformatted')
        write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
        write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
        write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
@@ -3127,6 +3166,9 @@ C     &            RHOB0,CONSTA_DENS
       DO IR=NL,1,-1
         CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
+     &    L1(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
+        CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
      &    U12(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
         CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
@@ -3151,6 +3193,11 @@ C     &            RHOB0,CONSTA_DENS
             KK = PATCHZ(ipatch) + int((K-1)/2)
             if (jpatch.ne.0) then
              uw(1:2,1:2,1:2) = 1.
+
+             u(1:2,1:2,1:2) = L1(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             L1(II,JJ,KK,JPATCH) = FUIN
+
              u(1:2,1:2,1:2) = u12(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              u12(II,JJ,KK,JPATCH) = FUIN
@@ -3164,6 +3211,11 @@ C     &            RHOB0,CONSTA_DENS
              u14(II,JJ,KK,JPATCH) = FUIN
             else
              uw(1:2,1:2,1:2) = 1.
+
+             u(1:2,1:2,1:2) = L1(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             L0(II,JJ,KK) = FUIN
+
              u(1:2,1:2,1:2) = u12(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              u2(II,JJ,KK) = FUIN
@@ -3205,7 +3257,7 @@ C     &            RHOB0,CONSTA_DENS
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,CR0AMR,CR0AMR1,
-     &                          SOLAP)
+     &                          SOLAP,L0,L1)
 
       RETURN
       END
