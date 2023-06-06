@@ -179,3 +179,33 @@
 
       RETURN
       END
+
+***********************************************************************
+      SUBROUTINE CIC_INTERP(U,XX,YY,ZZ,RX,RY,RZ,FUIN)
+***********************************************************************
+*     Linear interpolation using 8 nearest neighbours.
+************************************************************************
+      IMPLICIT NONE
+
+      INCLUDE 'vortex_parameters.dat'
+
+      REAL U(2,2,2),XX,YY,ZZ,RX(2),RY(2),RZ(2),FUIN
+
+      REAL BASX,BASY,BASZ
+
+      BASX=(XX-RX(1))/(RX(2)-RX(1))
+      BASY=(YY-RY(1))/(RY(2)-RY(1))
+      BASZ=(ZZ-RZ(1))/(RZ(2)-RZ(1))
+
+      FUIN=U(1,1,1)*(1.0-BASX)*(1.0-BASY)*(1.0-BASZ) +
+     &     U(2,1,1)*BASX*(1.0-BASY)*(1.0-BASZ) +
+     &     U(1,2,1)*(1.0-BASX)*BASY*(1.0-BASZ) +
+     &     U(1,1,2)*(1.0-BASX)*(1.0-BASY)*BASZ +
+     &     U(2,1,2)*BASX*(1.0-BASY)*BASZ +
+     &     U(1,2,2)*(1.0-BASX)*BASY*BASZ +
+     &     U(2,2,1)*BASX*BASY*(1.0-BASZ) +
+     &     U(2,2,2)*BASX*BASY*BASZ
+
+      RETURN 
+      END 
+
