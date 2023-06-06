@@ -3196,23 +3196,35 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       END DO !IR=NL,1,-1
 
       write(*,*) 'At level', 0
-      write(*,*) 'L min,max',minval(l0),maxval(l0)
-      write(*,*) 'vx min,max',minval(u2),maxval(u2)
-      write(*,*) 'vy min,max',minval(u3),maxval(u3)
-      write(*,*) 'vz min,max',minval(u4),maxval(u4)
+      CALL P_MINMAX_IR(L0,L1,0,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                 NPATCH,0,BASX,BASY)
+      write(*,*) 'L min,max',BASX,BASY
+      CALL P_MINMAX_IR(U2,U12,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                 NPATCH,0,BASX,BASY)
+      write(*,*) 'vx min,max',BASX,BASY
+      CALL P_MINMAX_IR(U3,U13,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                 NPATCH,0,BASX,BASY)
+      write(*,*) 'vy min,max',BASX,BASY
+       CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                  NPATCH,0,BASX,BASY)
+      write(*,*) 'vz min,max',BASX,BASY
 
       DO IR=1,NL
        low1=sum(npatch(0:ir-1))+1
        low2=sum(npatch(0:ir))
        write(*,*) 'At level',ir
-       write(*,*) 'L min, max',minval(l1(:,:,:,low1:low2)),
-     &                          maxval(l1(:,:,:,low1:low2))
-       write(*,*) 'vx min, max',minval(u12(:,:,:,low1:low2)),
-     &                          maxval(u12(:,:,:,low1:low2))
-       write(*,*) 'vy min, max',minval(u13(:,:,:,low1:low2)),
-     &                          maxval(u13(:,:,:,low1:low2))
-       write(*,*) 'vz min, max',minval(u14(:,:,:,low1:low2)),
-     &                          maxval(u14(:,:,:,low1:low2))
+       CALL P_MINMAX_IR(L0,L1,0,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                  NPATCH,IR,BASX,BASY)
+       write(*,*) 'L min,max',BASX,BASY
+       CALL P_MINMAX_IR(U2,U12,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                  NPATCH,IR,BASX,BASY)
+       write(*,*) 'vx min,max',BASX,BASY
+       CALL P_MINMAX_IR(U3,U13,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                  NPATCH,IR,BASX,BASY)
+       write(*,*) 'vy min,max',BASX,BASY
+       CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                  NPATCH,IR,BASX,BASY)
+       write(*,*) 'vz min,max',BASX,BASY
       END DO
 
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
