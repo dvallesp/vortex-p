@@ -1434,6 +1434,7 @@ c     &                               maxval(u14(:,:,:,low1:low2))
       DO IR=1,NL
        low1=sum(npatch(0:ir-1))+1
        low2=sum(npatch(0:ir))
+       write(*,*) 'At level',IR
        write(*,*) 'density min, max',minval(u11(:,:,:,low1:low2)),
      &                               maxval(u11(:,:,:,low1:low2))
        write(*,*) 'vx min, max',minval(u12(:,:,:,low1:low2)),
@@ -2612,28 +2613,25 @@ c        end if
       REAL L0(NMAX,NMAY,NMAZ)
       REAL L1(NAMRX,NAMRY,NAMRZ,NPALEV)
 
-      INTEGER IX,JY,KZ,IR,I,IPATCH,LOW1,LOW2,MARCA,CONTA,KPARTICLES
-      INTEGER N1,N2,N3,RINT,MINI,MINJ,MINK,MAXI,MAXJ,MAXK,II,JJ,KK
-      INTEGER INSI,INSJ,INSK,BASINT,CONTA2,CONTA_PA,I1,I2,J1,J2,K1,K2
-      INTEGER CONTA3,JPATCH,J,K,SCR_PAR(NMAX),SCR_IDX(NMAX),IXPAR
-      INTEGER NPART_TOT
+      INTEGER IX,JY,KZ,IR,I,J,K,IPATCH,LOW1,LOW2,CONTA,KNEIGHBOURS
+      INTEGER N1,N2,N3,II,JJ,KK,JPATCH,I1,I2,J1,J2,K1,K2,STEP
+      INTEGER NPART_TOT,II1,II2,JJ1,JJ2,KK1,KK2,IIP1,JJP1,KKP1
       REAL DXPA,DYPA,DZPA,BASX,BASY,BASZ,BAS,RBAS,BASXX,BASYY,BASZZ
-      REAL XL,YL,ZL,XR,YR,ZR,MEDIOLADO0,WBAS,CONSTA_DENS,PI
-      REAL,ALLOCATABLE::DIST(:),MINS(:),U2INS(:),U3INS(:),U4INS(:)
-      REAL,ALLOCATABLE::RXPA_PA(:),RYPA_PA(:),RZPA_PA(:),U2DM_PA(:),
-     &                  U3DM_PA(:),U4DM_PA(:),MASAP_PA(:)
-      INTEGER,ALLOCATABLE::INDICES_PA(:),IXPA_PA(:),JYPA_PA(:),
-     &                     KZPA_PA(:)
-      REAL FUIN,U(2,2,2),UW(2,2,2)
+      REAL MEDIOLADO0,PI,MINX,MAXX,MINY,MAXY,MINZ,MAXZ,FRAC_INT,H_KERN
+      REAL*8 BAS8,BAS8X,BAS8Y,BAS8Z
+      REAL,ALLOCATABLE::DIST(:)
+      INTEGER,ALLOCATABLE::NEIGH(:),LB(:)
+      REAL FUIN,U(2,2,2),UW(2,2,2),Q(3)
 
       !INTEGER,ALLOCATABLE::SCRINT(:,:,:)
-      real t1,t2
-      INTEGER IXPA(NDM),JYPA(NDM),KZPA(NDM)
+      integer*8 t1,t2
 
       TYPE(KDTREE_TYPE) TREE
       REAL,ALLOCATABLE::ARR(:,:)
 
-      KPARTICLES=32 !NUMBER OF PARTICLES INSIDE THE KERNEL
+      integer omp_get_thread_num
+
+      KNEIGHBOURS=32 !NUMBER OF PARTICLES INSIDE THE KERNEL
 
       MEDIOLADO0=0.5*LADO0
       PI=ACOS(-1.0)
@@ -2667,12 +2665,463 @@ C     &            RHOB0,CONSTA_DENS
       DEALLOCATE(ARR)
 
       WRITE(*,*) 'KDTree built'
+
+*     Now, go (clean) cell to (clean) cell, finding the neighbouring
+*     particles and interpolating the velocity field onto the cell.
+*     Around each cell, we consider all the particles within a sphere 
+*     of radius MAX(DXPA, LNEIGH), where LNEIGH is the distance to the
+*     KNEIGHBOURS-th nearest particle. 
+
+*     Base grid: to save computational cost, we consider three regions:
+*     1) outside the domain where there are particles, we go 4 cells 
+*     by 4 cells, and then will interpolate. (outside [I1,I2])
+*     2) inside this domain, but outside the region defined by the 
+*     5-95 percentiles around each position, we go 2 cells by 2 cells.
+*     (outside [II1,II2], but inside [I1,I2])
+*     3) inside this region, we go cell by cell. (inside [II1,II2])
+
+      ALLOCATE(NEIGH(NPART_TOT))
+      FRAC_INT=0.05
+      
+*     X      
+      CALL ARGSORT(NPART_TOT,RXPA(1:NPART_TOT),NEIGH)
+      MINX=RXPA(NEIGH(1))
+      MAXX=RXPA(NEIGH(NPART_TOT))
+      I1=INT((MINX+MEDIOLADO0)/DX)+1
+      I2=INT((MAXX+MEDIOLADO0)/DX)+1
+      MINX=RXPA(NEIGH(INT(FRAC_INT*NPART_TOT)))
+      MAXX=RXPA(NEIGH(INT((1.-FRAC_INT)*NPART_TOT)))
+      II1=INT((MINX+MEDIOLADO0)/DX)+1
+      II2=INT((MAXX+MEDIOLADO0)/DX)+1
+
+*     Y
+      CALL ARGSORT(NPART_TOT,RYPA(1:NPART_TOT),NEIGH)
+      MINY=RYPA(NEIGH(1))
+      MAXY=RYPA(NEIGH(NPART_TOT))
+      J1=INT((MINY+MEDIOLADO0)/DY)+1
+      J2=INT((MAXY+MEDIOLADO0)/DY)+1
+      MINY=RYPA(NEIGH(INT(FRAC_INT*NPART_TOT)))
+      MAXY=RYPA(NEIGH(INT((1.-FRAC_INT)*NPART_TOT)))
+      JJ1=INT((MINY+MEDIOLADO0)/DY)+1
+      JJ2=INT((MAXY+MEDIOLADO0)/DY)+1
+
+*     Z
+      CALL ARGSORT(NPART_TOT,RZPA(1:NPART_TOT),NEIGH)
+      MINZ=RZPA(NEIGH(1))
+      MAXZ=RZPA(NEIGH(NPART_TOT))
+      K1=INT((MINZ+MEDIOLADO0)/DZ)+1
+      K2=INT((MAXZ+MEDIOLADO0)/DZ)+1
+      MINZ=RZPA(NEIGH(INT(FRAC_INT*NPART_TOT)))
+      MAXZ=RZPA(NEIGH(INT((1.-FRAC_INT)*NPART_TOT)))
+      KK1=INT((MINZ+MEDIOLADO0)/DZ)+1
+      KK2=INT((MAXZ+MEDIOLADO0)/DZ)+1
+
+      DEALLOCATE(NEIGH)
+
+      WRITE(*,*) I1,II1,II2,I2
+      WRITE(*,*) J1,JJ1,JJ2,J2
+      WRITE(*,*) K1,KK1,KK2,K2
+
+************************
+*     BASE GRID
+************************
+
+*     1. outside the domain where there are particles, we go 4 cells
+*        by 4 cells, and then will interpolate. (outside [I1,I2]).
+      STEP=4
+
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
+!$OMP+                   RADZ,TREE,U2DM,U3DM,U4DM,L0,U2,U3,U4,
+!$OMP+                   KNEIGHBOURS,DX),
+!$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,I),
+!$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
+      DO KZ=1,NZ,STEP
+      DO JY=1,NY,STEP
+      DO IX=1,NX,STEP
+       IF (IX.GT.INT(I1/STEP+1)*STEP.AND.
+     &     IX.LT.INT(I2/STEP)*STEP.AND.
+     &     JY.GT.INT(J1/STEP+1)*STEP.AND.
+     &     JY.LT.INT(J2/STEP)*STEP.AND.
+     &     KZ.GT.INT(K1/STEP+1)*STEP.AND.
+     &     KZ.LT.INT(K2/STEP)*STEP) CYCLE
+
+       Q(1)=RADX(IX)
+       Q(2)=RADY(JY)
+       Q(3)=RADZ(KZ)
+
+       ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+       CALL TREE%SEARCH(Q,NEIGH,NGB_DIST=DIST)
+
+       IF (DIST(KNEIGHBOURS).GT.DX) THEN
+        CONTA=KNEIGHBOURS 
+       ELSE 
+        DEALLOCATE(DIST,NEIGH)
+        CALL TREE%RANGE_SEARCH(Q,NEIGH,DX,NGB_DIST=DIST,ngb_bunch=1000)
+        CONTA=SIZEOF(NEIGH)/SIZEOF(NEIGH(1))
+       END IF
+
+       !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
+       H_KERN=DIST(CONTA)
+       L0(IX,JY,KZ)=H_KERN
+
+       CALL KERNEL_CUBICSPLINE(CONTA,CONTA,H_KERN/2.,DIST)
+
+       BAS8=0.D0
+       BAS8X=0.D0
+       BAS8Y=0.D0
+       BAS8Z=0.D0
+       DO I=1,CONTA 
+        BAS8=BAS8+DIST(I)
+        BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
+        BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
+        BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
+       END DO
+       
+       U2(IX,JY,KZ)=BAS8X/BAS8
+       U3(IX,JY,KZ)=BAS8Y/BAS8
+       U4(IX,JY,KZ)=BAS8Z/BAS8
+
+       DEALLOCATE(DIST, NEIGH)
+      END DO 
+      END DO 
+      END DO
+      write(*,*) 'step 1 done'
+
+      ! Fill the blanks by interpolation
+
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
+!$OMP+                   RADZ,U2,U3,U4,L0,DX,DY,DZ),
+!$OMP+            PRIVATE(IX,JY,KZ,II,JJ,KK,IIP1,JJP1,KKP1,BASX,BASY,
+!$OMP+                    BASZ),
+!$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
+      DO KZ=1,NZ
+       KK=INT(KZ/STEP)*STEP
+       KKP1=MOD(KK+STEP,NZ)
+       BASZ=(RADZ(KZ)-RADZ(KK))/(STEP*DZ)
+      DO JY=1,NY
+       JJ=INT(JY/STEP)*STEP
+       JJP1=MOD(JJ+STEP,NY)
+       BASY=(RADY(JY)-RADY(JJ))/(STEP*DY)
+      DO IX=1,NX
+       IF (IX.GE.I1.AND.IX.LE.I2.AND.
+     &     JY.GE.J1.AND.JY.LE.J2.AND.
+     &     KZ.GE.K1.AND.KZ.LE.K2) CYCLE
+       II=INT(IX/STEP)*STEP
+       IIP1=MOD(II+STEP,NX)
+       BASX=(RADX(IX)-RADX(II))/(STEP*DX)
+
+       IF (IX.EQ.II.AND.JY.EQ.JJ.AND.KZ.EQ.KK) CYCLE 
+
+       U2(IX,JY,KZ)=U2(II,JJ,KK)      *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &              U2(IIP1,JJ,KK)    *  BASX  *(1-BASY)*(1-BASZ) +
+     &              U2(II,JJP1,KK)    *(1-BASX)*  BASY  *(1-BASZ) +
+     &              U2(IIP1,JJP1,KK)  *  BASX  *  BASY  *(1-BASZ) +
+     &              U2(II,JJ,KKP1)    *(1-BASX)*(1-BASY)*  BASZ   +
+     &              U2(IIP1,JJ,KKP1)  *  BASX  *(1-BASY)*  BASZ   +
+     &              U2(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
+     &              U2(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ
+
+       U3(IX,JY,KZ)=U3(II,JJ,KK)      *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &              U3(IIP1,JJ,KK)    *  BASX  *(1-BASY)*(1-BASZ) +
+     &              U3(II,JJP1,KK)    *(1-BASX)*  BASY  *(1-BASZ) +
+     &              U3(IIP1,JJP1,KK)  *  BASX  *  BASY  *(1-BASZ) +
+     &              U3(II,JJ,KKP1)    *(1-BASX)*(1-BASY)*  BASZ   +
+     &              U3(IIP1,JJ,KKP1)  *  BASX  *(1-BASY)*  BASZ   +
+     &              U3(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
+     &              U3(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ
+
+       U4(IX,JY,KZ)=U4(II,JJ,KK)      *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &              U4(IIP1,JJ,KK)    *  BASX  *(1-BASY)*(1-BASZ) +
+     &              U4(II,JJP1,KK)    *(1-BASX)*  BASY  *(1-BASZ) +
+     &              U4(IIP1,JJP1,KK)  *  BASX  *  BASY  *(1-BASZ) +
+     &              U4(II,JJ,KKP1)    *(1-BASX)*(1-BASY)*  BASZ   +
+     &              U4(IIP1,JJ,KKP1)  *  BASX  *(1-BASY)*  BASZ   +
+     &              U4(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
+     &              U4(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ     
+
+       L0(IX,JY,KZ)=L0(II,JJ,KK)      *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &              L0(IIP1,JJ,KK)    *  BASX  *(1-BASY)*(1-BASZ) +
+     &              L0(II,JJP1,KK)    *(1-BASX)*  BASY  *(1-BASZ) +
+     &              L0(IIP1,JJP1,KK)  *  BASX  *  BASY  *(1-BASZ) +
+     &              L0(II,JJ,KKP1)    *(1-BASX)*(1-BASY)*  BASZ   +
+     &              L0(IIP1,JJ,KKP1)  *  BASX  *(1-BASY)*  BASZ   +
+     &              L0(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
+     &              L0(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ   
+
+      END DO 
+      END DO
+      END DO
+      write(*,*) 'step 1-interp done'
+
+      ! 2. inside this domain, but outside the region defined by the
+      ! 5-95 percentiles around each position, we go 2 cells by 2 cells.
+      ! (outside [II1,II2], but inside [I1,I2])
+      STEP=2
+
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,II1,II2,JJ1,
+!$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,TREE,U2DM,U3DM,
+!$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX),
+!$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,I),
+!$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
+      DO KZ=K1,K2,STEP
+      DO JY=J1,J2,STEP
+      DO IX=I1,I2,STEP
+       IF (IX.GT.INT(II1/STEP+1)*STEP.AND.
+     &     IX.LT.INT(II2/STEP)*STEP.AND.
+     &     JY.GT.INT(JJ1/STEP+1)*STEP.AND.
+     &     JY.LT.INT(JJ2/STEP)*STEP.AND.
+     &     KZ.GT.INT(KK1/STEP+1)*STEP.AND.
+     &     KZ.LT.INT(KK2/STEP)*STEP) CYCLE
+
+       Q(1)=RADX(IX)
+       Q(2)=RADY(JY)
+       Q(3)=RADZ(KZ)
+
+       ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+       CALL TREE%SEARCH(Q,NEIGH,NGB_DIST=DIST)
+
+       IF (DIST(KNEIGHBOURS).GT.DX) THEN
+        CONTA=KNEIGHBOURS 
+       ELSE 
+        DEALLOCATE(DIST,NEIGH)
+        CALL TREE%RANGE_SEARCH(Q,NEIGH,DX,NGB_DIST=DIST,ngb_bunch=1000)
+        CONTA=SIZEOF(NEIGH)/SIZEOF(NEIGH(1))
+       END IF
+
+       !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
+       H_KERN=DIST(CONTA)
+       L0(IX,JY,KZ)=H_KERN
+
+       CALL KERNEL_CUBICSPLINE(CONTA,CONTA,H_KERN/2.,DIST)
+
+       BAS8=0.D0
+       BAS8X=0.D0
+       BAS8Y=0.D0
+       BAS8Z=0.D0
+       DO I=1,CONTA 
+        BAS8=BAS8+DIST(I)
+        BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
+        BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
+        BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
+       END DO
+       
+       U2(IX,JY,KZ)=BAS8X/BAS8
+       U3(IX,JY,KZ)=BAS8Y/BAS8
+       U4(IX,JY,KZ)=BAS8Z/BAS8
+
+       DEALLOCATE(DIST, NEIGH)
+      END DO 
+      END DO 
+      END DO
+      write(*,*) 'step 2 done'
+
+      ! Fill the blanks by interpolation
+
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,II1,II2,JJ1,JJ2,KK1,KK2,RADX,
+!$OMP+                   RADY,RADZ,U2,U3,U4,L0,DX,DY,DZ,I1,I2,J1,J2,K1,
+!$OMP+                   K2),
+!$OMP+            PRIVATE(IX,JY,KZ,II,JJ,KK,IIP1,JJP1,KKP1,BASX,BASY,
+!$OMP+                    BASZ),
+!$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
+      DO KZ=K1,K2
+       KK=INT(KZ/STEP)*STEP
+       KKP1=MOD(KK+STEP,NZ)
+       BASZ=(RADZ(KZ)-RADZ(KK))/(STEP*DZ)
+      DO JY=J1,J2
+       JJ=INT(JY/STEP)*STEP
+       JJP1=MOD(JJ+STEP,NY)
+       BASY=(RADY(JY)-RADY(JJ))/(STEP*DY)
+      DO IX=I1,I2
+       IF (IX.GE.II1.AND.IX.LE.II2.AND.
+     &     JY.GE.JJ1.AND.JY.LE.JJ2.AND.
+     &     KZ.GE.KK1.AND.KZ.LE.KK2) CYCLE
+       II=INT(IX/STEP)*STEP
+       IIP1=MOD(II+STEP,NX)
+       BASX=(RADX(IX)-RADX(II))/(STEP*DX)
+
+       IF (IX.EQ.II.AND.JY.EQ.JJ.AND.KZ.EQ.KK) CYCLE 
+
+       U2(IX,JY,KZ)=U2(II,JJ,KK)      *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &              U2(IIP1,JJ,KK)    *  BASX  *(1-BASY)*(1-BASZ) +
+     &              U2(II,JJP1,KK)    *(1-BASX)*  BASY  *(1-BASZ) +
+     &              U2(IIP1,JJP1,KK)  *  BASX  *  BASY  *(1-BASZ) +
+     &              U2(II,JJ,KKP1)    *(1-BASX)*(1-BASY)*  BASZ   +
+     &              U2(IIP1,JJ,KKP1)  *  BASX  *(1-BASY)*  BASZ   +
+     &              U2(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
+     &              U2(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ
+
+       U3(IX,JY,KZ)=U3(II,JJ,KK)      *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &              U3(IIP1,JJ,KK)    *  BASX  *(1-BASY)*(1-BASZ) +
+     &              U3(II,JJP1,KK)    *(1-BASX)*  BASY  *(1-BASZ) +
+     &              U3(IIP1,JJP1,KK)  *  BASX  *  BASY  *(1-BASZ) +
+     &              U3(II,JJ,KKP1)    *(1-BASX)*(1-BASY)*  BASZ   +
+     &              U3(IIP1,JJ,KKP1)  *  BASX  *(1-BASY)*  BASZ   +
+     &              U3(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
+     &              U3(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ
+
+       U4(IX,JY,KZ)=U4(II,JJ,KK)      *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &              U4(IIP1,JJ,KK)    *  BASX  *(1-BASY)*(1-BASZ) +
+     &              U4(II,JJP1,KK)    *(1-BASX)*  BASY  *(1-BASZ) +
+     &              U4(IIP1,JJP1,KK)  *  BASX  *  BASY  *(1-BASZ) +
+     &              U4(II,JJ,KKP1)    *(1-BASX)*(1-BASY)*  BASZ   +
+     &              U4(IIP1,JJ,KKP1)  *  BASX  *(1-BASY)*  BASZ   +
+     &              U4(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
+     &              U4(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ     
+
+       L0(IX,JY,KZ)=L0(II,JJ,KK)      *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &              L0(IIP1,JJ,KK)    *  BASX  *(1-BASY)*(1-BASZ) +
+     &              L0(II,JJP1,KK)    *(1-BASX)*  BASY  *(1-BASZ) +
+     &              L0(IIP1,JJP1,KK)  *  BASX  *  BASY  *(1-BASZ) +
+     &              L0(II,JJ,KKP1)    *(1-BASX)*(1-BASY)*  BASZ   +
+     &              L0(IIP1,JJ,KKP1)  *  BASX  *(1-BASY)*  BASZ   +
+     &              L0(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
+     &              L0(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ   
+
+      END DO 
+      END DO
+      END DO
+      write(*,*) 'step 2 interp done'
+
+      ! 3. inside this region, we go cell by cell. (inside [II1,II2])
+
+      ! Load balancing
+      !ALLOCATE(LB())
+
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,II1,II2,JJ1,JJ2,KK1,KK2,RADX,RADY,
+!$OMP+                   RADZ,TREE,U2DM,U3DM,U4DM,L0,U2,U3,U4,
+!$OMP+                   KNEIGHBOURS,DX,CR0AMR),
+!$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,I),
+!$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
+      DO KZ=KK1,KK2
+      DO JY=JJ1,JJ2
+            !write(*,*) kz,jy
+      DO IX=II1,II2
+       IF (CR0AMR(IX,JY,KZ).EQ.1) THEN 
+        Q(1)=RADX(IX)
+        Q(2)=RADY(JY)
+        Q(3)=RADZ(KZ)
+
+        ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+        CALL TREE%SEARCH(Q,NEIGH,NGB_DIST=DIST)
+
+        IF (DIST(KNEIGHBOURS).GT.DX) THEN
+         CONTA=KNEIGHBOURS 
+        ELSE 
+         DEALLOCATE(DIST,NEIGH)
+         CALL TREE%RANGE_SEARCH(Q,NEIGH,DX,NGB_DIST=DIST,ngb_bunch=1000)
+         CONTA=SIZEOF(NEIGH)/SIZEOF(NEIGH(1))
+        END IF
+
+        !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
+        H_KERN=DIST(CONTA)
+        L0(IX,JY,KZ)=H_KERN
+
+        CALL KERNEL_CUBICSPLINE(CONTA,CONTA,H_KERN/2.,DIST)
+
+        BAS8=0.D0
+        BAS8X=0.D0
+        BAS8Y=0.D0
+        BAS8Z=0.D0
+        DO I=1,CONTA 
+         BAS8=BAS8+DIST(I)
+         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
+         BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
+         BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
+        END DO
+      
+        U2(IX,JY,KZ)=BAS8X/BAS8
+        U3(IX,JY,KZ)=BAS8Y/BAS8
+        U4(IX,JY,KZ)=BAS8Z/BAS8
+
+        DEALLOCATE(DIST, NEIGH)
+       END IF
+      END DO 
+      END DO 
+      END DO
+      write(*,*) 'step 3 done'
       
 
+      open(89,file='caca.dat',form='unformatted')
+       write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+       write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+       write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+       write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
+      close(89) 
 
 
+*     AMR levels 
+      DO IR=1,NL 
+       DXPA=DX/(2.**IR)
+       DYPA=DY/(2.**IR)
+       DZPA=DZ/(2.**IR)
 
-      STOP
+       LOW1=SUM(NPATCH(0:IR-1))+1
+       LOW2=SUM(NPATCH(0:IR))
+
+!$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
+!$OMP+                   RX,RY,RZ,TREE,U2DM,U3DM,U4DM,L1,U12,U13,U14,
+!$OMP+                   KNEIGHBOURS,DXPA,DX),
+!$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,Q,DIST,NEIGH,
+!$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,I),
+!$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
+       DO IPATCH=LOW1,LOW2 
+            !write(*,*) ir,ipatch
+        N1=PATCHNX(IPATCH)
+        N2=PATCHNY(IPATCH)
+        N3=PATCHNZ(IPATCH)
+
+        DO KZ=1,N3 
+        DO JY=1,N2 
+        DO IX=1,N1
+         IF (CR0AMR1(IX,JY,KZ,IPATCH).EQ.1) THEN
+          Q(1)=RX(IX,IPATCH)
+          Q(2)=RY(JY,IPATCH)
+          Q(3)=RZ(KZ,IPATCH)
+          
+          ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+          CALL TREE%SEARCH(Q,NEIGH,NGB_DIST=DIST)
+
+          IF (DIST(KNEIGHBOURS).GT.DXPA) THEN
+           CONTA=KNEIGHBOURS 
+          ELSE 
+           DEALLOCATE(DIST,NEIGH)
+           CALL TREE%RANGE_SEARCH(Q,NEIGH,DXPA,NGB_DIST=DIST,
+     &                            ngb_bunch=1000)
+           CONTA=SIZEOF(NEIGH)/SIZEOF(NEIGH(1))
+          END IF
+  
+          !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
+          H_KERN=DIST(CONTA)
+          L1(IX,JY,KZ,IPATCH)=H_KERN
+  
+          CALL KERNEL_CUBICSPLINE(CONTA,CONTA,H_KERN/2.,DIST)
+  
+          BAS8=0.D0
+          BAS8X=0.D0
+          BAS8Y=0.D0
+          BAS8Z=0.D0
+          DO I=1,CONTA 
+           BAS8=BAS8+DIST(I)
+           BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
+           BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
+           BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
+          END DO
+        
+          U12(IX,JY,KZ,IPATCH)=BAS8X/BAS8
+          U13(IX,JY,KZ,IPATCH)=BAS8Y/BAS8
+          U14(IX,JY,KZ,IPATCH)=BAS8Z/BAS8
+  
+          DEALLOCATE(DIST, NEIGH)
+
+         END IF
+        END DO 
+        END DO 
+        END DO
+       END DO 
+      END DO
 
 *     refill refined and overlapping cells
       DO IR=NL,1,-1
@@ -2701,7 +3150,7 @@ C     &            RHOB0,CONSTA_DENS
             JJ = PATCHY(ipatch) + int((J-1)/2)
             KK = PATCHZ(ipatch) + int((K-1)/2)
             if (jpatch.ne.0) then
-             uw(1:2,1:2,1:2) = u(1:2,1:2,1:2)
+             uw(1:2,1:2,1:2) = 1.
              u(1:2,1:2,1:2) = u12(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              u12(II,JJ,KK,JPATCH) = FUIN
@@ -2714,7 +3163,7 @@ C     &            RHOB0,CONSTA_DENS
              call finer_to_coarser(u,uw,fuin)
              u14(II,JJ,KK,JPATCH) = FUIN
             else
-             uw(1:2,1:2,1:2) = u(1:2,1:2,1:2)
+             uw(1:2,1:2,1:2) = 1.
              u(1:2,1:2,1:2) = u12(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              u2(II,JJ,KK) = FUIN
@@ -2734,6 +3183,7 @@ C     &            RHOB0,CONSTA_DENS
       END DO !IR=NL,1,-1
 
       write(*,*) 'At level', 0
+      write(*,*) 'L min,max',minval(l0),maxval(l0)
       write(*,*) 'vx min,max',minval(u2),maxval(u2)
       write(*,*) 'vy min,max',minval(u3),maxval(u3)
       write(*,*) 'vz min,max',minval(u4),maxval(u4)
@@ -2741,6 +3191,9 @@ C     &            RHOB0,CONSTA_DENS
       DO IR=1,NL
        low1=sum(npatch(0:ir-1))+1
        low2=sum(npatch(0:ir))
+       write(*,*) 'At level',ir
+       write(*,*) 'L min, max',minval(l1(:,:,:,low1:low2)),
+     &                          maxval(l1(:,:,:,low1:low2))
        write(*,*) 'vx min, max',minval(u12(:,:,:,low1:low2)),
      &                          maxval(u12(:,:,:,low1:low2))
        write(*,*) 'vy min, max',minval(u13(:,:,:,low1:low2)),

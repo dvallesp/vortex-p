@@ -486,9 +486,13 @@ c      DEALLOCATE(SCR4)
       INTEGER cr0amr1(NAMRX,NAMRY,NAMRZ,NPALEV)
       INTEGER solap(NAMRX,NAMRY,NAMRZ,NPALEV)
 
-      real u1(1:NMAX,1:NMAY,1:NMAZ)
-      real u11(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
-      common /dens/ u1,u11
+      real U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      real U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      real U4(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      real U12(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      real U13(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      real U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      COMMON /VELOC/ U2,U3,U4,U12,U13,U14
 
       INTEGER IX,JY,KZ,I,LOW1,LOW2,IR,IPATCH,J,K,N1,N2,N3
 
@@ -523,13 +527,17 @@ c      DEALLOCATE(SCR4)
        OPEN(99,FILE='output_files/'//FILNOMGRIDVARS,STATUS='UNKNOWN',
      &     FORM='UNFORMATTED')
 
-       write(99) (((u1(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       write(99) (((u2(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       write(99) (((u3(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       write(99) (((u4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
        write(99) (((cr0amr(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
        do ipatch=1,sum(npatch(0:nl))
         n1=patchnx(ipatch)
         n2=patchny(ipatch)
         n3=patchnz(ipatch)
-        write(99) (((u11(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
+        write(99) (((u12(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
+        write(99) (((u13(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
+        write(99) (((u14(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
         write(99) (((cr0amr1(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
         write(99) (((solap(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
        end do
