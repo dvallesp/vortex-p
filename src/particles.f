@@ -1486,7 +1486,7 @@ c     &                               maxval(u14(:,:,:,low1:low2))
       REAL DX,DY,DZ
       COMMON /ESPACIADO/ DX,DY,DZ
 
-      BORAMR=3
+      BORAMR=1
 
       DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
@@ -1655,14 +1655,6 @@ c     &                               maxval(u14(:,:,:,low1:low2))
         RXBAS=RX(IX-1:IX+1,IPATCH)
         RYBAS=RY(JY-1:JY+1,IPATCH)
         RZBAS=RZ(KZ-1:KZ+1,IPATCH)
-c        if (rxbas(1).gt.aaa.or.rxbas(3).lt.aaa.or.
-c     &      rybas(1).gt.bbb.or.rybas(3).lt.bbb.or.
-c     &      rzbas(1).gt.ccc.or.rzbas(3).lt.ccc ) then
-c         write(*,*) ip
-c         write(*,*) aaa,'-',(rxbas(ii),ii=1,3)
-c         write(*,*) bbb,'-',(rybas(ii),ii=1,3)
-c         write(*,*) ccc,'-',(rzbas(ii),ii=1,3)
-c        end if
 
         UBAS(1:3,1:3,1:3)=U12(IX-1:IX+1,JY-1:JY+1,KZ-1:KZ+1,IPATCH)
         CALL LININT52D_NEW_REAL(AAA,BBB,CCC,RXBAS,RYBAS,RZBAS,UBAS,
@@ -1715,12 +1707,9 @@ c        end if
 
 *     Save errors to a file
       CALL NOMFILE_PARTICLES_ERR(ITER,FILERR)
-
       OPEN(98,FILE='output_files/'//FILERR,STATUS='UNKNOWN',
      &     FORM='UNFORMATTED')
-
       WRITE(98) (ERR(IP),IP=1,SUM(NPART(0:NL)))
-
       CLOSE(98)
 
       RETURN
