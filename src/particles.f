@@ -2718,13 +2718,15 @@ C     &            RHOB0,CONSTA_DENS
 
       DEALLOCATE(NEIGH)
 
-      WRITE(*,*) I1,II1,II2,I2
-      WRITE(*,*) J1,JJ1,JJ2,J2
-      WRITE(*,*) K1,KK1,KK2,K2
+c      WRITE(*,*) I1,II1,II2,I2
+c      WRITE(*,*) J1,JJ1,JJ2,J2
+c      WRITE(*,*) K1,KK1,KK2,K2
 
 ************************
 *     BASE GRID
 ************************
+
+      WRITE(*,*) 'Base grid...',0
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,L0),
 !$OMP+            PRIVATE(IX,JY,KZ),
@@ -2797,14 +2799,6 @@ C     &            RHOB0,CONSTA_DENS
       END DO 
       END DO 
       END DO
-      write(*,*) 'step 1 done'
-
-      open(89,file='caca1.dat',form='unformatted')
-      write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      close(89) 
 
       ! Fill the blanks by interpolation
 
@@ -2870,14 +2864,6 @@ C     &            RHOB0,CONSTA_DENS
       END DO 
       END DO
       END DO
-      write(*,*) 'step 1-interp done'
-
-      open(89,file='caca1int.dat',form='unformatted')
-      write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      close(89) 
 
       ! 2. inside this domain, but outside the region defined by the
       ! 5-95 percentiles around each position, we go 2 cells by 2 cells.
@@ -2940,14 +2926,6 @@ C     &            RHOB0,CONSTA_DENS
       END DO 
       END DO 
       END DO
-      write(*,*) 'step 2 done'
-
-      open(89,file='caca2.dat',form='unformatted')
-      write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      close(89) 
 
       ! Fill the blanks by interpolation
 
@@ -3014,14 +2992,6 @@ C     &            RHOB0,CONSTA_DENS
       END DO 
       END DO
       END DO
-      write(*,*) 'step 2 interp done'
-
-      open(89,file='caca2int.dat',form='unformatted')
-      write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      close(89) 
 
       ! 3. inside this region, we go cell by cell. (inside [II1,II2])
 
@@ -3080,19 +3050,10 @@ C     &            RHOB0,CONSTA_DENS
       END DO 
       END DO 
       END DO
-      write(*,*) 'step 3 done'
-      
-
-      open(89,file='caca3.dat',form='unformatted')
-       write(89) (((l0(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-       write(89) (((u2(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-       write(89) (((u3(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-       write(89) (((u4(ix,jy,kz),kz=1,nz),jy=1,ny),ix=1,nx)
-      close(89) 
-
 
 *     AMR levels 
       DO IR=1,NL 
+       WRITE(*,*) 'AMR level...',IR
        DXPA=DX/(2.**IR)
        DYPA=DY/(2.**IR)
        DZPA=DZ/(2.**IR)
