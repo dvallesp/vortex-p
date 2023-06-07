@@ -1029,8 +1029,8 @@
 
 *      Outliers (cells where differentiation noise has produced large
 *      relative errors) get corrected by interpolation from coarser grids
-       CALL CORRECT_OUTLIERS(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,PATCHNZ,
-     &                       ERR_THR)
+c       CALL CORRECT_OUTLIERS(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,PATCHNZ,
+c     &                       ERR_THR)
 
         IF (FLAG_VERBOSE.EQ.1) THEN
           WRITE(*,*) '...Compressional velocity...'
