@@ -280,6 +280,7 @@
         DEALLOCATE(ELIM)
 
         LOW2=J
+        NPART(0)=LOW2 !Correct the number of particles!
 
        END IF
 
