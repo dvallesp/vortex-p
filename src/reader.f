@@ -126,7 +126,8 @@
 
 !      Particles
        REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
-     &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
+     &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM),
+     &        KERNEL(NDM)
 
        integer cr0amr(1:NMAX,1:NMAY,1:NMAZ)
        integer cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
@@ -206,6 +207,11 @@
         CALL read_float(FIL2,'MASS',SCR4,blocksize)
         WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
         MASAP(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+
+        WRITE(*,*) 'Reading filter length ...'
+        CALL read_float(FIL2,'HSML',SCR4,blocksize)
+        WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+        KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))        
         DEALLOCATE(SCR4)
 
        END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -234,6 +240,8 @@
      &                     MAXVAL(U4DM(LOW1:LOW2))
        WRITE(*,*) 'MASAP=',MINVAL(MASAP(LOW1:LOW2)),
      &                     MAXVAL(MASAP(LOW1:LOW2))
+       WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
+     &                             MAXVAL(KERNEL(LOW1:LOW2))
 
        IF (XMIN.LT.DDXL.OR.XMAX.GT.DDXR.OR.
      &     YMIN.LT.DDYL.OR.YMAX.GT.DDYR.OR.
@@ -266,6 +274,7 @@
             U3DM(J)=U3DM(I)
             U4DM(J)=U4DM(I)
             MASAP(J)=MASAP(I)
+            KERNEL(J)=KERNEL(I)
           END IF
         END DO
         DEALLOCATE(ELIM)
@@ -311,6 +320,8 @@
      &                     MAXVAL(U4DM(LOW1:LOW2))
        WRITE(*,*) 'MASAP=',MINVAL(MASAP(LOW1:LOW2)),
      &                     MAXVAL(MASAP(LOW1:LOW2))
+       WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
+     &                             MAXVAL(KERNEL(LOW1:LOW2))
        
 
        WRITE(*,*) 'Routine create mesh ------------------------------'
