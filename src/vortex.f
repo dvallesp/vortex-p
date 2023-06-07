@@ -165,7 +165,7 @@
 
        ! For the particles version
        REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
-     &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
+     &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM),KERNEL(NDM)
 
        ! grids
        INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
@@ -308,7 +308,7 @@
      &            NL,REFINE_THR,PARCHLIM,BORGRID,
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
      &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
-     &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM)
+     &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL)
 
 
 *      INITIALIZE VARIABLES TO ZERO
@@ -1058,7 +1058,8 @@ c     &                       ERR_THR)
            CALL WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &                          MASAP,U2DM,U3DM,U4DM,NPART,LADO0)
+     &                          MASAP,U2DM,U3DM,U4DM,KERNEL,
+     &                          NPART,LADO0)
           END IF
         END IF
 

@@ -683,7 +683,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
 ************************************************************************
       SUBROUTINE PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
+     &            KERNEL,NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
 ************************************************************************
 
       IMPLICIT NONE
@@ -695,7 +695,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
       INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
-      REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM)
+      REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),KERNEL(NDM)
       REAL LADO0
 
 *     Output variables
@@ -704,6 +704,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
 *     Local variables
       INTEGER IPATCH,IX,JY,KZ,BORAMR,IP,IR,LOW1,LOW2,N1,N2,N3,MARCA
+      INTEGER IRMAX
       REAL BASX,BASY,BASZ,DXPA,DYPA,DZPA
       REAL XL(NPALEV),XR(NPALEV),YL(NPALEV),YR(NPALEV),ZL(NPALEV),
      &     ZR(NPALEV)
@@ -737,14 +738,24 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
 !$OMP PARALLEL DO SHARED(NPART,NL,NPATCH,XL,XR,YL,YR,ZL,ZR,RXPA,RYPA,
 !$OMP+                   RZPA,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ,BORAMR,
-!$OMP+                   LADO0,DX,DY,DZ,NX,NY,NZ),
+!$OMP+                   LADO0,DX,DY,DZ,NX,NY,NZ,KERNEL),
 !$OMP+            PRIVATE(IP,MARCA,IR,LOW1,LOW2,IPATCH,DXPA,DYPA,DZPA,
-!$OMP+                    BASX,BASY,BASZ,IX,JY,KZ),
+!$OMP+                    BASX,BASY,BASZ,IX,JY,KZ,IRMAX),
 !$OMP+            DEFAULT(NONE)
       DO IP=1,SUM(NPART(0:NL))
        LIHAL(IP)=-1
        MARCA=0
-       levels: DO IR=NL,1,-1
+
+       ! Look for the finest patch tah contains the particle,
+       ! but not with a finer resolution than the SPH kernel length.
+       IF (KERNEL(IP).GT.DX) THEN
+        IRMAX=0 
+       ELSE
+        IRMAX=INT(LOG(DX/KERNEL(IP))/LOG(2.0))+1
+        IRMAX=MIN(IRMAX,NL)
+       END IF
+
+       levels: DO IR=IRMAX,1,-1
         LOW1=SUM(NPATCH(0:IR-1))+1
         LOW2=SUM(NPATCH(0:IR))
         patches: DO IPATCH=LOW1,LOW2

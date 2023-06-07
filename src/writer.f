@@ -556,7 +556,8 @@ c      DEALLOCATE(SCR4)
       SUBROUTINE WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                           PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                           PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &                           MASAP,U2DM,U3DM,U4DM,NPART,LADO0)
+     &                           MASAP,U2DM,U3DM,U4DM,KERNEL,
+     &                           NPART,LADO0)
 ***********************************************************************
 *     Writes the GRIDS and CR0AMR/SOLAP variables for the created AMR
 *     structure
@@ -572,7 +573,7 @@ c      DEALLOCATE(SCR4)
       INTEGER PARE(NPALEV)
 
       REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
-     &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
+     &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM),KERNEL(NDM)
 
       INTEGER LIHAL(NDM),LIHAL_IX(NDM),LIHAL_JY(NDM),LIHAL_KZ(NDM)
       REAL SCRPART(NDM)
@@ -627,7 +628,7 @@ c      DEALLOCATE(SCR4)
 
       CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
+     &            KERNEL,NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
 
 
       CALL GRID_TO_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
