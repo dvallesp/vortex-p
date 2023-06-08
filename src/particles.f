@@ -1073,6 +1073,47 @@ C        WRITE(*,*) LVAL(I,IPARE)
       RETURN
       END
 
+************************************************************************
+      SUBROUTINE KERNEL_WENDLAND_C4(N,N2,W,DIST)
+************************************************************************
+*     DIST contains initially the distance (particle to cell), and it is
+*     updated with the (unnormalised) value of the kernel
+      IMPLICIT NONE
+      INTEGER N,N2 ! N is the dimension of the array dist;
+                   ! N2, the actual number of particles filled in
+      REAL W,DIST(N)
+
+      REAL DISTS
+      INTEGER I
+
+      DO I=1,N2
+       DISTS=DIST(I)/W
+       IF (DISTS.LE.2.0) THEN
+        DIST(I)=(1. - .5*DISTS)**6 * (35./12.*DISTS**2 + 3.*DISTS + 1.)
+       ELSE
+        DIST(I)=0.0
+       END IF
+      END DO
+
+      RETURN
+      END
+
+************************************************************************
+      SUBROUTINE KERNEL(N,N2,W,DIST)
+************************************************************************
+*     DIST contains initially the distance (particle to cell), and it is
+*     updated with the (unnormalised) value of the kernel
+      IMPLICIT NONE
+      INTEGER N,N2 ! N is the dimension of the array dist;
+                   ! N2, the actual number of particles filled in
+      REAL W,DIST(N)
+
+C      CALL KERNEL_CUBICSPLINE(N,N2,W,DIST)
+      CALL KERNEL_WENDLAND_C4(N,N2,W,DIST)
+
+      RETURN
+      END
+
 
 
 ************************************************************************
@@ -2004,7 +2045,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL_CUBICSPLINE(CONTA,CONTA,H_KERN/2.,DIST)
+       CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST)
 
        BAS8=0.D0
        BAS8X=0.D0
@@ -2131,7 +2172,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL_CUBICSPLINE(CONTA,CONTA,H_KERN/2.,DIST)
+       CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST)
 
        BAS8=0.D0
        BAS8X=0.D0
@@ -2254,7 +2295,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         H_KERN=DIST(CONTA)
         L0(IX,JY,KZ)=H_KERN
 
-        CALL KERNEL_CUBICSPLINE(CONTA,CONTA,H_KERN/2.,DIST)
+        CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST)
 
         BAS8=0.D0
         BAS8X=0.D0
@@ -2323,7 +2364,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           H_KERN=DIST(CONTA)
           L1(IX,JY,KZ,IPATCH)=H_KERN
   
-          CALL KERNEL_CUBICSPLINE(CONTA,CONTA,H_KERN/2.,DIST)
+          CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST)
   
           BAS8=0.D0
           BAS8X=0.D0
