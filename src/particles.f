@@ -1115,7 +1115,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
        DISTS=DIST(I)/W
        IF (DISTS.LE.2.0) THEN
         DIST(I)=(1. - .5*DISTS)**8 * (4.*DISTS**3 + 25./4.*DISTS**2 +
-     &                                4.*DISTS + 3.)
+     &                                4.*DISTS + 1.)
        ELSE
         DIST(I)=0.0
        END IF
