@@ -1099,6 +1099,32 @@ C        WRITE(*,*) LVAL(I,IPARE)
       END
 
 ************************************************************************
+      SUBROUTINE KERNEL_WENDLAND_C6(N,N2,W,DIST)
+************************************************************************
+*     DIST contains initially the distance (particle to cell), and it is
+*     updated with the (unnormalised) value of the kernel
+      IMPLICIT NONE
+      INTEGER N,N2 ! N is the dimension of the array dist;
+                   ! N2, the actual number of particles filled in
+      REAL W,DIST(N)
+
+      REAL DISTS
+      INTEGER I
+
+      DO I=1,N2
+       DISTS=DIST(I)/W
+       IF (DISTS.LE.2.0) THEN
+        DIST(I)=(1. - .5*DISTS)**8 * (4.*DISTS**3 + 25./4.*DISTS**2 +
+     &                                4.*DISTS + 3.)
+       ELSE
+        DIST(I)=0.0
+       END IF
+      END DO
+
+      RETURN
+      END
+
+************************************************************************
       SUBROUTINE KERNEL(N,N2,W,DIST)
 ************************************************************************
 *     DIST contains initially the distance (particle to cell), and it is
@@ -1108,8 +1134,8 @@ C        WRITE(*,*) LVAL(I,IPARE)
                    ! N2, the actual number of particles filled in
       REAL W,DIST(N)
 
-C      CALL KERNEL_CUBICSPLINE(N,N2,W,DIST)
-      CALL KERNEL_WENDLAND_C4(N,N2,W,DIST)
+      CALL KERNEL_CUBICSPLINE(N,N2,W,DIST)
+C      CALL KERNEL_WENDLAND_C4(N,N2,W,DIST)
 
       RETURN
       END
@@ -1898,7 +1924,7 @@ C      CALL KERNEL_CUBICSPLINE(N,N2,W,DIST)
 
       integer omp_get_thread_num
 
-      KNEIGHBOURS=32 !NUMBER OF PARTICLES INSIDE THE KERNEL
+      KNEIGHBOURS=295 !NUMBER OF PARTICLES INSIDE THE KERNEL
 
       MEDIOLADO0=0.5*LADO0
       PI=ACOS(-1.0)
@@ -2011,10 +2037,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       STEP=4
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
-!$OMP+                   RADZ,TREE,U2DM,U3DM,U4DM,L0,U2,U3,U4,
+!$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
 !$OMP+                   KNEIGHBOURS,DX),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,I),
+!$OMP+            FIRSTPRIVATE(TREE),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
       DO KZ=1,NZ,STEP
       DO JY=1,NY,STEP
@@ -2138,10 +2165,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       STEP=2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,II1,II2,JJ1,
-!$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,TREE,U2DM,U3DM,
+!$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,U2DM,U3DM,
 !$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,I),
+!$OMP+            FIRSTPRIVATE(TREE),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
       DO KZ=K1,K2,STEP
       DO JY=J1,J2,STEP
@@ -2266,10 +2294,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       !ALLOCATE(LB())
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,II1,II2,JJ1,JJ2,KK1,KK2,RADX,RADY,
-!$OMP+                   RADZ,TREE,U2DM,U3DM,U4DM,L0,U2,U3,U4,
+!$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
 !$OMP+                   KNEIGHBOURS,DX,CR0AMR),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,I),
+!$OMP+            FIRSTPRIVATE(TREE),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
       DO KZ=KK1,KK2
       DO JY=JJ1,JJ2
@@ -2329,10 +2358,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        LOW2=SUM(NPATCH(0:IR))
 
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
-!$OMP+                   RX,RY,RZ,TREE,U2DM,U3DM,U4DM,L1,U12,U13,U14,
+!$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
 !$OMP+                   KNEIGHBOURS,DXPA,DX),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,Q,DIST,NEIGH,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,I),
+!$OMP+            FIRSTPRIVATE(TREE),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
        DO IPATCH=LOW1,LOW2 
             !write(*,*) ir,ipatch
