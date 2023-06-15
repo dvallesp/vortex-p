@@ -127,6 +127,8 @@
      &                            flag_feedback,nall,cooling_flag,
      &                            numfiles,boxsize,Omega0,OmegaL0,
      &                            Hubblepar
+        ELSE 
+         WRITE(*,*) 'Block',filename,'not found'
         END IF
         CLOSE (lun)
       END SUBROUTINE read_head 
