@@ -1054,13 +1054,13 @@ c     &                       ERR_THR)
         IF (FLAG_W_VELOCITIES.EQ.1) THEN
           CALL WRITE_VELOCITIES(FILERR5,NX,NY,NZ,ITER,T,ZETA,NL,
      &                          NPATCH, PATCHNX,PATCHNY,PATCHNZ)
-          IF (FLAG_PARTICLES.EQ.1) THEN
+C          IF (FLAG_PARTICLES.EQ.1) THEN
            CALL WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
      &                          MASAP,U2DM,U3DM,U4DM,KERNEL,
      &                          NPART,LADO0)
-          END IF
+C          END IF
         END IF
 
 *//////////////////////////////////// ! DO IFI=1,NFILE
