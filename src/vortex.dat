@@ -4,26 +4,26 @@
 *       General parameters block                                      *
 ***********************************************************************
 Files: first, last, every, num files per snapshot -------------------->
-144,144,1,2
+0,0,1,1
 Cells per direction (NX,NY,NZ) --------------------------------------->
 128,128,128
 Max box sidelength (in input length units) --------------------------->
-50.e3
+1.
 Output flags (1=yes; 0=no): verbose, write div/rot, write pot, write v>
 1,1,1,1
 Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
--25.e3,25.e3,-25.e3,25.e3,-25.e3,25.e3
+0.,1.,0.,1.,0.,1.
 ***********************************************************************
 *       Mesh creation parameters                                      *
 ***********************************************************************
 Number of levels ----------------------------------------------------->
 9
 Number of particles for a cell to be refinable ----------------------->
-20
+10
 Minimum size of a refinement patch to be accepted -------------------->
 6
 Cells not to be refined from the border ------------------------------>
-32
+2
 ***********************************************************************
 *       Poisson solver                                                *
 ***********************************************************************
