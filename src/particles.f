@@ -1975,7 +1975,7 @@ C     &            RHOB0,CONSTA_DENS
 *     3) inside this region, we go cell by cell. (inside [II1,II2])
 
       ALLOCATE(NEIGH(NPART_TOT))
-      FRAC_INT=0.05
+      FRAC_INT=0.01
       
 *     X      
       CALL ARGSORT(NPART_TOT,RXPA(1:NPART_TOT),NEIGH)
