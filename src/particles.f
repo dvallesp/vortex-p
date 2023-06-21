@@ -54,7 +54,13 @@ C      INTEGER PLEV(NDM)
       INTEGER,ALLOCATABLE::LPATCHX(:,:),LPATCHY(:,:),LPATCHZ(:,:)
       REAL,ALLOCATABLE::LPATCHRX(:,:),LPATCHRY(:,:),LPATCHRZ(:,:)
       INTEGER,ALLOCATABLE::LVAL(:,:)
-
+      
+      IF (NL_MESH.EQ.0) THEN
+       NPATCH(:)=0
+       CR0AMR(1:NX,1:NY,1:NZ)=1
+       RETURN
+      END IF
+      
 !     hard-coded parameters (for now, at least)
       BORAMR=0
       INI_EXTENSION=0 !initial extension of a patch around a cell (on each direction)
