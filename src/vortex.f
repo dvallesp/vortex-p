@@ -1075,7 +1075,7 @@ C          END IF
 
       !!!! FUNCTIONS in EXTERNAL FILES
 *     Differential operators
-      INCLUDE 'diff_ho.f' ! diff.f for first order
+      INCLUDE 'diff.f' ! diff_ho.f for first order
 *     Filenames
       INCLUDE 'nomfile.f'
 *     Build the base and AMR grids
