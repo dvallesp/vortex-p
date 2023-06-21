@@ -1,4 +1,69 @@
 ***********************************************************************
+       SUBROUTINE ROTARY_2(NX,NY,NZ,NL,NPATCH,
+     &            PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &            PATCHRX,PATCHRY,PATCHRZ)
+***********************************************************************
+*     Computes the rotational of the velocity field (U2,U3,U4,U12,U13,
+*     U14) using a first-order centered scheme.
+************************************************************************
+
+       IMPLICIT NONE
+
+       INCLUDE 'vortex_parameters.dat'
+
+       INTEGER NX,NY,NZ,I,J,K,IR,IX,JY,KZ
+       INTEGER NL,N1,N2,N3,L1,L2,L3
+       INTEGER II,JJ,KK,LOW1, LOW2
+
+       real  RADX(0:NMAX+1),RADMX(0:NMAX+1),
+     &         RADY(0:NMAY+1),RADMY(0:NMAY+1),
+     &         RADZ(0:NMAZ+1),RADMZ(0:NMAZ+1)
+       COMMON /GRID/   RADX,RADMX,RADY,RADMY,RADZ,RADMZ
+
+       real U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+       real U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+       real U4(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+       real U12(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+       real U13(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+       real U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+       COMMON /VELOC/ U2,U3,U4,U12,U13,U14
+
+       real ROTAX_0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+       real ROTAY_0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+       real ROTAZ_0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+       real ROTAX_1(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
+       real ROTAY_1(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
+       real ROTAZ_1(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
+       COMMON /ROTS/ ROTAX_0,ROTAY_0,ROTAZ_0,ROTAX_1,ROTAY_1,ROTAZ_1
+
+       real DX,DY,DZ
+       COMMON /ESPACIADO/ DX,DY,DZ
+
+       INTEGER NPATCH(0:NLEVELS),PARE(NPALEV)
+       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
+       INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
+       real  PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
+
+       real DXPA,DYPA,DZPA,XXX1,YYY1,ZZZ1
+       real BAS21,BAS32,BAS33,BAS43,AAA,BBB,CCC
+       INTEGER CR1,CR2,CR3
+       INTEGER MARK,ABUELO,KR1,KR2,KR3,IR_ABUE
+
+*      ---PARALLEL---
+       INTEGER NUM,OMP_GET_NUM_THREADS,NUMOR, FLAG_PARALLEL
+       COMMON /PROCESADORES/ NUM
+       
+       call ROTARY(NX,NY,NZ,NL,NPATCH,
+     &            PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &            PATCHRX,PATCHRY,PATCHRZ)
+     
+       return
+       
+       end
+
+
+
+***********************************************************************
        SUBROUTINE ROTARY(NX,NY,NZ,NL,NPATCH,
      &            PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ)
