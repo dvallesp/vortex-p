@@ -1853,7 +1853,7 @@ C      CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
       SUBROUTINE INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,MACH)
+     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC)
 ************************************************************************
 *     Compute the velocity field on the grid
 ************************************************************************
@@ -1871,7 +1871,7 @@ C      CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
       REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
      &       U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
-      REAL*4 MACH(NDM)
+      REAL*4 ABVC(NDM)
       REAL LADO0
       INTEGER FLAG_FILTER
 
@@ -1905,8 +1905,8 @@ C      CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
       REAL U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
       COMMON /VELOC/ U2,U3,U4,U12,U13,U14
 
-      REAL MACH0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
-      REAL MACH1(NAMRX,NAMRY,NAMRZ,NPALEV)
+      REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
 
       !real u1(1:NMAX,1:NMAY,1:NMAZ)
       !real u11(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
@@ -2050,7 +2050,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
-!$OMP+                   KNEIGHBOURS,DX,MACH0,MACH),
+!$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2095,12 +2095,12 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
         BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
         BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
-        BAS8M=BAS8M+DIST(I)*MACH(NEIGH(I))
+        BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
        END DO
        U2(IX,JY,KZ)=BAS8X/BAS8
        U3(IX,JY,KZ)=BAS8Y/BAS8
        U4(IX,JY,KZ)=BAS8Z/BAS8
-       MACH0(IX,JY,KZ)=BAS8M/BAS8
+       VISC0(IX,JY,KZ)=BAS8M/BAS8
 
        DEALLOCATE(DIST, NEIGH)
       END DO 
@@ -2110,7 +2110,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       ! Fill the blanks by interpolation
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
-!$OMP+                   RADZ,U2,U3,U4,L0,DX,DY,DZ,MACH0),
+!$OMP+                   RADZ,U2,U3,U4,L0,DX,DY,DZ,VISC0),
 !$OMP+            PRIVATE(IX,JY,KZ,II,JJ,KK,IIP1,JJP1,KKP1,BASX,BASY,
 !$OMP+                    BASZ),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
@@ -2168,14 +2168,14 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &              L0(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
      &              L0(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ  
      
-       MACH0(IX,JY,KZ)=MACH0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
-     &                 MACH0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
-     &                 MACH0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
-     &                 MACH0(IIP1,JJP1,KK)* BASX * BASY *(1-BASZ) +
-     &                 MACH0(II,JJ,KKP1)*(1-BASX)*(1-BASY)* BASZ  +
-     &                 MACH0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
-     &                 MACH0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
-     &                 MACH0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
+       VISC0(IX,JY,KZ)=VISC0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &                 VISC0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
+     &                 VISC0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
+     &                 VISC0(IIP1,JJP1,KK)* BASX * BASY *(1-BASZ) +
+     &                 VISC0(II,JJ,KKP1)*(1-BASX)*(1-BASY)* BASZ  +
+     &                 VISC0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
+     &                 VISC0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
+     &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
 
       END DO 
       END DO 
@@ -2188,7 +2188,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,II1,II2,JJ1,
 !$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,U2DM,U3DM,
-!$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,MACH0,MACH),
+!$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,VISC0,ABVC),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2234,13 +2234,13 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
         BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
         BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
-        BAS8M=BAS8M+DIST(I)*MACH(NEIGH(I))
+        BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
        END DO
        
        U2(IX,JY,KZ)=BAS8X/BAS8
        U3(IX,JY,KZ)=BAS8Y/BAS8
        U4(IX,JY,KZ)=BAS8Z/BAS8
-       MACH0(IX,JY,KZ)=BAS8M/BAS8
+       VISC0(IX,JY,KZ)=BAS8M/BAS8
 
        DEALLOCATE(DIST, NEIGH)
       END DO 
@@ -2251,7 +2251,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,II1,II2,JJ1,JJ2,KK1,KK2,RADX,
 !$OMP+                   RADY,RADZ,U2,U3,U4,L0,DX,DY,DZ,I1,I2,J1,J2,K1,
-!$OMP+                   K2,MACH0),
+!$OMP+                   K2,VISC0),
 !$OMP+            PRIVATE(IX,JY,KZ,II,JJ,KK,IIP1,JJP1,KKP1,BASX,BASY,
 !$OMP+                    BASZ),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
@@ -2309,14 +2309,14 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &              L0(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
      &              L0(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ  
      
-       MACH0(IX,JY,KZ)=MACH0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
-     &                 MACH0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
-     &                 MACH0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
-     &                 MACH0(IIP1,JJP1,KK)* BASX * BASY *(1-BASZ) +
-     &                 MACH0(II,JJ,KKP1)*(1-BASX)*(1-BASY)* BASZ  +
-     &                 MACH0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
-     &                 MACH0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
-     &                 MACH0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
+       VISC0(IX,JY,KZ)=VISC0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &                 VISC0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
+     &                 VISC0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
+     &                 VISC0(IIP1,JJP1,KK)* BASX * BASY *(1-BASZ) +
+     &                 VISC0(II,JJ,KKP1)*(1-BASX)*(1-BASY)* BASZ  +
+     &                 VISC0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
+     &                 VISC0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
+     &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
 
       END DO 
       END DO
@@ -2329,7 +2329,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,II1,II2,JJ1,JJ2,KK1,KK2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
-!$OMP+                   KNEIGHBOURS,DX,CR0AMR,MACH0,MACH),
+!$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2370,13 +2370,13 @@ c      WRITE(*,*) K1,KK1,KK2,K2
          BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
          BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
          BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
-         BAS8M=BAS8M+DIST(I)*MACH(NEIGH(I))
+         BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
         END DO
       
         U2(IX,JY,KZ)=BAS8X/BAS8
         U3(IX,JY,KZ)=BAS8Y/BAS8
         U4(IX,JY,KZ)=BAS8Z/BAS8
-        MACH0(IX,JY,KZ)=BAS8M/BAS8
+        VISC0(IX,JY,KZ)=BAS8M/BAS8
 
         DEALLOCATE(DIST, NEIGH)
        END IF
@@ -2396,7 +2396,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
 !$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
-!$OMP+                   KNEIGHBOURS,DXPA,DX,MACH1,MACH),
+!$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,Q,DIST,NEIGH,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2443,13 +2443,13 @@ c      WRITE(*,*) K1,KK1,KK2,K2
            BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
            BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
            BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
-           BAS8M=BAS8M+DIST(I)*MACH(NEIGH(I))
+           BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
           END DO
         
           U12(IX,JY,KZ,IPATCH)=BAS8X/BAS8
           U13(IX,JY,KZ,IPATCH)=BAS8Y/BAS8
           U14(IX,JY,KZ,IPATCH)=BAS8Z/BAS8
-          MACH1(IX,JY,KZ,IPATCH)=BAS8M/BAS8
+          VISC1(IX,JY,KZ,IPATCH)=BAS8M/BAS8
   
           DEALLOCATE(DIST, NEIGH)
 
@@ -2476,7 +2476,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &    U14(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
         CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
-     &    MACH1(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
+     &    VISC1(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
 
         LOW1=SUM(NPATCH(0:IR-1))+1
         LOW2=SUM(NPATCH(0:IR))
@@ -2511,9 +2511,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
              call finer_to_coarser(u,uw,fuin)
              u14(II,JJ,KK,JPATCH) = FUIN
 
-             u(1:2,1:2,1:2) = MACH1(I:I+1,J:J+1,K:K+1,IPATCH)
+             u(1:2,1:2,1:2) = VISC1(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
-             MACH1(II,JJ,KK,JPATCH) = FUIN
+             VISC1(II,JJ,KK,JPATCH) = FUIN
             else
              uw(1:2,1:2,1:2) = 1.
 
@@ -2533,9 +2533,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
              call finer_to_coarser(u,uw,fuin)
              u4(II,JJ,KK) = FUIN
 
-             u(1:2,1:2,1:2) = mach1(I:I+1,J:J+1,K:K+1,IPATCH)
+             u(1:2,1:2,1:2) = VISC1(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
-             mach0(II,JJ,KK) = FUIN
+             VISC0(II,JJ,KK) = FUIN
             end if
           END DO
           END DO
@@ -2556,7 +2556,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,0,BASX,BASY)
       write(*,*) 'vz min,max',BASX,BASY
-      CALL P_MINMAX_IR(MACH0,MACH1,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,
+      CALL P_MINMAX_IR(VISC0,VISC1,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,0,BASX,BASY)
       write(*,*) 'MACH min,max',BASX,BASY
 
@@ -2577,7 +2577,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,IR,BASX,BASY)
        write(*,*) 'vz min,max',BASX,BASY
-       CALL P_MINMAX_IR(MACH0,MACH1,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,
+       CALL P_MINMAX_IR(VISC0,VISC1,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,IR,BASX,BASY)
        write(*,*) 'MACH min,max',BASX,BASY
       END DO
@@ -2585,7 +2585,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,CR0AMR,CR0AMR1,
-     &                          SOLAP,L0,L1,MACH0,MACH1)
+     &                          SOLAP,L0,L1,VISC0,VISC1)
 
       RETURN
       END

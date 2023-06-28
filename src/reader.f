@@ -159,7 +159,7 @@
        character*4 blocklabel
        ! End scratch variables for reading
 
-       REAL*4 MACH(NDM)
+       REAL*4 ABVC(NDM)
 
        real xmin,ymin,zmin,xmax,ymax,zmax
 
@@ -219,10 +219,10 @@
 
         IF (FLAG_FILTER.EQ.1) THEN
           ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
-          WRITE(*,*) 'Reading MACH ...'
-          CALL read_float(FIL2,'MACH',SCR4,blocksize)
+          WRITE(*,*) 'Reading ABVC ...'
+          CALL read_float(FIL2,'ABVC',SCR4,blocksize)
           WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-          MACH(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
+          ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
           DEALLOCATE(SCR4)      
         END IF
 
@@ -255,8 +255,8 @@
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
        IF (FLAG_FILTER.EQ.1) THEN
-        WRITE(*,*) 'MACH=',MINVAL(MACH(LOW1:LOW2)),
-     &                     MAXVAL(MACH(LOW1:LOW2))
+        WRITE(*,*) 'ABVC=',MINVAL(ABVC(LOW1:LOW2)),
+     &                     MAXVAL(ABVC(LOW1:LOW2))
        END IF
 
        IF (XMIN.LT.DDXL.OR.XMAX.GT.DDXR.OR.
@@ -291,7 +291,7 @@
             U4DM(J)=U4DM(I)
             MASAP(J)=MASAP(I)
             KERNEL(J)=KERNEL(I)
-            IF (FLAG_FILTER.EQ.1) MACH(J)=MACH(I)
+            IF (FLAG_FILTER.EQ.1) ABVC(J)=ABVC(I)
           END IF
         END DO
         DEALLOCATE(ELIM)
@@ -341,8 +341,8 @@
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
        IF (FLAG_FILTER.EQ.1) THEN
-        WRITE(*,*) 'MACH=',MINVAL(MACH(LOW1:LOW2)),
-     &                       MAXVAL(MACH(LOW1:LOW2))
+        WRITE(*,*) 'ABVC=',MINVAL(ABVC(LOW1:LOW2)),
+     &                     MAXVAL(ABVC(LOW1:LOW2))
        END IF
        
 
@@ -367,7 +367,7 @@
        CALL INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,MACH)
+     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC)
 
        WRITE(*,*) 'Locating particles onto the grid'
        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
