@@ -125,6 +125,10 @@
        real U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
        COMMON /VELOC/ U2,U3,U4,U12,U13,U14
 
+       INTEGER*1 SHOCK0(1:NMAX,1:NMAY,1:NMAZ)
+       INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+       COMMON /SHOCKED/ SHOCK0,SHOCK1
+
 !      Particles
        REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
      &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM),
@@ -380,7 +384,33 @@
      &            LIHAL_KZ)
        WRITE(*,*) 'End velocity interpolation -----------------------'
 
+       IF (FLAG_FILTER.EQ.1) THEN 
+        CALL IDENTIFY_SHOCKS(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,
+     &                       PATCHNZ,PATCHRX,PATCHRY,PATCHRZ)
+       END IF
+
        stop
 
        RETURN
        END
+
+***********************************************************************
+       SUBROUTINE IDENTIFY_SHOCKS(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
+     &                            PATCHNY,PATCHNZ,PATCHRX,PATCHRY,
+     &                            PATCHRZ)
+***********************************************************************
+*      For the multiscale filter, an indication of (strong) shocked
+*       cells is required. This routine does that job by using a
+*       combination of velocity divergence and artificial bulk 
+*       viscosity constant.
+***********************************************************************
+
+      IMPLICIT NONE 
+      INCLUDE 'vortex_parameters.dat'
+      INTEGER NX,NY,NZ,NL 
+      INTEGER NPATCH(0:NLEVELS),PARE(NPALEV),PATCHNX(NPALEV),
+     &        PATCHNY(NPALEV),PATCHNZ(NPALEV)
+      REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
+
+      RETURN 
+      END 
