@@ -69,7 +69,8 @@
      &            NL_PARTICLE_GRID,REFINE_THR,PARCHLIM,BORGRID,
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
-     &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL)
+     &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
+     &            FLAG_FILTER)
 ***********************************************************************
 *     Reads the GAS particles of the simulation, builds a set of AMR
 *     grids and interpolates a continuous velocity field.
@@ -99,7 +100,7 @@
        INTEGER REFINE_THR,PARCHLIM,BORGRID
 
        INTEGER FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
-     &         FLAG_W_VELOCITIES
+     &         FLAG_W_VELOCITIES,FLAG_FILTER
        COMMON /FLAGS/ FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
      &                FLAG_W_VELOCITIES
 
@@ -158,6 +159,8 @@
        character*4 blocklabel
        ! End scratch variables for reading
 
+       REAL*4 MACH(NDM)
+
        real xmin,ymin,zmin,xmax,ymax,zmax
 
        NPART(:)=0
@@ -211,8 +214,17 @@
         WRITE(*,*) 'Reading filter length ...'
         CALL read_float(FIL2,'HSML',SCR4,blocksize)
         WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-        KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))        
-        DEALLOCATE(SCR4)
+        KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
+        DEALLOCATE(SCR4)       
+
+        IF (FLAG_FILTER.EQ.1) THEN
+          ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+          WRITE(*,*) 'Reading MACH ...'
+          CALL read_float(FIL2,'MACH',SCR4,blocksize)
+          WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+          MACH(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
+          DEALLOCATE(SCR4)      
+        END IF
 
        END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        
@@ -242,6 +254,10 @@
      &                     MAXVAL(MASAP(LOW1:LOW2))
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
+       IF (FLAG_FILTER.EQ.1) THEN
+        WRITE(*,*) 'MACH=',MINVAL(MACH(LOW1:LOW2)),
+     &                     MAXVAL(MACH(LOW1:LOW2))
+       END IF
 
        IF (XMIN.LT.DDXL.OR.XMAX.GT.DDXR.OR.
      &     YMIN.LT.DDYL.OR.YMAX.GT.DDYR.OR.
@@ -275,6 +291,7 @@
             U4DM(J)=U4DM(I)
             MASAP(J)=MASAP(I)
             KERNEL(J)=KERNEL(I)
+            IF (FLAG_FILTER.EQ.1) MACH(J)=MACH(I)
           END IF
         END DO
         DEALLOCATE(ELIM)
@@ -323,6 +340,10 @@
      &                     MAXVAL(MASAP(LOW1:LOW2))
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
+       IF (FLAG_FILTER.EQ.1) THEN
+        WRITE(*,*) 'MACH=',MINVAL(MACH(LOW1:LOW2)),
+     &                       MAXVAL(MACH(LOW1:LOW2))
+       END IF
        
 
        WRITE(*,*) 'Routine create mesh ------------------------------'
@@ -346,7 +367,7 @@
        CALL INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0)
+     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,MACH)
 
        WRITE(*,*) 'Locating particles onto the grid'
        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
@@ -358,6 +379,8 @@
      &            U2DM,U3DM,U4DM,NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,
      &            LIHAL_KZ)
        WRITE(*,*) 'End velocity interpolation -----------------------'
+
+       stop
 
        RETURN
        END

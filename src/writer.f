@@ -467,7 +467,7 @@ c      DEALLOCATE(SCR4)
       SUBROUTINE WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,
      &                          PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &                          PATCHRX,PATCHRY,PATCHRZ,PARE,CR0AMR,
-     &                          CR0AMR1,SOLAP,L0,L1)
+     &                          CR0AMR1,SOLAP,L0,L1,MACH0,MACH1)
 ***********************************************************************
 *     Writes the GRIDS and CR0AMR/SOLAP variables for the created AMR
 *     structure
@@ -486,8 +486,11 @@ c      DEALLOCATE(SCR4)
       INTEGER cr0amr1(NAMRX,NAMRY,NAMRZ,NPALEV)
       INTEGER solap(NAMRX,NAMRY,NAMRZ,NPALEV)
 
-      REAL L0(NMAX,NMAY,NMAZ)
+      REAL L0(NMAX+1,NMAY+1,NMAZ+1)
       REAL L1(NAMRX,NAMRY,NAMRZ,NPALEV)
+
+      REAL MACH0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL MACH1(NAMRX,NAMRY,NAMRZ,NPALEV)
 
       real U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       real U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
@@ -534,6 +537,7 @@ c      DEALLOCATE(SCR4)
        write(99) (((u2(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
        write(99) (((u3(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
        write(99) (((u4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       write(99) (((mach0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
        write(99) (((cr0amr(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
        do ipatch=1,sum(npatch(0:nl))
         n1=patchnx(ipatch)
@@ -543,6 +547,7 @@ c      DEALLOCATE(SCR4)
         write(99) (((u12(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
         write(99) (((u13(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
         write(99) (((u14(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
+        write(99) (((mach1(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
         write(99) (((cr0amr1(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
         write(99) (((solap(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
        end do
