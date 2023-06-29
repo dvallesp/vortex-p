@@ -45,3 +45,10 @@ Output filtering lengths (separate file) ----------------------------->
 0
 Filtering parameters: tolerance, growing step, max. num. of its. ----->
 0.1,1.05,200
+***********************************************************************
+*       On-the-fly shock detection (for multifiltering)               *
+***********************************************************************
+Threshold on velocity divergence (negative, input units) ------------->
+-0.5
+Threshold on artificial bulk viscosity constant ---------------------->
+0.75

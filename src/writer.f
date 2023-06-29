@@ -773,3 +773,50 @@ c      DEALLOCATE(SCR4)
       CLOSE(25)
 
       END
+
+**********************************************************************
+       SUBROUTINE WRITE_SHOCKED(NX,NY,NZ,ITER,NL,NPATCH,
+     &            PATCHNX,PATCHNY,PATCHNZ,SHOCK0,SHOCK1)
+***********************************************************************
+*     Writes the filter length to a separate file.
+***********************************************************************
+      IMPLICIT NONE
+
+      INCLUDE 'vortex_parameters.dat'
+
+*     FUNCTION ARGUMENTS
+      CHARACTER*200 FILERR5
+      CHARACTER*5 ITER_STRING
+      INTEGER NX, NY, NZ, NL, ITER
+      INTEGER NPATCH(0:NLEVELS)
+      INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
+      INTEGER*1 SHOCK0(1:NMAX,1:NMAY,1:NMAZ)
+      INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+
+*     VARIABLES
+      INTEGER IR, I, LOW1, LOW2, IX, J, K, N1, N2, N3
+
+*     OPEN THE OUTPUT FILE
+      WRITE(ITER_STRING,'(I5.5)') ITER
+      FILERR5='./output_files/shocked_'//ITER_STRING
+      
+      OPEN(25,FILE=FILERR5,STATUS='UNKNOWN',FORM='UNFORMATTED')
+
+*     WRITE THE 'COHERENCE' LENGTH
+
+      WRITE(25) (((SHOCK0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+
+      DO IR=1,NL
+        LOW1=SUM(NPATCH(0:IR-1))+1
+        LOW2=SUM(NPATCH(0:IR))
+        DO I=LOW1,LOW2
+          N1=PATCHNX(I)
+          N2=PATCHNY(I)
+          N3=PATCHNZ(I)
+          WRITE(25) (((SHOCK1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        END DO
+      END DO
+
+      CLOSE(25)
+
+      END

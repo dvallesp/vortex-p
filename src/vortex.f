@@ -154,10 +154,11 @@
        INTEGER I,J,K,LOW1,LOW2,II,JJ,IX,JY,KZ,NL,IR,N1,N2,N3,FILT_MAXIT
        INTEGER NFILE,FIRST,EVERY,IFI,LAST,BOR,KNEIGHBOURS,IKERNEL
        INTEGER FILES_PER_SNAP,NL_INPUT,PARCHLIM,BORGRID,REFINE_THR
-       real ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
+       REAL ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
        REAL OMEGA0,ACHE,FDM
        REAL CIO_XC0,CIO_YC0,CIO_ZC0,LADO_BKP,LADO0_BKP
        REAL CIO_XC,CIO_YC,CIO_ZC
+       REAL ABVC_THR,DIV_THR
        COMMON /COSMO/ OMEGA0,ACHE,FDM
        LOGICAL FILE_EXISTS
        CHARACTER*14 FILE5
@@ -245,6 +246,13 @@
        READ(1,*) FLAG_W_FILTLEN
        READ(1,*) !Filtering parameters: tolerance, growing step, max. num. of its. ----->
        READ(1,*) FILT_TOL, FILT_STEP, FILT_MAXIT
+       READ(1,*) !***********************************************************************
+       READ(1,*) !*       On-the-fly shock detection                                    *
+       READ(1,*) !***********************************************************************
+       READ(1,*) ! Threshold on velocity divergence (negative, input units) ------------>
+       READ(1,*) DIV_THR
+       READ(1,*) ! Threshold on artificial bulk viscosity constant --------------------->
+       READ(1,*) ABVC_THR
 
        CLOSE(1)
 
@@ -314,7 +322,7 @@
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
      &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
-     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL)
+     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR)
 
 
 *      INITIALIZE VARIABLES TO ZERO
@@ -398,11 +406,6 @@
 
        IF (ZETA.LT.0.0) ZETA=0.0
 
-
-*     Build the AMR grid:
-      CALL GRIDAMR(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,PATCHNZ,
-     &      PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,PARE)
-
 *     Runtime check: velocities have been read properly
       IF (FLAG_VERBOSE.EQ.1) THEN
         write(*,*) 'velocity: min and max values'
@@ -416,11 +419,13 @@
 
 *     Filter velocities (if specified to do so in vortex.dat)
       IF (flag_filter.eq.1) then
+              goto 1234
         IF (flag_verbose.eq.1) write(*,*) 'Applying multiscale filter'
         call MULTISCALE_FILTER(NX,NY,NZ,NL,NPATCH,pare,
      &            PATCHNX,PATCHNY,PATCHNZ,patchx,patchy,patchz,
      &            patchrx,patchry,patchrz,DX,ITER,FLAG_W_FILTLEN,
      &            FILT_TOL,FILT_STEP, FILT_MAXIT)
+1234   write(*,*) 'temporarily skipping the filter!!!!!!!!!!!!!'
         IF (FLAG_VERBOSE.EQ.1) THEN
          write(*,*) 'Computation ended!'
          write(*,*) 'filtered velocity: min and max values'

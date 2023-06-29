@@ -70,7 +70,7 @@
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
-     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL)
+     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR)
 ***********************************************************************
 *     Reads the GAS particles of the simulation, builds a set of AMR
 *     grids and interpolates a continuous velocity field.
@@ -98,6 +98,7 @@
        real T,AAA,BBB,CCC,MAP,ZETA,LADO0
        INTEGER I,J,K,IX,NL,IR,IRR,N1,N2,N3,NL_PARTICLE_GRID
        INTEGER REFINE_THR,PARCHLIM,BORGRID,KNEIGHBOURS,IKERNEL
+       REAL DIV_THR,ABVC_THR
 
        INTEGER FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
      &         FLAG_W_VELOCITIES,FLAG_FILTER
@@ -389,20 +390,24 @@
        WRITE(*,*) 'End velocity interpolation -----------------------'
 
        IF (FLAG_FILTER.EQ.1) THEN 
-        CALL IDENTIFY_SHOCKS(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,
-     &                       PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,
-     &                       VISC0,VISC1)
-       END IF
+*     All patches are extended with one extra cell per direction
+        CALL EXTEND_VAR(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &                  PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ)
 
-       stop
+        CALL IDENTIFY_SHOCKS(ITER,NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
+     &                       PATCHNY,PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,
+     &                       PATCHX,PATCHY,PATCHZ,LADO0,VISC0,VISC1,
+     &                       DIV_THR,ABVC_THR)
+       END IF
 
        RETURN
        END
 
 ***********************************************************************
-       SUBROUTINE IDENTIFY_SHOCKS(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
+       SUBROUTINE IDENTIFY_SHOCKS(ITER,NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
      &                            PATCHNY,PATCHNZ,PATCHRX,PATCHRY,
-     &                            PATCHRZ,VISC0,VISC1)
+     &                            PATCHRZ,PATCHX,PATCHY,PATCHZ,LADO0,
+     &                            VISC0,VISC1,DIV_THR,ABVC_THR)
 ***********************************************************************
 *      For the multiscale filter, an indication of (strong) shocked
 *       cells is required. This routine does that job by using a
@@ -412,12 +417,15 @@
 
       IMPLICIT NONE 
       INCLUDE 'vortex_parameters.dat'
-      INTEGER NX,NY,NZ,NL 
+      INTEGER ITER,NX,NY,NZ,NL 
       INTEGER NPATCH(0:NLEVELS),PARE(NPALEV),PATCHNX(NPALEV),
      &        PATCHNY(NPALEV),PATCHNZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
+      INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
+      REAL LADO0
       REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
+      REAL DIV_THR,ABVC_THR
 
       REAL U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
@@ -434,6 +442,47 @@
       INTEGER*1 SHOCK0(1:NMAX,1:NMAY,1:NMAZ)
       INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
       COMMON /SHOCKED/ SHOCK0,SHOCK1
+
+      INTEGER I,J,K,IPATCH,N1,N2,N3,LOW1,LOW2,IR
+
+      CALL DIVER_FINA(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &                PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ)
+
+
+      DO K=1,NZ 
+      DO J=1,NY
+      DO I=1,NX 
+        SHOCK0(I,J,K) = 0
+        IF (DIVER0(I,J,K).LT.DIV_THR.AND.VISC0(I,J,K).GT.ABVC_THR) THEN
+          SHOCK0(I,J,K) = 1
+        END IF
+      END DO 
+      END DO 
+      END DO
+
+      DO IR=1,NL
+        LOW1=SUM(NPATCH(0:IR-1))+1
+        LOW2=SUM(NPATCH(0:IR))
+        DO IPATCH=LOW1,LOW2 
+          N1=PATCHNX(IPATCH)
+          N2=PATCHNY(IPATCH)
+          N3=PATCHNZ(IPATCH)
+          DO K=1,N3 
+          DO J=1,N2
+          DO I=1,N1 
+            SHOCK1(I,J,K,IPATCH) = 0
+            IF (DIVER(I,J,K,IPATCH).LT.DIV_THR.AND.
+     &          VISC1(I,J,K,IPATCH).GT.ABVC_THR) THEN
+              SHOCK1(I,J,K,IPATCH) = 1
+            END IF
+          END DO 
+          END DO 
+          END DO
+        END DO
+      END DO
+
+      CALL WRITE_SHOCKED(NX,NY,NZ,ITER,NL,NPATCH,PATCHNX,PATCHNY,
+     &                   PATCHNZ,SHOCK0,SHOCK1)
 
       RETURN 
       END 
