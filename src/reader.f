@@ -70,7 +70,7 @@
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
-     &            FLAG_FILTER)
+     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL)
 ***********************************************************************
 *     Reads the GAS particles of the simulation, builds a set of AMR
 *     grids and interpolates a continuous velocity field.
@@ -97,7 +97,7 @@
        INTEGER NX,NY,NZ,ITER,NDXYZ,LOW1,LOW2,FILES_PER_SNAP
        real T,AAA,BBB,CCC,MAP,ZETA,LADO0
        INTEGER I,J,K,IX,NL,IR,IRR,N1,N2,N3,NL_PARTICLE_GRID
-       INTEGER REFINE_THR,PARCHLIM,BORGRID
+       INTEGER REFINE_THR,PARCHLIM,BORGRID,KNEIGHBOURS,IKERNEL
 
        INTEGER FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
      &         FLAG_W_VELOCITIES,FLAG_FILTER
@@ -164,6 +164,9 @@
        ! End scratch variables for reading
 
        REAL*4 ABVC(NDM)
+       REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+       REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
+ 
 
        real xmin,ymin,zmin,xmax,ymax,zmax
 
@@ -371,7 +374,8 @@
        CALL INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC)
+     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC,KNEIGHBOURS,
+     &            IKERNEL,VISC0,VISC1)
 
        WRITE(*,*) 'Locating particles onto the grid'
        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
@@ -386,7 +390,8 @@
 
        IF (FLAG_FILTER.EQ.1) THEN 
         CALL IDENTIFY_SHOCKS(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,
-     &                       PATCHNZ,PATCHRX,PATCHRY,PATCHRZ)
+     &                       PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,
+     &                       VISC0,VISC1)
        END IF
 
        stop
@@ -397,7 +402,7 @@
 ***********************************************************************
        SUBROUTINE IDENTIFY_SHOCKS(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
      &                            PATCHNY,PATCHNZ,PATCHRX,PATCHRY,
-     &                            PATCHRZ)
+     &                            PATCHRZ,VISC0,VISC1)
 ***********************************************************************
 *      For the multiscale filter, an indication of (strong) shocked
 *       cells is required. This routine does that job by using a
@@ -411,6 +416,24 @@
       INTEGER NPATCH(0:NLEVELS),PARE(NPALEV),PATCHNX(NPALEV),
      &        PATCHNY(NPALEV),PATCHNZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
+      REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
+
+      REAL U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL U4(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL U12(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      REAL U13(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      REAL U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
+      COMMON /VELOC/ U2,U3,U4,U12,U13,U14
+
+      REAL DIVER0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL DIVER(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
+      COMMON /DIVERGENCE/ DIVER0, DIVER
+
+      INTEGER*1 SHOCK0(1:NMAX,1:NMAY,1:NMAZ)
+      INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+      COMMON /SHOCKED/ SHOCK0,SHOCK1
 
       RETURN 
       END 

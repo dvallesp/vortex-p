@@ -152,7 +152,7 @@
 
 *      LOCAL VARIABLES
        INTEGER I,J,K,LOW1,LOW2,II,JJ,IX,JY,KZ,NL,IR,N1,N2,N3,FILT_MAXIT
-       INTEGER NFILE,FIRST,EVERY,IFI,LAST,BOR
+       INTEGER NFILE,FIRST,EVERY,IFI,LAST,BOR,KNEIGHBOURS,IKERNEL
        INTEGER FILES_PER_SNAP,NL_INPUT,PARCHLIM,BORGRID,REFINE_THR
        real ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
        REAL OMEGA0,ACHE,FDM
@@ -222,15 +222,20 @@
        READ(1,*) REFINE_THR
        READ(1,*) !Minimum size of a refinement patch to be accepted -------------------->
        READ(1,*) PARCHLIM
-       READ(1,*) !Cells not to be refined from the border ------------------------------>
+       READ(1,*) !Cells not to be refined from the border  (base grid) ----------------->
        READ(1,*) BORGRID
+       READ(1,*) !***********************************************************************
+       READ(1,*) !*       Velocity interpolation parameters                             *
+       READ(1,*) !***********************************************************************
+       READ(1,*) ! Number of neighbours for interpolation ------------------------------>
+       READ(1,*) KNEIGHBOURS
+       READ(1,*) !Kernel (1=W4, 2=C4, 3=C6) -------------------------------------------->
+       READ(1,*) IKERNEL
        READ(1,*) !***********************************************************************
        READ(1,*) !*       Poisson solver                                                *
        READ(1,*) !***********************************************************************
        READ(1,*) !SOR presion parameter, SOR max iter, border for AMR patches ---------->
        READ(1,*) PRECIS, MAXIT, BOR
-       READ(1,*) !Error threshold ------------------------------------------------------>
-       READ(1,*) ERR_THR
        READ(1,*) !***********************************************************************
        READ(1,*) !*       Multifiltering                                                *
        READ(1,*) !***********************************************************************
@@ -309,7 +314,7 @@
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
      &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
-     &            FLAG_FILTER)
+     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL)
 
 
 *      INITIALIZE VARIABLES TO ZERO

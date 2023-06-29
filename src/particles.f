@@ -1131,7 +1131,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
       END
 
 ************************************************************************
-      SUBROUTINE KERNEL(N,N2,W,DIST)
+      SUBROUTINE KERNEL(N,N2,W,DIST,IKERNEL)
 ************************************************************************
 *     DIST contains initially the distance (particle to cell), and it is
 *     updated with the (unnormalised) value of the kernel
@@ -1139,10 +1139,15 @@ C        WRITE(*,*) LVAL(I,IPARE)
       INTEGER N,N2 ! N is the dimension of the array dist;
                    ! N2, the actual number of particles filled in
       REAL W,DIST(N)
+      INTEGER IKERNEL
 
-C      CALL KERNEL_CUBICSPLINE(N,N2,W,DIST)
-      CALL KERNEL_WENDLAND_C4(N,N2,W,DIST)
-C      CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
+      IF (IKERNEL.EQ.1) THEN
+       CALL KERNEL_CUBICSPLINE(N,N2,W,DIST)
+      ELSE IF (IKERNEL.EQ.2) THEN
+       CALL KERNEL_WENDLAND_C4(N,N2,W,DIST)
+      ELSE IF (IKERNEL.EQ.3) THEN
+       CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
+      END IF
 
       RETURN
       END
@@ -1853,7 +1858,8 @@ C      CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
       SUBROUTINE INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC)
+     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC,KNEIGHBOURS,
+     &            IKERNEL,VISC0,VISC1)
 ************************************************************************
 *     Compute the velocity field on the grid
 ************************************************************************
@@ -1873,7 +1879,7 @@ C      CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
      &       U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
       REAL*4 ABVC(NDM)
       REAL LADO0
-      INTEGER FLAG_FILTER
+      INTEGER FLAG_FILTER,IKERNEL
 
 *     COMMON VARIABLES
       REAL DX,DY,DZ
@@ -1915,7 +1921,7 @@ C      CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
       REAL OMEGA0,ACHE,FDM,RHOB0
       COMMON /COSMO/ OMEGA0,ACHE,FDM
 
-      REAL L0(NMAX+1,NMAY+1,NMAZ+1)
+      REAL L0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL L1(NAMRX,NAMRY,NAMRZ,NPALEV)
 
       INTEGER IX,JY,KZ,IR,I,J,K,IPATCH,LOW1,LOW2,CONTA,KNEIGHBOURS
@@ -1935,8 +1941,18 @@ C      CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
       REAL,ALLOCATABLE::ARR(:,:)
 
       integer omp_get_thread_num
-
-      KNEIGHBOURS=58 !NUMBER OF PARTICLES INSIDE THE KERNEL
+      WRITE(*,*) 'Each cell-center value is computed using at least',
+     &            KNEIGHBOURS,'particles'
+      IF (IKERNEL.EQ.1) THEN 
+       WRITE(*,*) 'Kernel: cubic spline (W4)'
+      ELSE IF (IKERNEL.EQ.2) THEN
+       WRITE(*,*) 'Kernel: Wendland C4'
+      ELSE IF (IKERNEL.EQ.3) THEN
+       WRITE(*,*) 'Kernel: Wendland C6'
+      ELSE 
+       WRITE(*,*) 'Kernel is badly specified... Use 1, 2 or 3'
+       STOP 
+      END IF
 
       MEDIOLADO0=0.5*LADO0
       PI=ACOS(-1.0)
@@ -2036,9 +2052,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,L0),
 !$OMP+            PRIVATE(IX,JY,KZ),
 !$OMP+            DEFAULT(NONE)
-      DO KZ=1,NZ
-      DO JY=1,NY
-      DO IX=1,NX
+      DO KZ=0,NZ+1
+      DO JY=0,NY+1
+      DO IX=0,NX+1
        L0(IX,JY,KZ)=0.
       END DO 
       END DO 
@@ -2050,7 +2066,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
-!$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC),
+!$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC,IKERNEL),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2083,7 +2099,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST)
+       CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
 
        BAS8=0.D0
        BAS8X=0.D0
@@ -2188,7 +2204,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,II1,II2,JJ1,
 !$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,U2DM,U3DM,
-!$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,VISC0,ABVC),
+!$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,VISC0,ABVC,
+!$OMP+                   IKERNEL),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2222,7 +2239,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST)
+       CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
 
        BAS8=0.D0
        BAS8X=0.D0
@@ -2329,7 +2346,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,II1,II2,JJ1,JJ2,KK1,KK2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
-!$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC),
+!$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC,IKERNEL),
 !$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2358,7 +2375,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         H_KERN=DIST(CONTA)
         L0(IX,JY,KZ)=H_KERN
 
-        CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST)
+        CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
 
         BAS8=0.D0
         BAS8X=0.D0
@@ -2396,7 +2413,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
 !$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
-!$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC),
+!$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,IKERNEL),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,Q,DIST,NEIGH,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2431,7 +2448,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           H_KERN=DIST(CONTA)
           L1(IX,JY,KZ,IPATCH)=H_KERN
   
-          CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST)
+          CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
   
           BAS8=0.D0
           BAS8X=0.D0
@@ -2544,7 +2561,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       END DO !IR=NL,1,-1
 
       write(*,*) 'At level', 0
-      CALL P_MINMAX_IR(L0,L1,0,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+      CALL P_MINMAX_IR(L0,L1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                 NPATCH,0,BASX,BASY)
       write(*,*) 'L min,max',BASX,BASY
       CALL P_MINMAX_IR(U2,U12,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
@@ -2556,16 +2573,16 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,0,BASX,BASY)
       write(*,*) 'vz min,max',BASX,BASY
-      CALL P_MINMAX_IR(VISC0,VISC1,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,
+      CALL P_MINMAX_IR(VISC0,VISC1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,0,BASX,BASY)
-      write(*,*) 'MACH min,max',BASX,BASY
+      write(*,*) 'ABVC min,max',BASX,BASY
 
 
       DO IR=1,NL
        low1=sum(npatch(0:ir-1))+1
        low2=sum(npatch(0:ir))
        write(*,*) 'At level',ir
-       CALL P_MINMAX_IR(L0,L1,0,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+       CALL P_MINMAX_IR(L0,L1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,IR,BASX,BASY)
        write(*,*) 'L min,max',BASX,BASY
        CALL P_MINMAX_IR(U2,U12,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
@@ -2577,9 +2594,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,IR,BASX,BASY)
        write(*,*) 'vz min,max',BASX,BASY
-       CALL P_MINMAX_IR(VISC0,VISC1,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,
+       CALL P_MINMAX_IR(VISC0,VISC1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,IR,BASX,BASY)
-       write(*,*) 'MACH min,max',BASX,BASY
+       write(*,*) 'ABVC min,max',BASX,BASY
       END DO
 
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
