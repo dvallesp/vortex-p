@@ -418,14 +418,12 @@
       END IF
 
 *     Filter velocities (if specified to do so in vortex.dat)
-      IF (flag_filter.eq.1) then
-              goto 1234
+      IF (FLAG_FILTER.EQ.1) THEN
         IF (flag_verbose.eq.1) write(*,*) 'Applying multiscale filter'
         call MULTISCALE_FILTER(NX,NY,NZ,NL,NPATCH,pare,
      &            PATCHNX,PATCHNY,PATCHNZ,patchx,patchy,patchz,
      &            patchrx,patchry,patchrz,DX,ITER,FLAG_W_FILTLEN,
-     &            FILT_TOL,FILT_STEP, FILT_MAXIT)
-1234   write(*,*) 'temporarily skipping the filter!!!!!!!!!!!!!'
+     &            FILT_TOL,FILT_STEP,FILT_MAXIT)
         IF (FLAG_VERBOSE.EQ.1) THEN
          write(*,*) 'Computation ended!'
          write(*,*) 'filtered velocity: min and max values'

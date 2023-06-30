@@ -60,8 +60,9 @@
 
       integer solap(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
 
-      integer shock0(1:NMAX,1:NMAY,1:NMAZ)
-      integer shock1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+      INTEGER*1 SHOCK0(1:NMAX,1:NMAY,1:NMAZ)
+      INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+      COMMON /SHOCKED/ SHOCK0,SHOCK1
 
 *     Auxiliary variables
       real u2bulk(1:NMAX,1:NMAY,1:NMAZ)
@@ -106,9 +107,6 @@
 
       call veinsgrid_all_l(NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,solap)
-
-      call lee_mach(output_iter,NPATCH,PARE,PATCHNX,PATCHNY,
-     &              PATCHNZ,SHOCK0,SHOCK1)
 
 !!!!! for each cell, we ought to find the optimum coherence length
       ! we first initialize the lengths

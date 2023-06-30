@@ -42,7 +42,7 @@ SOR presion parameter, SOR max iter, border for AMR patches ---------->
 Multiscale filter: apply filter -------------------------------------->
 1
 Output filtering lengths (separate file) ----------------------------->
-0
+1
 Filtering parameters: tolerance, growing step, max. num. of its. ----->
 0.1,1.05,200
 ***********************************************************************

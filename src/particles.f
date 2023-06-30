@@ -2417,7 +2417,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,Q,DIST,NEIGH,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
-!$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
+!$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC,1)
        DO IPATCH=LOW1,LOW2 
             !write(*,*) ir,ipatch
         N1=PATCHNX(IPATCH)
