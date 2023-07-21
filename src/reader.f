@@ -4,7 +4,8 @@
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
-     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR)
+     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR,
+     &            FLAG_MACHFIELD,MACH_THR)
 ***********************************************************************
 *     Reads the GAS particles of the simulation, builds a set of AMR
 *     grids and interpolates a continuous velocity field.
@@ -33,6 +34,8 @@
        INTEGER I,J,K,IX,NL,IR,IRR,N1,N2,N3,NL_PARTICLE_GRID
        INTEGER REFINE_THR,PARCHLIM,BORGRID,KNEIGHBOURS,IKERNEL
        REAL DIV_THR,ABVC_THR
+       INTEGER FLAG_MACHFIELD
+       REAL MACH_THR
 
        INTEGER FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
      &         FLAG_W_VELOCITIES,FLAG_FILTER
@@ -153,7 +156,7 @@
         WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
         MASAP(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
 
-        WRITE(*,*) 'Reading filter length ...'
+        WRITE(*,*) 'Reading kernel length ...'
         CALL read_float(FIL2,'HSML',SCR4,blocksize)
         WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
         KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
@@ -161,10 +164,17 @@
 
         IF (FLAG_FILTER.EQ.1) THEN
           ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
-          WRITE(*,*) 'Reading ABVC ...'
-          CALL read_float(FIL2,'ABVC',SCR4,blocksize)
-          WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-          ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
+          IF (FLAG_MACHFIELD.EQ.0) THEN
+            WRITE(*,*) 'Reading ABVC ...'
+            CALL read_float(FIL2,'ABVC',SCR4,blocksize)
+            WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+            ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
+          ELSE 
+            WRITE(*,*) 'Reading MACH ...'
+            CALL read_float(FIL2,'MACH',SCR4,blocksize)
+            WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+            ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
+          END IF            
           DEALLOCATE(SCR4)      
         END IF
 
@@ -197,8 +207,13 @@
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
        IF (FLAG_FILTER.EQ.1) THEN
-        WRITE(*,*) 'ABVC=',MINVAL(ABVC(LOW1:LOW2)),
-     &                     MAXVAL(ABVC(LOW1:LOW2))
+        IF (FLAG_MACHFIELD.EQ.0) THEN
+         WRITE(*,*) 'ABVC=',MINVAL(ABVC(LOW1:LOW2)),
+     &                      MAXVAL(ABVC(LOW1:LOW2))
+        ELSE 
+         WRITE(*,*) 'MACH=',MINVAL(ABVC(LOW1:LOW2)),
+     &                      MAXVAL(ABVC(LOW1:LOW2))
+        END IF
        END IF
 
        IF (XMIN.LT.DDXL.OR.XMAX.GT.DDXR.OR.
@@ -283,8 +298,13 @@
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
        IF (FLAG_FILTER.EQ.1) THEN
-        WRITE(*,*) 'ABVC=',MINVAL(ABVC(LOW1:LOW2)),
-     &                     MAXVAL(ABVC(LOW1:LOW2))
+        IF (FLAG_MACHFIELD.EQ.0) THEN
+         WRITE(*,*) 'ABVC=',MINVAL(ABVC(LOW1:LOW2)),
+     &                      MAXVAL(ABVC(LOW1:LOW2))
+        ELSE 
+         WRITE(*,*) 'MACH=',MINVAL(ABVC(LOW1:LOW2)),
+     &                      MAXVAL(ABVC(LOW1:LOW2))
+        END IF
        END IF
        
 
@@ -310,7 +330,7 @@
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
      &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC,KNEIGHBOURS,
-     &            IKERNEL,VISC0,VISC1)
+     &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD)
 
        WRITE(*,*) 'Locating particles onto the grid'
        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
@@ -331,7 +351,7 @@
         CALL IDENTIFY_SHOCKS(ITER,NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
      &                       PATCHNY,PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,
      &                       PATCHX,PATCHY,PATCHZ,LADO0,VISC0,VISC1,
-     &                       DIV_THR,ABVC_THR)
+     &                       DIV_THR,ABVC_THR,FLAG_MACHFIELD,MACH_THR)
        END IF
 
        RETURN
@@ -341,7 +361,8 @@
        SUBROUTINE IDENTIFY_SHOCKS(ITER,NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
      &                            PATCHNY,PATCHNZ,PATCHRX,PATCHRY,
      &                            PATCHRZ,PATCHX,PATCHY,PATCHZ,LADO0,
-     &                            VISC0,VISC1,DIV_THR,ABVC_THR)
+     &                            VISC0,VISC1,DIV_THR,ABVC_THR,
+     &                            FLAG_MACHFIELD,MACH_THR)
 ***********************************************************************
 *      For the multiscale filter, an indication of (strong) shocked
 *       cells is required. This routine does that job by using a
@@ -360,6 +381,8 @@
       REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
       REAL DIV_THR,ABVC_THR
+      INTEGER FLAG_MACHFIELD
+      REAL MACH_THR
 
       REAL U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
@@ -379,22 +402,41 @@
 
       INTEGER I,J,K,IPATCH,N1,N2,N3,LOW1,LOW2,IR
 
-      CALL DIVER_FINA(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
-     &                PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ)
+      character*5 iter_string 
+      write(iter_string, '(I5.5)') iter
+
+      IF (FLAG_MACHFIELD.EQ.0) THEN
+        WRITE(*,*) 'Identifying shocks with DIV_THR=',DIV_THR,
+     &             ' and ABVC_THR=',ABVC_THR
+       CALL DIVER_FINA(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &                 PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ)
+
+       open(55,file='output_files/diver_unfiltered_'//iter_string,
+     &      status='unknown', form='unformatted')
+
+        write(55) (((diver0(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        do ipatch=1,sum(npatch(0:nl))
+         n1=patchnx(ipatch)
+         n2=patchny(ipatch)
+         n3=patchnz(ipatch)
+         write(55) (((diver(i,j,k,ipatch),i=1,n1),j=1,n2),k=1,n3)
+        end do
 
 
-      DO K=1,NZ 
-      DO J=1,NY
-      DO I=1,NX 
-        SHOCK0(I,J,K) = 0
-        IF (DIVER0(I,J,K).LT.DIV_THR.AND.VISC0(I,J,K).GT.ABVC_THR) THEN
-          SHOCK0(I,J,K) = 1
-        END IF
-      END DO 
-      END DO 
-      END DO
+       close(55)
 
-      DO IR=1,NL
+       DO K=1,NZ 
+       DO J=1,NY
+       DO I=1,NX 
+         SHOCK0(I,J,K) = 0
+         IF (DIVER0(I,J,K).LT.DIV_THR.AND.VISC0(I,J,K).GT.ABVC_THR) THEN
+           SHOCK0(I,J,K) = 1
+         END IF
+       END DO 
+       END DO 
+       END DO
+
+       DO IR=1,NL
         LOW1=SUM(NPATCH(0:IR-1))+1
         LOW2=SUM(NPATCH(0:IR))
         DO IPATCH=LOW1,LOW2 
@@ -413,7 +455,43 @@
           END DO 
           END DO
         END DO
-      END DO
+       END DO
+
+      ELSE 
+        WRITE(*,*) 'Identifying shocks with MACH_THR=',MACH_THR
+
+        DO K=1,NZ 
+        DO J=1,NY
+        DO I=1,NX 
+          SHOCK0(I,J,K) = 0
+          IF (VISC0(I,J,K).GT.MACH_THR) THEN
+            SHOCK0(I,J,K) = 1
+          END IF
+        END DO 
+        END DO 
+        END DO
+  
+        DO IR=1,NL
+          LOW1=SUM(NPATCH(0:IR-1))+1
+          LOW2=SUM(NPATCH(0:IR))
+          DO IPATCH=LOW1,LOW2 
+            N1=PATCHNX(IPATCH)
+            N2=PATCHNY(IPATCH)
+            N3=PATCHNZ(IPATCH)
+            DO K=1,N3 
+            DO J=1,N2
+            DO I=1,N1 
+              SHOCK1(I,J,K,IPATCH) = 0
+              IF (VISC1(I,J,K,IPATCH).GT.MACH_THR) THEN
+                SHOCK1(I,J,K,IPATCH) = 1
+              END IF
+            END DO 
+            END DO 
+            END DO
+          END DO
+        END DO
+      
+      END IF
 
       CALL WRITE_SHOCKED(NX,NY,NZ,ITER,NL,NPATCH,PATCHNX,PATCHNY,
      &                   PATCHNZ,SHOCK0,SHOCK1)

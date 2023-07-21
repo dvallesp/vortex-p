@@ -1859,7 +1859,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
      &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC,KNEIGHBOURS,
-     &            IKERNEL,VISC0,VISC1)
+     &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD)
 ************************************************************************
 *     Compute the velocity field on the grid
 ************************************************************************
@@ -1879,7 +1879,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
      &       U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
       REAL*4 ABVC(NDM)
       REAL LADO0
-      INTEGER FLAG_FILTER,IKERNEL
+      INTEGER FLAG_FILTER,IKERNEL,FLAG_MACHFIELD
 
 *     COMMON VARIABLES
       REAL DX,DY,DZ
@@ -2413,7 +2413,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
 !$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
-!$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,IKERNEL),
+!$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,IKERNEL,SOLAP),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,Q,DIST,NEIGH,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I),
 !$OMP+            FIRSTPRIVATE(TREE),
@@ -2427,7 +2427,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         DO KZ=1,N3 
         DO JY=1,N2 
         DO IX=1,N1
-         IF (CR0AMR1(IX,JY,KZ,IPATCH).EQ.1) THEN
+         IF (CR0AMR1(IX,JY,KZ,IPATCH).EQ.1.AND.
+     &       SOLAP(IX,JY,KZ,IPATCH).EQ.1) THEN
           Q(1)=RX(IX,IPATCH)
           Q(2)=RY(JY,IPATCH)
           Q(3)=RZ(KZ,IPATCH)
@@ -2575,7 +2576,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       write(*,*) 'vz min,max',BASX,BASY
       CALL P_MINMAX_IR(VISC0,VISC1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,0,BASX,BASY)
-      write(*,*) 'ABVC min,max',BASX,BASY
+      IF (FLAG_MACHFIELD.EQ.0) THEN
+       WRITE(*,*) 'ABVC min,max',BASX,BASY
+      ELSE 
+       WRITE(*,*) 'Mach min,max',BASX,BASY
+      END IF
 
 
       DO IR=1,NL
@@ -2596,7 +2601,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        write(*,*) 'vz min,max',BASX,BASY
        CALL P_MINMAX_IR(VISC0,VISC1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,IR,BASX,BASY)
-       write(*,*) 'ABVC min,max',BASX,BASY
+       IF (FLAG_MACHFIELD.EQ.0) THEN
+        WRITE(*,*) 'ABVC min,max',BASX,BASY
+       ELSE 
+        WRITE(*,*) 'Mach min,max',BASX,BASY
+       END IF
       END DO
 
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,

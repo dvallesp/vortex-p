@@ -4,7 +4,7 @@
 *       General parameters block                                      *
 ***********************************************************************
 Files: first, last, every, num files per snapshot -------------------->
-144,144,1,2
+144,144,1,4
 Cells per direction (NX,NY,NZ) --------------------------------------->
 128,128,128
 Max box sidelength (in input length units) --------------------------->
@@ -19,9 +19,9 @@ Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
 Number of levels ----------------------------------------------------->
 9
 Number of particles for a cell to be refinable ----------------------->
-10
+8
 Minimum size of a refinement patch to be accepted -------------------->
-12
+6
 Cells not to be refined from the border (base grid) ------------------>
 2
 ***********************************************************************
@@ -49,6 +49,8 @@ Filtering parameters: tolerance, growing step, max. num. of its. ----->
 *       On-the-fly shock detection (for multifiltering)               *
 ***********************************************************************
 Threshold on velocity divergence (negative, input units) ------------->
--0.5
+-1.25
 Threshold on artificial bulk viscosity constant ---------------------->
-0.75
+1.
+Use particle's MACH field (0=no, 1=yes), Mach threshold -------------->
+1,2.0

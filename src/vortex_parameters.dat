@@ -11,4 +11,4 @@
 
 *      particles ------------------------------------------------------
        INTEGER NDM
-       PARAMETER (NDM=22000000)
+       PARAMETER (NDM=88000000)
