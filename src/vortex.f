@@ -154,7 +154,7 @@
        INTEGER I,J,K,LOW1,LOW2,II,JJ,IX,JY,KZ,NL,IR,N1,N2,N3,FILT_MAXIT
        INTEGER NFILE,FIRST,EVERY,IFI,LAST,BOR,KNEIGHBOURS,IKERNEL
        INTEGER FILES_PER_SNAP,NL_INPUT,PARCHLIM,BORGRID,REFINE_THR
-       INTEGER FLAG_MACHFIELD
+       INTEGER FLAG_MACHFIELD,FLAG_MASS
        REAL ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
        REAL OMEGA0,ACHE,FDM
        REAL CIO_XC0,CIO_YC0,CIO_ZC0,LADO_BKP,LADO0_BKP
@@ -207,6 +207,8 @@
        READ(1,*) !Output flags (1=yes; 0=no): verbose, write div/rot, write pot, write v>
        READ(1,*) FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
      &           FLAG_W_VELOCITIES
+       READ(1,*) !Output mass density (input units) instead of kernel lengths (1=yes) -->
+       READ(1,*) FLAG_MASS
        READ(1,*) !Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
        READ(1,*) DDXL,DDXR,DDYL,DDYR,DDZL,DDZR
        READ(1,*) !***********************************************************************
@@ -326,7 +328,7 @@
      &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
      &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR,
-     &            FLAG_MACHFIELD,MACH_THR)
+     &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
 
 
 *      INITIALIZE VARIABLES TO ZERO

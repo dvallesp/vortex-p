@@ -5,7 +5,7 @@
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
      &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR,
-     &            FLAG_MACHFIELD,MACH_THR)
+     &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
 ***********************************************************************
 *     Reads the GAS particles of the simulation, builds a set of AMR
 *     grids and interpolates a continuous velocity field.
@@ -34,7 +34,7 @@
        INTEGER I,J,K,IX,NL,IR,IRR,N1,N2,N3,NL_PARTICLE_GRID
        INTEGER REFINE_THR,PARCHLIM,BORGRID,KNEIGHBOURS,IKERNEL
        REAL DIV_THR,ABVC_THR
-       INTEGER FLAG_MACHFIELD
+       INTEGER FLAG_MACHFIELD,FLAG_MASS
        REAL MACH_THR
 
        INTEGER FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
@@ -330,7 +330,7 @@
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
      &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC,KNEIGHBOURS,
-     &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD)
+     &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
 
        WRITE(*,*) 'Locating particles onto the grid'
        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
