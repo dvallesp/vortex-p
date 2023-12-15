@@ -1864,8 +1864,6 @@ C        WRITE(*,*) LVAL(I,IPARE)
 *     Compute the velocity field on the grid
 ************************************************************************
 
-      !use kdtree
-
 *     From coretran ****************************************
       use variableKind, only: i32, r64
       use m_allocate, only: allocate
@@ -2531,6 +2529,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         END DO
        END DO 
       END DO
+
+      CALL TREE%DEALLOCATE()
 
 *     refill refined and overlapping cells
       DO IR=NL,1,-1
