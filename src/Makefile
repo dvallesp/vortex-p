@@ -10,7 +10,8 @@ endif
 ifeq ($(COMP),999)
  FC=gfortran
  FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium
- LIBS=libfortran_kdtree.a
+ LIBS=-L/usr/local/lib/libcoretran.a -lcoretran
+ INC=-I/usr/local/include/coretran/
 endif
 
 
