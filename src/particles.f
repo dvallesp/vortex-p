@@ -1864,7 +1864,16 @@ C        WRITE(*,*) LVAL(I,IPARE)
 *     Compute the velocity field on the grid
 ************************************************************************
 
-      use kdtree
+      !use kdtree
+
+*     From coretran ****************************************
+      use variableKind, only: i32, r64
+      use m_allocate, only: allocate
+      use m_deallocate, only: deallocate
+      use m_KdTree, only: KdTree, KdTreeSearch
+      use dargdynamicarray_class, only: dArgDynamicArray
+************************************************************
+
       IMPLICIT NONE
 
       INCLUDE 'vortex_parameters.dat'
@@ -1931,13 +1940,15 @@ C        WRITE(*,*) LVAL(I,IPARE)
       REAL*8 BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,BASMASS
       REAL,ALLOCATABLE::DIST(:)
       INTEGER,ALLOCATABLE::NEIGH(:),LB(:)
-      REAL FUIN,U(2,2,2),UW(2,2,2),Q(3)
+      REAL FUIN,U(2,2,2),UW(2,2,2)
 
       !INTEGER,ALLOCATABLE::SCRINT(:,:,:)
-      integer*8 t1,t2
+      integer*4 t1,t2,trate,tmax
 
-      TYPE(KDTREE_TYPE) TREE
-      REAL,ALLOCATABLE::ARR(:,:)
+      REAL(R64), ALLOCATABLE :: XTREE(:), YTREE(:), ZTREE(:)
+      TYPE(KDTREE) :: TREE 
+      TYPE (KDTREESEARCH) :: SEARCH
+      TYPE (DARGDYNAMICARRAY) :: DA
 
       integer omp_get_thread_num
       WRITE(*,*) 'Each cell-center value is computed using at least',
@@ -1969,22 +1980,23 @@ C     &            RHOB0,CONSTA_DENS
       WRITE(*,*) 'Building KDTree...'
 
       NPART_TOT=SUM(NPART)
-      ALLOCATE(ARR(3,NPART_TOT))
+      CALL ALLOCATE(XTREE, NPART_TOT)
+      CALL ALLOCATE(YTREE, NPART_TOT)
+      CALL ALLOCATE(ZTREE, NPART_TOT)
 
-!$OMP PARALLEL DO SHARED(NPART_TOT,RXPA,RYPA,RZPA,ARR),
+!$OMP PARALLEL DO SHARED(NPART_TOT,RXPA,RYPA,RZPA,XTREE,YTREE,ZTREE),
 !$OMP+            PRIVATE(I),
 !$OMP+            DEFAULT(NONE)
       DO I=1,NPART_TOT 
-       ARR(1,I)=RXPA(I)
-       ARR(2,I)=RYPA(I)
-       ARR(3,I)=RZPA(I)
+       XTREE(I)=RXPA(I)
+       YTREE(I)=RYPA(I)
+       ZTREE(I)=RZPA(I)
       END DO
 
-      CALL TREE%BUILD(ARR)
-
-      DEALLOCATE(ARR)
-
-      WRITE(*,*) 'KDTree built'
+      call system_clock(t1,trate,tmax)
+      TREE = KDTREE(XTREE, YTREE, ZTREE)
+      call system_clock(t2,trate,tmax)
+      WRITE(*,*) 'KDTree built in ',float(t2-t1)/1.e3,' seconds'
 
 *     Now, go (clean) cell to (clean) cell, finding the neighbouring
 *     particles and interpolating the velocity field onto the cell.
@@ -2065,11 +2077,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,MASAP,
-!$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC,IKERNEL,TREE,PI,
-!$OMP+                   FLAG_MASS),
-!$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
-!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS),
-!$OMP+            SCHEDULE(DYNAMIC)!!, DEFAULT(NONE)
+!$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC,IKERNEL,TREE,XTREE,
+!$OMP+                   YTREE,ZTREE,PI,FLAG_MASS),
+!$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
+!$OMP+            SCHEDULE(DYNAMIC), DEFAULT(NONE)
       DO KZ=1,NZ+1,STEP
       DO JY=1,NY+1,STEP
       DO IX=1,NX+1,STEP
@@ -2080,18 +2092,24 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &     KZ.GT.INT(K1/STEP+1)*STEP.AND.
      &     KZ.LT.INT(K2/STEP)*STEP) CYCLE
 
-       Q(1)=RADX(IX)
-       Q(2)=RADY(JY)
-       Q(3)=RADZ(KZ)
        ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
-       CALL TREE%SEARCH(Q,NEIGH,NGB_DIST=DIST)
+       DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
+     &       XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
+     &       ZQUERY=DBLE(RADZ(KZ)), K=KNEIGHBOURS)
+       DIST = DA%V%VALUES 
+       NEIGH = DA%I%VALUES
 
        IF (DIST(KNEIGHBOURS).GT.DX) THEN
         CONTA=KNEIGHBOURS 
        ELSE 
         DEALLOCATE(DIST,NEIGH)
-        CALL TREE%RANGE_SEARCH(Q,NEIGH,DX,NGB_DIST=DIST,ngb_bunch=1000)
-        CONTA=SIZEOF(NEIGH)/SIZEOF(NEIGH(1))
+        DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
+     &        XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
+     &        ZQUERY=DBLE(RADZ(KZ)), RADIUS=DBLE(DX))
+        CONTA = DA%SIZE() 
+        ALLOCATE(DIST(CONTA), NEIGH(CONTA))
+        DIST = DA%V%VALUES 
+        NEIGH = DA%I%VALUES
        END IF
 
        !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
@@ -2208,10 +2226,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,II1,II2,JJ1,
 !$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,U2DM,U3DM,
 !$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,VISC0,ABVC,
-!$OMP+                   IKERNEL,TREE,FLAG_MASS,MASAP,PI),
-!$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
-!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS),
-!$OMP+            SCHEDULE(DYNAMIC)!!, DEFAULT(NONE)
+!$OMP+                   IKERNEL,TREE,XTREE,YTREE,ZTREE,FLAG_MASS,
+!$OMP+                   MASAP,PI),
+!$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
+!$OMP+            SCHEDULE(DYNAMIC), DEFAULT(NONE)
       DO KZ=K1,K2+1,STEP
       DO JY=J1,J2+1,STEP
       DO IX=I1,I2+1,STEP
@@ -2222,19 +2241,24 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &     KZ.GT.INT(KK1/STEP+1)*STEP.AND.
      &     KZ.LT.INT(KK2/STEP)*STEP) CYCLE
 
-       Q(1)=RADX(IX)
-       Q(2)=RADY(JY)
-       Q(3)=RADZ(KZ)
-
        ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
-       CALL TREE%SEARCH(Q,NEIGH,NGB_DIST=DIST)
+       DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
+     &       XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
+     &       ZQUERY=DBLE(RADZ(KZ)), K=KNEIGHBOURS)
+       DIST = DA%V%VALUES 
+       NEIGH = DA%I%VALUES
 
        IF (DIST(KNEIGHBOURS).GT.DX) THEN
         CONTA=KNEIGHBOURS 
        ELSE 
         DEALLOCATE(DIST,NEIGH)
-        CALL TREE%RANGE_SEARCH(Q,NEIGH,DX,NGB_DIST=DIST,ngb_bunch=1000)
-        CONTA=SIZEOF(NEIGH)/SIZEOF(NEIGH(1))
+        DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
+     &        XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
+     &        ZQUERY=DBLE(RADZ(KZ)), RADIUS=DBLE(DX))
+        CONTA = DA%SIZE() 
+        ALLOCATE(DIST(CONTA), NEIGH(CONTA))
+        DIST = DA%V%VALUES 
+        NEIGH = DA%I%VALUES
        END IF
 
        !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
@@ -2353,28 +2377,33 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,II1,II2,JJ1,JJ2,KK1,KK2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
 !$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC,IKERNEL,
-!$OMP+                   TREE,FLAG_MASS,PI,MASAP),
-!$OMP+            PRIVATE(IX,JY,KZ,Q,DIST,NEIGH,CONTA,H_KERN,BAS8,
-!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS),
-!$OMP+            SCHEDULE(DYNAMIC)!!, DEFAULT(NONE)
+!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP),
+!$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
+!$OMP+            SCHEDULE(DYNAMIC), DEFAULT(NONE)
       DO KZ=KK1,KK2
       DO JY=JJ1,JJ2
             !write(*,*) kz,jy
       DO IX=II1,II2
        IF (CR0AMR(IX,JY,KZ).EQ.1) THEN 
-        Q(1)=RADX(IX)
-        Q(2)=RADY(JY)
-        Q(3)=RADZ(KZ)
-
         ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
-        CALL TREE%SEARCH(Q,NEIGH,NGB_DIST=DIST)
+        DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
+     &        XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
+     &        ZQUERY=DBLE(RADZ(KZ)), K=KNEIGHBOURS)
+        DIST = DA%V%VALUES 
+        NEIGH = DA%I%VALUES
 
         IF (DIST(KNEIGHBOURS).GT.DX) THEN
          CONTA=KNEIGHBOURS 
         ELSE 
          DEALLOCATE(DIST,NEIGH)
-         CALL TREE%RANGE_SEARCH(Q,NEIGH,DX,NGB_DIST=DIST,ngb_bunch=1000)
-         CONTA=SIZEOF(NEIGH)/SIZEOF(NEIGH(1))
+         DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
+     &         XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
+     &         ZQUERY=DBLE(RADZ(KZ)), RADIUS=DBLE(DX))
+         CONTA = DA%SIZE() 
+         ALLOCATE(DISt(CONTA), NEIGH(CONTA))
+         DIST = DA%V%VALUES 
+         NEIGH = DA%I%VALUES
         END IF
 
         !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
@@ -2424,11 +2453,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
 !$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
 !$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,IKERNEL,SOLAP,
-!$OMP+                   TREE,FLAG_MASS,PI,MASAP),
-!$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,Q,DIST,NEIGH,
+!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP),
+!$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,DIST,NEIGH,DA,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I,
-!$OMP+                    BASMASS),
-!$OMP+            SCHEDULE(DYNAMIC,1)!!, DEFAULT(NONE)
+!$OMP+                    BASMASS,SEARCH),
+!$OMP+            SCHEDULE(DYNAMIC,1), DEFAULT(NONE)
        DO IPATCH=LOW1,LOW2 
             !write(*,*) ir,ipatch
         N1=PATCHNX(IPATCH)
@@ -2440,26 +2469,35 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         DO IX=1,N1
          IF (CR0AMR1(IX,JY,KZ,IPATCH).EQ.1.AND.
      &       SOLAP(IX,JY,KZ,IPATCH).EQ.1) THEN
-          Q(1)=RX(IX,IPATCH)
-          Q(2)=RY(JY,IPATCH)
-          Q(3)=RZ(KZ,IPATCH)
+          !Q(1)=RX(IX,IPATCH)
+          !Q(2)=RY(JY,IPATCH)
+          !Q(3)=RZ(KZ,IPATCH)
           
           ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
-          CALL TREE%SEARCH(Q,NEIGH,NGB_DIST=DIST)
+          DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
+     &          XQUERY=DBLE(RX(IX,IPATCH)), YQUERY=DBLE(RY(JY,IPATCH)),
+     &          ZQUERY=DBLE(RZ(KZ,IPATCH)), K=KNEIGHBOURS)
+          DIST = DA%V%VALUES 
+          NEIGH = DA%I%VALUES
 
           IF (DIST(KNEIGHBOURS).GT.DXPA) THEN
            CONTA=KNEIGHBOURS 
           ELSE 
            DEALLOCATE(DIST,NEIGH)
-           CALL TREE%RANGE_SEARCH(Q,NEIGH,DXPA,NGB_DIST=DIST,
-     &                            ngb_bunch=1000)
-           CONTA=SIZEOF(NEIGH)/SIZEOF(NEIGH(1))
+           DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
+     &           XQUERY=DBLE(RX(IX,IPATCH)), YQUERY=DBLE(RY(JY,IPATCH)),
+     &           ZQUERY=DBLE(RZ(KZ,IPATCH)), RADIUS=DBLE(DXPA))
+           CONTA = DA%SIZE() 
+           ALLOCATE(DIST(CONTA), NEIGH(CONTA))
+           DIST = DA%V%VALUES 
+           NEIGH = DA%I%VALUES
           END IF
-  
           !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
           H_KERN=DIST(CONTA)
           L1(IX,JY,KZ,IPATCH)=H_KERN
-  
+          !  if (isnan(h_kern).or.conta.lt.kneighbours) then 
+          !   write(*,*) ipatch,ix,jy,kz,conta,h_kern,dxpa
+          !  end if
           CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
   
           BAS8=0.D0

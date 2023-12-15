@@ -14,7 +14,7 @@ Output flags (1=yes; 0=no): verbose, write div/rot, write pot, write v>
 Output mass density (input units) instead of kernel lengths (1=yes) -->
 1
 Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
--25.e3,25.e3,-25.e3,25.e3,-25.e3,25.e3
+-19972.0312, 30027.9688, -27619.4688, 22380.5312, -24089.4375, 25910.5625
 ***********************************************************************
 *       Mesh creation parameters                                      *
 ***********************************************************************
@@ -42,7 +42,7 @@ SOR presion parameter, SOR max iter, border for AMR patches ---------->
 *       Multifiltering                                                *
 ***********************************************************************
 Multiscale filter: apply filter -------------------------------------->
-1
+0
 Output filtering lengths (separate file) ----------------------------->
 1
 Filtering parameters: tolerance, growing step, max. num. of its. ----->

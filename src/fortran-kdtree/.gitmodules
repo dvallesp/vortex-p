@@ -1,3 +1,0 @@
-[submodule "lib/unit-test"]
-	path = lib/unit-test
-	url = https://github.com/dongli/fortran-unit-test
