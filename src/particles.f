@@ -54,6 +54,9 @@ C      INTEGER PLEV(NDM)
       INTEGER,ALLOCATABLE::LPATCHX(:,:),LPATCHY(:,:),LPATCHZ(:,:)
       REAL,ALLOCATABLE::LPATCHRX(:,:),LPATCHRY(:,:),LPATCHRZ(:,:)
       INTEGER,ALLOCATABLE::LVAL(:,:)
+
+      REAL,ALLOCATABLE::DDD(:)
+      INTEGER,ALLOCATABLE::DDDX(:),DDDY(:),DDDZ(:)
       
       IF (NL_MESH.EQ.0) THEN
        NPATCH(:)=0
@@ -144,16 +147,37 @@ C       END IF
       !WRITE(*,*) 'TOTAL DM MASS: ',SUM(U1*9.18E18)
       WRITE(*,*) 'PARTICLE COUNT CHECK: ',SUM(CONTA1),SUM(NPART)
       WRITE(*,*) 'Max. number of particles in 1 cell',maxval(conta1)
+
       REFINE_COUNT=COUNT(CR0.GE.REFINE_THR)
       WRITE(*,*) 'REFINABLE CELLS:', REFINE_COUNT
 
+      ALLOCATE(DDD(REFINE_COUNT),DDDX(REFINE_COUNT),
+     &         DDDY(REFINE_COUNT),DDDZ(REFINE_COUNT))
+
+      I=0
+      DO KZ=1,NZ
+      DO JY=1,NY
+      DO IX=1,NX
+       IF (CR0(IX,JY,KZ).GE.REFINE_THR) THEN
+        I=I+1
+        DDD(I)=FLOAT(CR0(IX,JY,KZ))
+        DDDX(I)=IX
+        DDDY(I)=JY
+        DDDZ(I)=KZ
+       END IF
+      END DO
+      END DO
+      END DO
+
+      CALL SORT_CELLS(REFINE_COUNT,DDD,DDDX,DDDY,DDDZ)
+
       IPATCH=0
 
-      DO WHILE (REFINE_COUNT.GT.0.AND.IPATCH.LT.NPALEV) !--------------
-       INMAX=MAXLOC(CR0)
-       IX=INMAX(1)
-       JY=INMAX(2)
-       KZ=INMAX(3)
+      DO I=1,REFINE_COUNT  !----------------------------------------
+       IX=DDDX(I)
+       JY=DDDY(I)
+       KZ=DDDZ(I)
+       IF (CR0(IX,JY,KZ).LT.REFINE_THR) CYCLE
        !IF (CONTA1(IX,JY,KZ).LT.REFINE_THR) EXIT
 
        I1=MAX(IX-INI_EXTENSION,BOR+1)
@@ -249,11 +273,9 @@ C        CR0(I1:I2,J1:J2,K1:K2)=0
         PARE(IPATCH)=0
        END IF
 
-       REFINE_COUNT=COUNT(CR0.GE.REFINE_THR)
-       !WRITE(*,*) REFINE_COUNT
-
-
       END DO  !-----------------------------------------------------
+
+      DEALLOCATE(DDD,DDDX,DDDY,DDDZ)
 
       NPATCH(IR)=IPATCH
 

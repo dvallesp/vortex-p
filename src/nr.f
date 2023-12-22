@@ -238,3 +238,45 @@
       RETURN
       END SUBROUTINE
 
+********************************************************************
+       SUBROUTINE SORT_CELLS(KK_ENTERO,DDD,DDDX,DDDY,DDDZ)
+********************************************************************
+*      Sorts cells decreasingly in density (DDD)
+********************************************************************
+
+       IMPLICIT NONE
+
+       INTEGER KK_ENTERO
+       REAL DDD(KK_ENTERO)
+       INTEGER DDDX(KK_ENTERO),DDDY(KK_ENTERO),DDDZ(KK_ENTERO)
+
+       REAL DDD2(KK_ENTERO)
+       INTEGER DDDX2(KK_ENTERO),DDDY2(KK_ENTERO),DDDZ2(KK_ENTERO)
+       INTEGER INDICE2(KK_ENTERO)
+       INTEGER I
+
+!$OMP PARALLEL DO SHARED(KK_ENTERO,DDD,DDDX,DDDY,DDDZ,DDD2,DDDX2,
+!$OMP+                   DDDY2,DDDZ2),
+!$OMP+            PRIVATE(I), DEFAULT(NONE)
+       DO I=1,KK_ENTERO
+        DDD2(I)=1.0/DDD(I)
+        DDDX2(I)=DDDX(I)
+        DDDY2(I)=DDDY(I)
+        DDDZ2(I)=DDDZ(I)
+       END DO
+
+       CALL ARGSORT(KK_ENTERO,DDD2,INDICE2)
+
+!$OMP PARALLEL DO SHARED(KK_ENTERO,DDD,DDDX,DDDY,DDDZ,DDD2,DDDX2,
+!$OMP+                   DDDY2,DDDZ2,INDICE2),
+!$OMP+            PRIVATE(I), DEFAULT(NONE)
+       DO I=1,KK_ENTERO
+        DDD(I)=1.0/DDD2(INDICE2(I))
+        DDDX(I)=DDDX2(INDICE2(I))
+        DDDY(I)=DDDY2(INDICE2(I))
+        DDDZ(I)=DDDZ2(INDICE2(I))
+       END DO
+
+       RETURN
+       END
+

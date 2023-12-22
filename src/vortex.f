@@ -271,13 +271,15 @@
 **************************************************************
 *     ...PARALLEL RUNNING...
 *     NUMBER OF PROCESSORS
-      NUM=4
+      NUM=1
 !$OMP PARALLEL SHARED(NUM)
 !$OMP SINGLE
 !$      NUM=OMP_GET_NUM_THREADS()
 !$OMP END SINGLE NOWAIT
 !$OMP END PARALLEL
 **************************************************************
+*     ...PARALLEL RUNNING...
+       WRITE(*,*) 'Number of processors: ',NUM
 
        NFILE=INT((LAST-FIRST)/EVERY) + 1
        WRITE(*,*) 'NFILE=',NFILE
