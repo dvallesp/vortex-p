@@ -1,8 +1,6 @@
 NAME=vortex
 
-ifndef FFTW
- override FFTW = 1 # default value: use FFTW; set to 0 if not installed 
-endif
+FFTW=1 # default value: use FFTW; set to 0 if not installed 
 $(info FFTW=$(FFTW))
 
 ifeq ($(COMP),1)          
