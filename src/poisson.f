@@ -1,4 +1,24 @@
 ************************************************************************
+      SUBROUTINE POTBASE(NX,NY,NZ,KKK)
+************************************************************************
+      IMPLICIT NONE 
+
+      INCLUDE 'vortex_parameters.dat'
+
+      INTEGER NX,NY,NZ 
+      REAL KKK(NMAX,NMAY,NMAZ)
+
+#ifdef use_fftw
+#if use_fftw==0
+      CALL POFFT3D(NX,NY,NZ,KKK)
+#else 
+      CALL POFFT3D_FFTW(NX,NY,NZ,KKK)
+#endif
+#endif
+
+      END
+
+************************************************************************
       SUBROUTINE POFFT3D(NX,NY,NZ,KKK)
 ************************************************************************
 *     Solve Poisson's equation in Fourier space, assuming periodic
@@ -93,6 +113,119 @@
 
       RETURN
       END
+
+#ifdef use_fftw
+#if use_fftw==1
+************************************************************************
+      SUBROUTINE POFFT3D_FFTW(NX,NY,NZ,KKK)
+************************************************************************
+*     Solve Poisson's equation in Fourier space, assuming periodic
+*     boundary conditions.
+************************************************************************
+
+      IMPLICIT NONE
+
+      INCLUDE 'vortex_parameters.dat'
+
+      INTEGER NX,NY,NZ,I,J,K
+
+      real  U1(0:NMAX+1,0:NMAY+1,0:NMAZ+1)    ! source in poisson equation
+      real  POT(0:NMAX+1,0:NMAY+1,0:NMAZ+1)   ! field to solve
+      COMMON /BASE/ U1,POT
+
+*     FFT variables
+      real KKK(NMAX,NMAY,NMAZ)
+      COMPLEX DATA1(NMAX,NMAY,NMAZ)
+
+      INTEGER I1,I2,IJK,NYZ,NXYZ,NNN(3)
+      INTEGER NZ2,NZ3,NX2,NX3,NY2,NY3
+
+      INTEGER NUM, IRET
+      COMMON /PROCESADORES/ NUM
+
+      INTEGER*8 PLAN1,PLAN2
+      INTEGER FFTW_FORWARD
+      PARAMETER (FFTW_FORWARD=-1)
+      INTEGER FFTW_BACKWARD
+      PARAMETER (FFTW_BACKWARD=+1)
+      INTEGER FFTW_MEASURE
+      PARAMETER (FFTW_MEASURE=0)
+      INTEGER FFTW_ESTIMATE
+      PARAMETER (FFTW_ESTIMATE=64)
+
+*     FFTW initialization
+      DATA1=(0.0,0.0)
+      CALL SFFTW_INIT_THREADS(IRET)
+      CALL SFFTW_PLAN_WITH_NTHREADS(NUM)
+
+      CALL SFFTW_PLAN_DFT_3D(PLAN1,NX,NY,NZ,DATA1,DATA1,
+     &                       FFTW_FORWARD,FFTW_MEASURE)
+      CALL SFFTW_PLAN_DFT_3D(PLAN2,NX,NY,NZ,DATA1,DATA1,
+     &                       FFTW_BACKWARD,FFTW_MEASURE)
+*     End initialization
+
+
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,DATA1,U1),
+!$OMP+            PRIVATE(I,J,K),
+!$OMP+            DEFAULT(NONE)
+      DO K=1,NZ 
+      DO J=1,NY 
+      DO I=1,NX 
+        DATA1(I,J,K)=U1(I,J,K)
+      END DO 
+      END DO 
+      END DO
+
+      CALL SFFTW_EXECUTE_DFT(PLAN1,DATA1,DATA1)
+
+**    POISSON EQUATION IN MOMENTUM SPACE
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,DATA1,KKK),
+!$OMP+            PRIVATE(I,J,K),
+!$OMP+            DEFAULT(NONE)                                                    
+      DO K=1,NZ 
+      DO J=1,NY
+      DO I=1,NX
+        DATA1(I,J,K)=DATA1(I,J,K)*KKK(I,J,K) 
+      END DO 
+      END DO 
+      END DO
+
+      CALL SFFTW_EXECUTE_DFT(PLAN2,DATA1,DATA1)
+
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,DATA1,POT),PRIVATE(I,J,K)                                                    
+      DO K=1,NZ
+      DO J=1,NY
+      DO I=1,NX
+        POT(I,J,K)=REAL(DATA1(I,J,K))/(NX*NY*NZ)                                     
+      END DO
+      END DO
+      END DO
+
+*     FICTICIOUS CELLS FOR FIELD COMPUTATION
+      DO K=1,NZ
+      DO J=1,NY
+          POT(0,J,K)=POT(NX,J,K)
+          POT(NX+1,J,K)=POT(1,J,K)
+      END DO
+      END DO
+      DO K=1,NZ
+      DO I=0,NX+1
+          POT(I,0,K)=POT(I,NY,K)
+          POT(I,NY+1,K)=POT(I,1,K)
+      END DO
+      END DO
+      DO J=0,NY+1
+      DO I=0,NX+1
+          POT(I,J,0)=POT(I,J,NZ)
+          POT(I,J,NZ+1)=POT(I,J,1)
+      END DO
+      END DO
+
+
+      RETURN
+      END
+#endif
+#endif
 
 ************************************************************************
       SUBROUTINE MOMENTO(DX,NX,NY,NZ,KKK)

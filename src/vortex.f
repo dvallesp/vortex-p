@@ -187,6 +187,39 @@
        INTEGER NUM,OMP_GET_NUM_THREADS,NUMOR, FLAG_PARALLEL
        COMMON /PROCESADORES/ NUM
 
+#ifdef use_fftw
+#if use_fftw==1
+       COMPLEX,ALLOCATABLE::DATA1(:,:,:)
+       INTEGER IRET
+       INTEGER*8 PLAN1,PLAN2
+       COMMON /FOURIER/ PLAN1,PLAN2
+
+       INTEGER FFTW_FORWARD
+       PARAMETER (FFTW_FORWARD=-1)
+       INTEGER FFTW_BACKWARD
+       PARAMETER (FFTW_BACKWARD=+1)
+       INTEGER FFTW_MEASURE
+       PARAMETER (FFTW_MEASURE=0)
+       INTEGER FFTW_ESTIMATE
+       PARAMETER (FFTW_ESTIMATE=64)
+ 
+
+       WRITE(*,*) 'Using FFTW!'
+**      FFTW inizialization
+       ALLOCATE(DATA1(NMAX,NMAY,NMAZ))
+       DATA1=(0.0,0.0)
+       CALL SFFTW_INIT_THREADS(IRET)
+       CALL SFFTW_PLAN_WITH_NTHREADS(NUMOR)
+
+       CALL SFFTW_PLAN_DFT_3D(PLAN1,NX,NY,NZ,DATA1,DATA1,
+     &                        FFTW_FORWARD,FFTW_MEASURE)
+       CALL SFFTW_PLAN_DFT_3D(PLAN2,NX,NY,NZ,DATA1,DATA1,
+     &                        FFTW_BACKWARD,FFTW_MEASURE)
+       DEALLOCATE(DATA1)
+       WRITE(*,*) 'FFTW initialized!'
+#endif
+#endif
+
 
 ****************************************************
 *      READING INITIAL DATA                        *
@@ -517,7 +550,7 @@
 *      COMMON /BASE/ U1,POT
 *
 *      WE 'MUST' SOLVE 4 DIFFERENT POISSON EQUATIONS --> 4 CALLS:
-*       --> IR=0, i.e. base level: we call to POFFT3D
+*       --> IR=0, i.e. base level: we call to POTBASE
 *       --> IR>0, i.e. refinement patches: we call to POTAMR
 *
 *      To save memory, we then copy the potentials to the source arrays.
@@ -539,7 +572,7 @@
       END DO
       END DO
 
-      CALL POFFT3D(NX,NY,NZ,KKK)    ! returns field POT --> PHI
+      CALL POTBASE(NX,NY,NZ,KKK)    ! returns field POT --> PHI
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,DIVER0,POT),
 !$OMP+            PRIVATE(I,J,K),
@@ -565,7 +598,7 @@
       END DO
       END DO
 
-      CALL POFFT3D(NX,NY,NZ,KKK)    ! returns field POT --> W_x
+      CALL POTBASE(NX,NY,NZ,KKK)    ! returns field POT --> W_x
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,ROTAX_0,POT),
 !$OMP+            PRIVATE(I,J,K),
@@ -591,7 +624,7 @@
       END DO
       END DO
 
-      CALL POFFT3D(NX,NY,NZ,KKK)    ! returns field POT --> W_y
+      CALL POTBASE(NX,NY,NZ,KKK)    ! returns field POT --> W_y
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,ROTAY_0,POT),
 !$OMP+            PRIVATE(I,J,K),
@@ -617,7 +650,7 @@
       END DO
       END DO
 
-      CALL POFFT3D(NX,NY,NZ,KKK)    ! returns field POT --> W_z
+      CALL POTBASE(NX,NY,NZ,KKK)    ! returns field POT --> W_z
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,ROTAZ_0,POT),
 !$OMP+            PRIVATE(I,J,K),
@@ -1100,7 +1133,8 @@ C          END IF
 *     Linear interpolation routines
       INCLUDE 'interp.f'
 *     Solve elliptic equations at base and refined levels
-      INCLUDE 'poisson.f'
+      !INCLUDE 'poisson.f'
+#include "poisson.f"
 *     Read the input data
       INCLUDE 'reader.f'
 *     Write the outputs
