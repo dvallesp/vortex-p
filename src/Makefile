@@ -1,6 +1,7 @@
 NAME=vortex
 
-FFTW=1 # default value: use FFTW; set to 0 if not installed 
+# FFTW default value: use FFTW; set to 0 if not installed 
+FFTW := $(if $(FFTW),$(FFTW),1)
 $(info FFTW=$(FFTW))
 
 ifeq ($(COMP),1)          
