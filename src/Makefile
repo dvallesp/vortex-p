@@ -30,7 +30,7 @@ endif
 ifeq ($(COMP),999)
  FC=gfortran
  FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW)
- LIBS=-L/usr/local/lib/libcoretran.a -lcoretran
+ LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
   LIBS +=-L/usr/local/lib64 -lfftw3f_omp -lfftw3f
