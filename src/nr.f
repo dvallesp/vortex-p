@@ -152,7 +152,7 @@
      &             1-BORAMR:NAMRZ+BORAMR,NPALEV)
 
        REAL VMIN0,VMIN1,VMAX0,VMAX1
-       INTEGER N1,N2,N3,I
+       INTEGER N1,N2,N3,I,LOW1
 
        VMIN0=1.E30
        VMAX0=-1.E30
@@ -168,12 +168,13 @@
 
        VMIN1=1.E30
        VMAX1=-1.E30
+       LOW1=SUM(NPATCH(0:NL))
 !$OMP PARALLEL DO SHARED(NPATCH,PATCHNX,PATCHNY,PATCHNZ,NL,
-!$OMP+                   ARRAY1),
+!$OMP+                   ARRAY1,LOW1),
 !$OMP+            PRIVATE(I,N1,N2,N3),
 !$OMP+            REDUCTION(MIN:VMIN1), REDUCTION(MAX:VMAX1),
 !$OMP+            DEFAULT(NONE)
-       DO I=1,SUM(NPATCH(0:NL))
+       DO I=1,LOW1
         N1=PATCHNX(I)
         N2=PATCHNY(I)
         N3=PATCHNZ(I)

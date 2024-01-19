@@ -709,11 +709,12 @@ C     &                                                k,iter,l,err
 
       ! U2,U3,U4,U12,U13,U14 gets updated with the values of the
       ! velocity fluctuation
+      low1=sum(npatch)
 !$OMP PARALLEL DO SHARED(NPATCH,PATCHNX,PATCHNY,PATCHNZ,U12,U13,U14,
-!$OMP+                   U12BULK,U13BULK,U14BULK),
+!$OMP+                   U12BULK,U13BULK,U14BULK,LOW1),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,I,J,K),
 !$OMP+            DEFAULT(NONE)
-      DO ipatch=1,sum(npatch)
+      DO ipatch=1,low1
         n1 = patchnx(ipatch)
         n2 = patchny(ipatch)
         n3 = patchnz(ipatch)

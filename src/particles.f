@@ -105,11 +105,12 @@ C     &           MAXVAL(PLEV)
       END DO
       END DO
 
+      LOW1=SUM(NPART)
 !$OMP PARALLEL DO SHARED(NPART,RXPA,RYPA,RZPA,XL,YL,ZL,DX,DY,DZ,
-!$OMP+                   NX,NY,NZ,REFINE_THR),
+!$OMP+                   NX,NY,NZ,REFINE_THR,LOW1),
 !$OMP+            PRIVATE(I,IX,JY,KZ), DEFAULT(NONE)
 !$OMP+            REDUCTION(+: CONTA1)
-      DO I=1,SUM(NPART)
+      DO I=1,LOW1
        IX=INT((RXPA(I)-XL)/DX)+1
        JY=INT((RYPA(I)-YL)/DY)+1
        KZ=INT((RZPA(I)-ZL)/DZ)+1
@@ -764,13 +765,14 @@ C        WRITE(*,*) LVAL(I,IPARE)
        END DO
       END DO
 
+      LOW1=SUM(NPART(0:NL))
 !$OMP PARALLEL DO SHARED(NPART,NL,NPATCH,XL,XR,YL,YR,ZL,ZR,RXPA,RYPA,
 !$OMP+                   RZPA,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ,BORAMR,
-!$OMP+                   LADO0,DX,DY,DZ,NX,NY,NZ,KERNEL),
+!$OMP+                   LADO0,DX,DY,DZ,NX,NY,NZ,KERNEL,LOW1),
 !$OMP+            PRIVATE(IP,MARCA,IR,LOW1,LOW2,IPATCH,DXPA,DYPA,DZPA,
 !$OMP+                    BASX,BASY,BASZ,IX,JY,KZ,IRMAX),
 !$OMP+            DEFAULT(NONE)
-      DO IP=1,SUM(NPART(0:NL))
+      DO IP=1,LOW1
        LIHAL(IP)=-1
        MARCA=0
 
@@ -903,7 +905,8 @@ C        WRITE(*,*) LVAL(I,IPARE)
        END DO
       END DO
 
-      DO IP=1,SUM(NPART(0:NL))
+      LOW1=SUM(NPART(0:NL))
+      DO IP=1,LOW1
        IPATCH=LIHAL(IP)
        IX=LIHAL_IX(IP)
        JY=LIHAL_JY(IP)
@@ -1028,13 +1031,14 @@ C        WRITE(*,*) LVAL(I,IPARE)
      &      RADZ(0:NMAZ+1),RADMZ(0:NMAZ+1)
       COMMON /GRID/ RADX,RADMX,RADY,RADMY,RADZ,RADMZ
 
+      LOW1=SUM(NPART(0:NL))
 !$OMP PARALLEL DO SHARED(NL,NPART,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ,RX,
 !$OMP+                   RY,RZ,NX,NY,NZ,RADX,RADY,RADZ,VAR0,VAR1,RXPA,
-!$OMP+                   RYPA,RZPA,VARPART),
+!$OMP+                   RYPA,RZPA,VARPART,LOW1),
 !$OMP+            PRIVATE(IP,IPATCH,IX,JY,KZ,AAA,BBB,CCC,RXBAS,RYBAS,
 !$OMP+                    RZBAS,UBAS,FUIN),
 !$OMP+            DEFAULT(NONE)
-      DO IP=1,SUM(NPART(0:NL))
+      DO IP=1,LOW1
        IPATCH=LIHAL(IP)
        IX=LIHAL_IX(IP)
        JY=LIHAL_JY(IP)
