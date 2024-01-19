@@ -58,8 +58,9 @@ C      INTEGER PLEV(NDM)
       REAL,ALLOCATABLE::DDD(:)
       INTEGER,ALLOCATABLE::DDDX(:),DDDY(:),DDDZ(:)
       
+      NPATCH(:)=0
+
       IF (NL_MESH.EQ.0) THEN
-       NPATCH(:)=0
        CR0AMR(1:NX,1:NY,1:NZ)=1
        RETURN
       END IF
