@@ -97,9 +97,9 @@ C     &           MAXVAL(PLEV)
 
 !$OMP PARALLEL DO SHARED(CONTA1,CR0,NX,NY,NZ),PRIVATE(IX,JY,KZ),
 !$OMP+            DEFAULT(NONE)
-      DO IX=1,NX
-      DO JY=1,NY
       DO KZ=1,NZ
+      DO JY=1,NY
+      DO IX=1,NX
        CONTA1(IX,JY,KZ)=0
        CR0(IX,JY,KZ)=0
       END DO
@@ -133,9 +133,9 @@ C       END IF
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,BOR,CONTA1,CR0),
 !$OMP+            PRIVATE(IX,JY,KZ), DEFAULT(NONE)
-      DO IX=1,NX
-      DO JY=1,NY
       DO KZ=1,NZ
+      DO JY=1,NY
+      DO IX=1,NX
        IF(IX.LE.BOR.OR.IX.GE.NX-BOR+1.OR.
      &    JY.LE.BOR.OR.JY.GE.NY-BOR+1.OR.
      &    KZ.LE.BOR.OR.KZ.GE.NZ-BOR+1) THEN
@@ -283,9 +283,9 @@ C        CR0(I1:I2,J1:J2,K1:K2)=0
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,CR0,CR0AMR),
 !$OMP+            PRIVATE(IX,JY,KZ), DEFAULT(NONE)
-      DO IX=1,NX
-      DO JY=1,NY
       DO KZ=1,NZ
+      DO JY=1,NY
+      DO IX=1,NX
        IF (CR0(IX,JY,KZ).EQ.-1) THEN
         CR0AMR(IX,JY,KZ)=0
        ELSE
@@ -331,9 +331,9 @@ C        CR0(I1:I2,J1:J2,K1:K2)=0
 !$OMP+            PRIVATE(IPATCH,IX,JY,KZ),
 !$OMP+            DEFAULT(NONE)
        DO IPATCH=LOW1,LOW2
-        DO IX=1,NAMRX
-        DO JY=1,NAMRY
         DO KZ=1,NAMRZ
+        DO JY=1,NAMRY
+        DO IX=1,NAMRX
          CR01(IX,JY,KZ,IPATCH)=0
          CONTA11(IX,JY,KZ,IPATCH)=0
         END DO
@@ -373,9 +373,9 @@ C          END IF
          END IF !*****************************************************
         END DO
 
-        DO IX=1,N1
-        DO JY=1,N2
         DO KZ=1,N3
+        DO JY=1,N2
+        DO IX=1,N1
          IF(IX.LE.BORAMR.OR.IX.GE.N1-BORAMR+1.OR.
      &      JY.LE.BORAMR.OR.JY.GE.N2-BORAMR+1.OR.
      &      KZ.LE.BORAMR.OR.KZ.GE.N3-BORAMR+1) THEN
@@ -601,9 +601,9 @@ C        WRITE(*,*) LVAL(I,IPARE)
         N1=PATCHNX(IPATCH)
         N2=PATCHNY(IPATCH)
         N3=PATCHNZ(IPATCH)
-        DO IX=1,NAMRX
-        DO JY=1,NAMRY
         DO KZ=1,NAMRZ
+        DO JY=1,NAMRY
+        DO IX=1,NAMRX
          CR0AMR1(IX,JY,KZ,IPATCH)=1
         END DO
         END DO
@@ -628,9 +628,9 @@ C        WRITE(*,*) LVAL(I,IPARE)
         I2=I1+N1/2-1
         J2=J1+N2/2-1
         K2=K1+N3/2-1
-        DO IX=I1,I2
-        DO JY=J1,J2
         DO KZ=K1,K2
+        DO JY=J1,J2
+        DO IX=I1,I2
          CR0AMR1(IX,JY,KZ,IPARE)=0
         END DO
         END DO
@@ -698,9 +698,9 @@ C        WRITE(*,*) LVAL(I,IPARE)
        N1=PATCHNX(IPATCH)
        N2=PATCHNY(IPATCH)
        N3=PATCHNZ(IPATCH)
-       DO IX=1,N1
-       DO JY=1,N2
        DO KZ=1,N3
+       DO JY=1,N2
+       DO IX=1,N1
         CR0AMR1(IX,JY,KZ,IPATCH)=1
        END DO
        END DO
@@ -2585,9 +2585,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           N2 = PATCHNY(IPATCH)
           N3 = PATCHNZ(IPATCH)
           JPATCH = PARE(IPATCH)
-          DO I=1,N1,2
-          DO J=1,N2,2
           DO K=1,N3,2
+          DO J=1,N2,2
+          DO I=1,N1,2
             II = PATCHX(ipatch) + int((I-1)/2)
             JJ = PATCHY(ipatch) + int((J-1)/2)
             KK = PATCHZ(ipatch) + int((K-1)/2)

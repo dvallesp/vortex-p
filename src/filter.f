@@ -765,9 +765,9 @@ C     &                                                k,iter,l,err
 
         FUIN = 0.0
         WSUM = 0.0
-        DO I=1,2
+        DO K=1,2
           DO J=1,2
-            DO K=1,2
+            DO I=1,2
               FUIN = FUIN + U(I,J,K)*UW(I,J,K)
               WSUM = WSUM + UW(I,J,K)
             END DO
@@ -1179,9 +1179,9 @@ C     &                                                k,iter,l,err
             n1=patchnx(i)
             n2=patchny(i)
             n3=patchnz(i)
-            do ix=1,n1,2
-            do jy=1,n2,2
             do kz=1,n3,2
+            do jy=1,n2,2
+            do ix=1,n1,2
               ii=patchx(i) + int((ix-1)/2)
               jj=patchy(i) + int((jy-1)/2)
               kk=patchz(i) + int((kz-1)/2)
@@ -1195,9 +1195,9 @@ C     &                                                k,iter,l,err
             n1=patchnx(i)
             n2=patchny(i)
             n3=patchnz(i)
-            do ix=1,n1
-            do jy=1,n2
             do kz=1,n3
+            do jy=1,n2
+            do ix=1,n1
               ! if it is not refined --> normal veinsgrid behaviour
               if (cr0amr1(ix,jy,kz,i).eq.1) then
                 marca(ix,jy,kz,i)=1
