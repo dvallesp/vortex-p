@@ -689,7 +689,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
       END DO pare_levels !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 *     END SUBSEQUENT LEVELS OF REFINEMENT
 
-      IR=IR-1
+      IF (NPATCH(IR).EQ.0) IR=IR-1 !The last non-empty level, in any case
       LOW1=SUM(NPATCH(0:IR-1))+1
       LOW2=SUM(NPATCH(0:IR))
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1),
