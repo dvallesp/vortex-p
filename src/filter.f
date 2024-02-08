@@ -177,7 +177,6 @@
               outer0_c: do kk=mink,maxk
                 do jj=minj,maxj
                   do ii=mini,maxi
-                    if (cr0amr(ii,jj,kk).eq.1) then
                     if ((radx(ii)-thisx)**2+(rady(jj)-thisy)**2+
      &                  (radz(kk)-thisz)**2.le.l2) then
                       bas1 = bas1 + dens0(ii,jj,kk)
@@ -192,128 +191,12 @@
                         end if
                       end if
                     end if
-                    end if
                   end do
                 end do
               end do outer0_c
 
-              if (marca.eq.0) exit iter_while_c
+              if (marca.eq.0.and.basintprev.gt.10) exit iter_while_c
 
-              outer1_c: DO irr=1,NL
-               LLOW1=SUM(NPATCH(0:IRR-1))+1
-               LLOW2=SUM(NPATCH(0:IRR))
-               dxpa = dx / 2.0 ** irr
-               DO jpatch=LLOW1,LLOW2
-                 nn1 = patchnx(jpatch)
-                 nn2 = patchny(jpatch)
-                 nn3 = patchnz(jpatch)
-
-                 RX1=PATCHRX(jpatch)-0.5*dxpa
-                 RY1=PATCHRY(jpatch)-0.5*dxpa
-                 RZ1=PATCHRZ(jpatch)-0.5*dxpa
-                 RX2=PATCHRX(jpatch)-0.5*dxpa+(nn1-1)*dxpa
-                 RY2=PATCHRY(jpatch)-0.5*dxpa+(nn2-1)*dxpa
-                 RZ2=PATCHRZ(jpatch)-0.5*dxpa+(nn3-1)*dxpa
-
-                 RXX1 = thisx - l
-                 RXX2 = thisx + l
-                 RYY1 = thisy - l
-                 RYY2 = thisy + l
-                 RZZ1 = thisz - l
-                 RZZ2 = thisz + l
-
-                 IF (rxx1.le.rx2.AND.rx1.le.rxx2.AND.
-     &               ryy1.le.ry2.AND.ry1.le.ryy2.AND.
-     &               rzz1.le.rz2.AND.rz1.le.rzz2) then
-
-                  !X
-                  IF (RXX1.GE.RX1.AND.RXX2.LE.RX2) THEN
-                     mini=INT(((RXX1-RX1)/DXPA)+1) + 1
-                     maxi=INT(((RXX2-RX1)/DXPA)) + 1
-                  END IF
-                  IF (RXX1.GE.RX1.AND.RXX2.GT.RX2) THEN
-                     mini=INT(((RXX1-RX1)/DXPA)+1) + 1
-                     maxi=nn1
-                  END IF
-                  IF (RXX2.LE.RX2.AND.RXX1.LT.RX1) THEN
-                     mini=1
-                     maxi=INT(((RXX2-RX1)/DXPA)) + 1
-                  END IF
-                  IF (RXX1.LT.RX1.AND.RXX2.GT.RX2) THEN
-                     mini=1
-                     maxi=nn1
-                  END IF
-
-                  !Y
-                  IF (RYY1.GE.RY1.AND.RYY2.LE.RY2) THEN
-                     minj=INT(((RYY1-RY1)/dxpa)+1) + 1
-                     maxj=INT(((RYY2-RY1)/dxpa)) + 1
-                  END IF
-                  IF (RYY1.GE.RY1.AND.RYY2.GT.RY2) THEN
-                     minj=INT(((RYY1-RY1)/dxpa)+1) + 1
-                     maxj=nn2
-                  END IF
-                  IF (RYY2.LE.RY2.AND.RYY1.LT.RY1) THEN
-                     minj=1
-                     maxj=INT(((RYY2-RY1)/dxpa)) + 1
-                  END IF
-                  IF (RYY1.LT.RY1.AND.RYY2.GT.RY2) THEN
-                     minj=1
-                     maxj=nn2
-                  END IF
-
-                  !Z
-                  IF (RZZ1.GE.RZ1.AND.RZZ2.LE.RZ2) THEN
-                     mink=INT(((RZZ1-RZ1)/dxpa)+1) + 1
-                     maxk=INT(((RZZ2-RZ1)/dxpa)) + 1
-                  END IF
-                  IF (RZZ1.GE.RZ1.AND.RZZ2.GT.RZ2) THEN
-                     mink=INT(((RZZ1-RZ1)/dxpa)+1) + 1
-                     maxk=nn3
-                  END IF
-                  IF (RZZ2.LE.RZ2.AND.RZZ1.LT.RZ1) THEN
-                     mink=1
-                     maxk=INT(((RZZ2-RZ1)/dxpa)) + 1
-                  END IF
-                  IF (RZZ1.LT.RZ1.AND.RZZ2.GT.RZ2) THEN
-                     mink=1
-                     maxk=nn3
-                  END IF
-
-                   do kkzz = mink,maxk
-                   do jjyy = minj,maxj
-                   do iixx = mini,maxi
-                     if (cr0amr1(iixx,jjyy,kkzz,jpatch).eq.1.and.
-     &                 solap(iixx,jjyy,kkzz,jpatch).eq.1) then
-                     if ((rx(iixx,jpatch)-thisx)**2+
-     &                 (ry(jjyy,jpatch)-thisy)**2+
-     &                 (rz(kkzz,jpatch)-thisz)**2.le.l2) then
-                       bas1 = bas1 + dens1(iixx,jjyy,kkzz,jpatch)
-                       bas2 = bas2 + dens1(iixx,jjyy,kkzz,jpatch) *
-     &                              u12(iixx,jjyy,kkzz,jpatch)
-                       bas3 = bas3 + dens1(iixx,jjyy,kkzz,jpatch) *
-     &                              u13(iixx,jjyy,kkzz,jpatch)
-                       bas4 = bas4 + dens1(iixx,jjyy,kkzz,jpatch) *
-     &                              u14(iixx,jjyy,kkzz,jpatch)
-                       basint = basint + 1
-                       if (shock1(iixx,jjyy,kkzz,jpatch).eq.1) then
-                         if (iter.ge.1) then
-                           marca = 0
-                           exit outer1_c
-                         end if
-                       end if
-                     end if
-                     end if
-                   end do
-                   end do
-                   end do
-                END IF
-               END DO
-             end do outer1_c
-
-              if (marca.eq.0) exit iter_while_c
-
-              !write(*,*) i,j,k,iter,basint,basintprev
               if (basint-basintprev.lt.10) then 
                l = max(l*step, l+dx)
                iter = iter + 1 
@@ -458,9 +341,9 @@ c     &                         solap(1:n1,1:n2,1:n3,ipatch))
               end do
             end do outer0
 
-            if (marca.eq.0) exit iter_while
+            if (marca.eq.0.and.basintprev.gt.10) exit iter_while
 
-            outer1: DO irr=1,NL
+            outer1: DO irr=1,ir
              LLOW1=SUM(NPATCH(0:IRR-1))+1
              LLOW2=SUM(NPATCH(0:IRR))
              dxpa = dx / (2.0 ** irr)
@@ -544,8 +427,9 @@ c     &                         solap(1:n1,1:n2,1:n3,ipatch))
                  do kkzz = mink,maxk
                  do jjyy = minj,maxj
                  do iixx = mini,maxi
-                   if (cr0amr1(iixx,jjyy,kkzz,jpatch).eq.1.and.
-     &                 solap(iixx,jjyy,kkzz,jpatch).eq.1) then
+                   if ((cr0amr1(iixx,jjyy,kkzz,jpatch).eq.1
+     &                 .or.ir.eq.irr)
+     &             .and.solap(iixx,jjyy,kkzz,jpatch).eq.1) then
                    if ((rx(iixx,jpatch)-thisx)**2+
      &                 (ry(jjyy,jpatch)-thisy)**2+
      &                 (rz(kkzz,jpatch)-thisz)**2.le.l2) then
@@ -572,7 +456,7 @@ c     &                         solap(1:n1,1:n2,1:n3,ipatch))
              END DO
            end do outer1
 
-            if (marca.eq.0) exit iter_while
+            if (marca.eq.0.and.basintprev.gt.10) exit iter_while
               
             if (basint-basintprev.lt.10) then 
              l = max(l*step, l+dxpa_i)
