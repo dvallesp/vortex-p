@@ -87,10 +87,16 @@
       character*13 filenom
       character*30 filerr5
 
+      real basx,basy
+
       integer exectime, time
 
 
       lado0 = nx * dx
+      write(*,*) 'in filter'
+      write(*,*) minval(dens0),maxval(dens0)
+      write(*,*) minval(dens1(:,:,:,1:sum(npatch(1:nl)))), 
+     &           maxval(dens1(:,:,:,1:sum(npatch(1:nl))))
 
 *     DENS0, DENS1 PROPORTIONAL TO CELLS MASSES!!!
       dens0 = dens0 + 1.0
@@ -110,7 +116,7 @@
 
 !!!!! for each cell, we ought to find the optimum coherence length
       ! we first initialize the lengths
-      L0 = 3.0 * DX
+      L0 = 0.!3.0 * DX
       DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
        LOW2=SUM(NPATCH(0:IR))
@@ -118,7 +124,7 @@
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,L1,DXPA),
 !$OMP+            PRIVATE(I), DEFAULT(NONE)
        DO I=LOW1,LOW2
-         L1(:,:,:,I) = 3.0 * DXPA
+         L1(:,:,:,I) = 0.!3.0 * DXPA
        END DO
       END DO
 
@@ -141,7 +147,7 @@
             marca = 0
             if (cr0amr(i,j,k).eq.1) marca = 1
             iter = 0
-            L = L0(i,j,k)
+            L = 3.0*dx!L0(i,j,k)
             thisx = radx(i)
             thisy = rady(j)
             thisz = radz(k)
@@ -356,14 +362,12 @@
               if (marca.eq.1) l = max(l*step, l+dx)
               iter = iter+1
             end do iter_while_c
-            l0(i,j,k) = l
+            if (cr0amr(i,j,k).eq.1) l0(i,j,k) = l
             !if (cr0amr(i,j,k).eq.1) write(*,*) i,j,k,iter,l,err !DEBUGGING
           end do
         end do
         !write(*,*) i, 'done'
       end do ! do i=1,nx
-
-      write(*,*) 'base grid done!'
 
  !!! REFINED CELLS
       LOW1=1
@@ -403,7 +407,7 @@ c     &                         solap(1:n1,1:n2,1:n3,ipatch))
           if (cr0amr1(i,j,k,ipatch).eq.1.and.
      &          solap(i,j,k,ipatch).eq.1) marca = 1
           iter = 0
-          L = L1(i,j,k,ipatch)
+          L = 3.0*dxpa_i!L1(i,j,k,ipatch)
           thisx = rx(i,ipatch)
           thisy = ry(j,ipatch)
           thisz = rz(k,ipatch)
@@ -618,7 +622,8 @@ c     &                         solap(1:n1,1:n2,1:n3,ipatch))
             if (marca.eq.1) l = max(l*step, l+dxpa_i)
             iter = iter+1
           end do iter_while
-          l1(i,j,k,ipatch) = l
+          if (cr0amr1(i,j,k,ipatch).eq.1.and.
+     &        solap(i,j,k,ipatch).eq.1) l1(i,j,k,ipatch) = l
 
           !DEBUGGING
 C            if (cr0amr1(i,j,k,ipatch).eq.1.and.
@@ -631,6 +636,16 @@ C     &                                                k,iter,l,err
       END DO
 
       write(*,*) 'refinement levels done!'
+
+
+      write(*,*) '------------------------'
+      write(*,*) 'pre synchro'
+      do ir=0,nl
+      CALL P_MINMAX_IR(L0,L1,0,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                 NPATCH,ir,BASX,BASY)
+      write(*,*) 'L ir,min,max',ir,BASX,BASY
+      end do
+      write(*,*) '------------------------'
 
 *     refill refined and overlapping cells
       DO IR=NL,1,-1
@@ -706,6 +721,42 @@ C     &                                                k,iter,l,err
           END DO
         END DO
       END DO !IR=NL,1,-1
+
+      write(*,*) '------------------------'
+      write(*,*) 'post synchro'
+      do ir=0,nl 
+        CALL P_MINMAX_IR(L0,L1,0,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
+     &                 NPATCH,ir,BASX,BASY)
+        write(*,*) 'L ir,min,max',ir,BASX,BASY
+        CALL P_MINMAX_IR(abs(u2bulk),abs(u12bulk),0,0,NX,NY,NZ,NL,
+     &                 PATCHNX,PATCHNY,PATCHNZ,NPATCH,ir,BASX,BASY)
+           write(*,*) 'abs(u2bulk) ir,min,max',ir,BASX,BASY
+        CALL P_MINMAX_IR(abs(u3bulk),abs(u13bulk),0,0,NX,NY,NZ,NL,
+     &                 PATCHNX,PATCHNY,PATCHNZ,NPATCH,ir,BASX,BASY)
+            write(*,*) 'abs(u3bulk) ir,min,max',ir,BASX,BASY
+        CALL P_MINMAX_IR(abs(u4bulk),abs(u14bulk),0,0,NX,NY,NZ,NL,
+     &                 PATCHNX,PATCHNY,PATCHNZ,NPATCH,ir,BASX,BASY)
+            write(*,*) 'abs(u4bulk) ir,min,max',ir,BASX,BASY
+      end do
+      write(*,*) '------------------------'
+      open(99, file='output_files/velocities_after_synchro.dat', 
+     &  form='unformatted',status='unknown')
+
+        write(99) (((l0(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        write(99) (((u2bulk(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        write(99) (((u3bulk(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        write(99) (((u4bulk(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        do i=1,sum(npatch)
+         n1=patchnx(i)
+         n2=patchny(i)
+         n3=patchnz(i)
+         write(99) (((l1(ix,j,k,i),ix=1,n1),j=1,n2),k=1,n3)
+         write(99) (((u12bulk(ix,j,k,i),ix=1,n1),j=1,n2),k=1,n3)
+         write(99) (((u13bulk(ix,j,k,i),ix=1,n1),j=1,n2),k=1,n3)
+         write(99) (((u14bulk(ix,j,k,i),ix=1,n1),j=1,n2),k=1,n3)
+        end do
+
+      close(99)
 
       ! U2,U3,U4,U12,U13,U14 gets updated with the values of the
       ! velocity fluctuation
