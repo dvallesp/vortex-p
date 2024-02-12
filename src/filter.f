@@ -52,7 +52,7 @@
 
       real dens0(1:NMAX,1:NMAY,1:NMAZ)
       real dens1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
-      common /dens/ dens0,dens1
+      !common /dens/ dens0,dens1
 
       integer cr0amr(1:NMAX,1:NMAY,1:NMAZ)
       integer cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
@@ -99,15 +99,14 @@
      &           maxval(dens1(:,:,:,1:sum(npatch(1:nl))))
 
 *     DENS0, DENS1 PROPORTIONAL TO CELLS MASSES!!!
-      dens0 = dens0 + 1.0
+      dens0 = 1.0
       DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
        LOW2=SUM(NPATCH(0:IR))
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,DENS1,IR),
 !$OMP+            PRIVATE(I), DEFAULT(NONE)
        DO I=LOW1,LOW2
-         DENS1(:,:,:,I) = DENS1(:,:,:,I) + 1.0
-         DENS1(:,:,:,I) = DENS1(:,:,:,I) / 8.0**IR
+         DENS1(:,:,:,I) = 1 / 8.0**IR
        END DO
       END DO
 
