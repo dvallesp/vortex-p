@@ -80,3 +80,4 @@ info:
 	@echo ""
 	@echo "- FILTER (optional, default is 0): set to 1 if you want to "
 	@echo "                                   use the turbulent filter"
+	@echo ""

@@ -458,6 +458,8 @@
      &                npatch)
       END IF
 
+#ifdef use_filter 
+#if use_filter==1
 *     Filter velocities (if specified to do so in vortex.dat)
       IF (FLAG_FILTER.EQ.1) THEN
         IF (flag_verbose.eq.1) write(*,*) 'Applying multiscale filter'
@@ -476,6 +478,8 @@
      &                npatch)
         END IF
       END IF
+#endif
+#endif
 
 *     All patches are extended with one extra cell per direction
       CALL EXTEND_VAR(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
@@ -1124,30 +1128,46 @@ C          END IF
 *********************************************************************
 
       !!!! FUNCTIONS in EXTERNAL FILES
+
 *     Differential operators
-      INCLUDE 'diff.f' ! diff_ho.f for first order
+#include "diff.f"
+
 *     Filenames
-      INCLUDE 'nomfile.f'
+#include "nomfile.f"
+
 *     Build the base and AMR grids
-      INCLUDE 'grids.f'
+#include "grids.f"
+
 *     Linear interpolation routines
-      INCLUDE 'interp.f'
+#include "interp.f"
+
 *     Solve elliptic equations at base and refined levels
-      !INCLUDE 'poisson.f'
 #include "poisson.f"
+
 *     Read the input data
-      INCLUDE 'reader.f'
+#include "reader.f"
+
 *     Write the outputs
-      INCLUDE 'writer.f'
+#include "writer.f"
+
 *     Handle the overlaps between different patches
-      INCLUDE 'overlaps.f'
+#include "overlaps.f"
+
 *     Handle the boundaries of AMR patches
-      INCLUDE 'boundaries.f'
+#include "boundaries.f"
+
 *     Detect cells with large errors and interpolate from coarser levels
-      INCLUDE 'outliers.f'
+#include "outliers.f"
+
 *     Multiscale filter as in (Vazza, 2012) to extract turbulent field
-      INCLUDE 'filter.f'
+#ifdef use_filter 
+#if use_filter==1
+#include "filter.f"
+#endif
+#endif
+
 *     Routines for working with particles
-      INCLUDE 'particles.f'
+#include "particles.f"
+
 *     Routines from 'Numerical Recipes in Fortran90', Press, Teukoslky et al.
-      INCLUDE 'nr.f'
+#include  "nr.f"
