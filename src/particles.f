@@ -712,7 +712,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
 ************************************************************************
       SUBROUTINE PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
+     &            NPART,LADO0)
 ************************************************************************
 
       use particle_data
@@ -727,10 +727,6 @@ C        WRITE(*,*) LVAL(I,IPARE)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
       REAL LADO0
 
-*     Output variables
-      INTEGER LIHAL(NDM),LIHAL_IX(NDM),LIHAL_JY(NDM),LIHAL_KZ(NDM)
-      REAL ERR(NDM)
-
 *     Local variables
       INTEGER IPATCH,IX,JY,KZ,BORAMR,IP,IR,LOW1,LOW2,N1,N2,N3,MARCA
       INTEGER IRMAX,NUMPARTLOOP
@@ -741,6 +737,9 @@ C        WRITE(*,*) LVAL(I,IPARE)
 *     COMMON VARIABLES
       REAL DX,DY,DZ
       COMMON /ESPACIADO/ DX,DY,DZ
+
+      ALLOCATE(LIHAL(PARTI), LIHAL_IX(PARTI), LIHAL_JY(PARTI),
+     &         LIHAL_KZ(PARTI))
 
       BORAMR=1
 
@@ -844,8 +843,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
 ************************************************************************
       SUBROUTINE ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,
-     &            LIHAL_KZ)
+     &            NPART,LADO0)
 ************************************************************************
       use particle_data
       IMPLICIT NONE
@@ -860,8 +858,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
       REAL LADO0
 
 *     Output variables
-      INTEGER LIHAL(NDM),LIHAL_IX(NDM),LIHAL_JY(NDM),LIHAL_KZ(NDM)
-      REAL ERR(NDM)
+      REAL ERR(PARTI)
 
 *     Local variables
       INTEGER IPATCH,IX,JY,KZ,LOW1,LOW2,IR,IP,II
@@ -985,7 +982,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
 ************************************************************************
       SUBROUTINE GRID_TO_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ,
+     &            NPART,LADO0,
      &            VAR0,VAR1,VARPART)
 ************************************************************************
 
@@ -1000,12 +997,11 @@ C        WRITE(*,*) LVAL(I,IPARE)
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
       REAL LADO0
-      INTEGER LIHAL(NDM),LIHAL_IX(NDM),LIHAL_JY(NDM),LIHAL_KZ(NDM)
       REAL VAR0(NMAX,NMAY,NMAZ)
       REAL VAR1(NAMRX,NAMRY,NAMRZ,NPALEV)
 
 *     Output variables
-      REAL VARPART(NDM)
+      REAL VARPART(PARTI)
 
 *     Local variables
       INTEGER IPATCH,IX,JY,KZ,LOW1,LOW2,IR,IP,II

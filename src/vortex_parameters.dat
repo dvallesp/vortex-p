@@ -8,7 +8,3 @@
 
        INTEGER NAMRX,NAMRY,NAMRZ
        PARAMETER (NAMRX=32,NAMRY=32,NAMRZ=32)
-
-*      particles ------------------------------------------------------
-       INTEGER NDM
-       PARAMETER (NDM=88000000)

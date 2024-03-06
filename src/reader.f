@@ -72,7 +72,6 @@
        integer cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
        common /cr0/ cr0amr, cr0amr1
 
-       INTEGER LIHAL(NDM),LIHAL_IX(NDM),LIHAL_JY(NDM),LIHAL_KZ(NDM)
 *      ---PARALLEL---
        INTEGER NUM,OMP_GET_NUM_THREADS,NUMOR, FLAG_PARALLEL
        COMMON /PROCESADORES/ NUM
@@ -403,12 +402,12 @@
        WRITE(*,*) 'Locating particles onto the grid'
        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
+     &            NPART,LADO0)
 
        CALL ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,
-     &            LIHAL_KZ)
+     &            NPART,LADO0)
+       DEALLOCATE(LIHAL, LIHAL_IX, LIHAL_JY, LIHAL_KZ)
        WRITE(*,*) 'End velocity interpolation -----------------------'
 
        IF (FLAG_FILTER.EQ.1) THEN 
