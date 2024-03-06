@@ -252,37 +252,73 @@
         WRITE(*,*) 'WARNING: PARTICLES OUTSIDE THE DOMAIN'
         ALLOCATE(ELIM(LOW1:LOW2))
         
+        J=0
 !$OMP PARALLEL DO SHARED(RXPA,RYPA,RZPA,LOW1,LOW2,DDXL,DDXR,DDYL,DDYR,
-!$OMP+            DDZL,DDZR,ELIM), PRIVATE(I), DEFAULT(NONE)
+!$OMP+            DDZL,DDZR,ELIM), 
+!$OMP+            PRIVATE(I), 
+!$OMP+            REDUCTION(+: J),
+!$OMP+            DEFAULT(NONE)
         DO I=LOW1,LOW2 
           ELIM(I)=0
           IF (RXPA(I).LT.DDXL.OR.RXPA(I).GT.DDXR.OR.
      &        RYPA(I).LT.DDYL.OR.RYPA(I).GT.DDYR.OR.
      &        RZPA(I).LT.DDZL.OR.RZPA(I).GT.DDZR) THEN
+            J=J+1
             ELIM(I)=1
           END IF
         END DO
+
+        ! NEW NUMBER OF PARTICLES GETS UPDATED HERE
+        PARTI=PARTI-J
+        
+        WRITE(*,*) 'Particles outside the domain:',J
+        ALLOCATE(SCR42(9,J))
 
         J=0
         DO I=LOW1,LOW2 
           IF (ELIM(I).EQ.0) THEN
             J=J+1
-            IF (I.EQ.J) CYCLE
-            RXPA(J)=RXPA(I)
-            RYPA(J)=RYPA(I)
-            RZPA(J)=RZPA(I)
-            U2DM(J)=U2DM(I)
-            U3DM(J)=U3DM(I)
-            U4DM(J)=U4DM(I)
-            MASAP(J)=MASAP(I)
-            KERNEL(J)=KERNEL(I)
-            IF (FLAG_FILTER.EQ.1) ABVC(J)=ABVC(I)
+            SCR42(1,J)=RXPA(I)
+            SCR42(2,J)=RYPA(I)
+            SCR42(3,J)=RZPA(I)
+            SCR42(4,J)=U2DM(I)
+            SCR42(5,J)=U3DM(I)
+            SCR42(6,J)=U4DM(I)
+            SCR42(7,J)=MASAP(I)
+            SCR42(8,J)=KERNEL(I)
+            IF (FLAG_FILTER.EQ.1) SCR42(9,J)=ABVC(I)
           END IF
         END DO
         DEALLOCATE(ELIM)
 
-        LOW2=J
-        NPART(0)=LOW2 !Correct the number of particles!
+        DEALLOCATE(RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,KERNEL)
+        DEALLOCATE(ABVC)
+
+        ALLOCATE(RXPA(PARTI),RYPA(PARTI),RZPA(PARTI))
+        ALLOCATE(U2DM(PARTI),U3DM(PARTI),U4DM(PARTI))
+        ALLOCATE(MASAP(PARTI),KERNEL(PARTI))
+        ALLOCATE(ABVC(PARTI))
+
+!$OMP PARALLEL DO SHARED(SCR42,RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,
+!$OMP+                   KERNEL,ABVC,PARTI,FLAG_FILTER), 
+!$OMP+            PRIVATE(I), 
+!$OMP+            DEFAULT(NONE)
+        DO I=1,PARTI 
+          RXPA(I)=SCR42(1,I)
+          RYPA(I)=SCR42(2,I)
+          RZPA(I)=SCR42(3,I)
+          U2DM(I)=SCR42(4,I)
+          U3DM(I)=SCR42(5,I)
+          U4DM(I)=SCR42(6,I)
+          MASAP(I)=SCR42(7,I)
+          KERNEL(I)=SCR42(8,I)
+          IF (FLAG_FILTER.EQ.1) ABVC(I)=SCR42(9,I)
+        END DO
+
+        DEALLOCATE(SCR42)
+
+        LOW2=PARTI
+        NPART(0)=PARTI !Correct the number of particles!
 
        END IF
 
