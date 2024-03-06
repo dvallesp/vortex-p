@@ -165,10 +165,6 @@
        CHARACTER*14 FILE5
        CHARACTER*30 FILERR5
 
-       ! For the particles version
-       REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
-     &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM),KERNEL(NDM)
-
        ! grids
        INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
        INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
@@ -361,7 +357,7 @@
      &            NL,REFINE_THR,PARCHLIM,BORGRID,
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
      &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
-     &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
+     &            NPART,
      &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR,
      &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
 
@@ -1111,8 +1107,7 @@ c     &                       ERR_THR)
 C          IF (FLAG_PARTICLES.EQ.1) THEN
            CALL WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
-     &                          PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &                          MASAP,U2DM,U3DM,U4DM,KERNEL,
+     &                          PATCHRY,PATCHRZ,PARE,
      &                          NPART,LADO0)
 C          END IF
         END IF

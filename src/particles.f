@@ -1,12 +1,13 @@
 ************************************************************************
       SUBROUTINE CREATE_MESH(NX,NY,NZ,NL_MESH,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
-     &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,REFINE_THR,PARCHLIM,BORGRID)
+     &            PATCHRX,PATCHRY,PATCHRZ,
+     &            NPART,LADO0,REFINE_THR,PARCHLIM,BORGRID)
 ************************************************************************
-*     Creats a mesh hierarchy for the given particle distribution
+*     Creates a mesh hierarchy for the given particle distribution
 ************************************************************************
 
+      use particle_data
       IMPLICIT NONE
 
       INCLUDE 'vortex_parameters.dat'
@@ -17,8 +18,6 @@
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
-      REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
-     &       U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
       REAL LADO0
       INTEGER REFINE_THR,PARCHLIM,BORGRID
 
@@ -712,10 +711,11 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
 ************************************************************************
       SUBROUTINE PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
-     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &            KERNEL,NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
+     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
+     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
 ************************************************************************
 
+      use particle_data
       IMPLICIT NONE
 
       INCLUDE 'vortex_parameters.dat'
@@ -725,7 +725,6 @@ C        WRITE(*,*) LVAL(I,IPARE)
       INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
-      REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),KERNEL(NDM)
       REAL LADO0
 
 *     Output variables
@@ -844,11 +843,11 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
 ************************************************************************
       SUBROUTINE ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
-     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &            U2DM,U3DM,U4DM,NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,
+     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
+     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,
      &            LIHAL_KZ)
 ************************************************************************
-
+      use particle_data
       IMPLICIT NONE
 
       INCLUDE 'vortex_parameters.dat'
@@ -858,7 +857,6 @@ C        WRITE(*,*) LVAL(I,IPARE)
       INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
-      REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),U2DM(NDM),U3DM(NDM),U4DM(NDM)
       REAL LADO0
 
 *     Output variables
@@ -986,11 +984,12 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
 ************************************************************************
       SUBROUTINE GRID_TO_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
-     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
+     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
      &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ,
      &            VAR0,VAR1,VARPART)
 ************************************************************************
 
+      use particle_data
       IMPLICIT NONE
 
       INCLUDE 'vortex_parameters.dat'
@@ -1000,7 +999,6 @@ C        WRITE(*,*) LVAL(I,IPARE)
       INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
-      REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM)
       REAL LADO0
       INTEGER LIHAL(NDM),LIHAL_IX(NDM),LIHAL_JY(NDM),LIHAL_KZ(NDM)
       REAL VAR0(NMAX,NMAY,NMAZ)
@@ -1158,7 +1156,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
       END
 
 ************************************************************************
-      SUBROUTINE KERNEL(N,N2,W,DIST,IKERNEL)
+      SUBROUTINE KERNEL_FUNC(N,N2,W,DIST,IKERNEL)
 ************************************************************************
 *     DIST contains initially the distance (particle to cell), and it is
 *     updated with the (unnormalised) value of the kernel
@@ -1884,8 +1882,8 @@ C        WRITE(*,*) LVAL(I,IPARE)
 ************************************************************************
       SUBROUTINE INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
-     &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC,KNEIGHBOURS,
+     &            PATCHRX,PATCHRY,PATCHRZ,
+     &            NPART,LADO0,FLAG_FILTER,KNEIGHBOURS,
      &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
 ************************************************************************
 *     Compute the velocity field on the grid
@@ -1899,6 +1897,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
       use dargdynamicarray_class, only: dArgDynamicArray
 ************************************************************
 
+      use particle_data
       IMPLICIT NONE
 
       INCLUDE 'vortex_parameters.dat'
@@ -1909,9 +1908,6 @@ C        WRITE(*,*) LVAL(I,IPARE)
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
-      REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
-     &       U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM)
-      REAL*4 ABVC(NDM)
       REAL LADO0
       INTEGER FLAG_FILTER,IKERNEL,FLAG_MACHFIELD,FLAG_MASS
 *     COMMON VARIABLES
@@ -2141,7 +2137,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
 
        BAS8=0.D0
        BAS8X=0.D0
@@ -2293,7 +2289,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
 
        BAS8=0.D0
        BAS8X=0.D0
@@ -2440,7 +2436,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         H_KERN=DIST(CONTA)
         L0(IX,JY,KZ)=H_KERN
 
-        CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
 
         BAS8=0.D0
         BAS8X=0.D0
@@ -2530,7 +2526,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           !  if (isnan(h_kern).or.conta.lt.kneighbours) then 
           !   write(*,*) ipatch,ix,jy,kz,conta,h_kern,dxpa
           !  end if
-          CALL KERNEL(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+          CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
   
           BAS8=0.D0
           BAS8X=0.D0

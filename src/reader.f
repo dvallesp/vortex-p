@@ -3,7 +3,7 @@
      &            NL_PARTICLE_GRID,REFINE_THR,PARCHLIM,BORGRID,
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
-     &            NPART,RXPA,RYPA,RZPA,MASAP,U2DM,U3DM,U4DM,KERNEL,
+     &            NPART,
      &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR,
      &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
 ***********************************************************************
@@ -25,6 +25,7 @@
 ***********************************************************************
 
        USE gadget_read
+       USE particle_data
        IMPLICIT NONE
 
        INCLUDE 'vortex_parameters.dat'
@@ -67,11 +68,6 @@
        INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
        COMMON /SHOCKED/ SHOCK0,SHOCK1
 
-!      Particles
-       REAL*4 RXPA(NDM),RYPA(NDM),RZPA(NDM),
-     &        U2DM(NDM),U3DM(NDM),U4DM(NDM),MASAP(NDM),
-     &        KERNEL(NDM)
-
        integer cr0amr(1:NMAX,1:NMAY,1:NMAZ)
        integer cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
        common /cr0/ cr0amr, cr0amr1
@@ -101,12 +97,44 @@
        character*4 blocklabel
        ! End scratch variables for reading
 
-       REAL*4 ABVC(NDM)
        REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
        REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
  
 
        real xmin,ymin,zmin,xmax,ymax,zmax
+
+       ! First, get the number of particles to be read in the snapshot 
+       parti=0
+       do ifile=0,files_per_snap-1 
+        WRITE(ITER_STRING,'(I3.3)') ITER
+        FIL1='./simulation/snapdir_'//ITER_STRING//'/snap_'//ITER_STRING
+        IF (FILES_PER_SNAP.EQ.1) THEN
+          FIL2=FIL1
+        ELSE
+          WRITE(IFILE_STRING,'(I1.1)') IFILE
+          FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
+        END IF
+
+        CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
+     &                  basint1,basint2,nall,basint3,basint4,bas83,
+     &                  bas84,bas85,bas86,blocksize)
+
+        parti=parti+npart_gadget(1)
+       end do 
+
+       ! Deallocate the particle arrays if they were allocated
+       if (allocated(rxpa)) then 
+          deallocate(rxpa,rypa,rzpa)
+          deallocate(u2dm,u3dm,u4dm)
+          deallocate(masap,kernel)
+          deallocate(abvc)
+        end if
+
+       ! Allocate the particle arrays
+       allocate(rxpa(parti),rypa(parti),rzpa(parti))
+       allocate(u2dm(parti),u3dm(parti),u4dm(parti))
+       allocate(masap(parti),kernel(parti))
+       allocate(abvc(parti))
 
        NPART(:)=0
 
@@ -312,8 +340,8 @@
        NPATCH(0:IR)=0
        CALL CREATE_MESH(NX,NY,NZ,NL_PARTICLE_GRID,NPATCH,
      &            PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
-     &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,REFINE_THR,PARCHLIM,BORGRID)
+     &            PATCHRX,PATCHRY,PATCHRZ,
+     &            NPART,LADO0,REFINE_THR,PARCHLIM,BORGRID)
        
        NL=NL_PARTICLE_GRID
        DO IR=1,NL_PARTICLE_GRID
@@ -332,18 +360,18 @@
        WRITE(*,*) 'Routine interpolate velocity ---------------------'
        CALL INTERPOLATE_VELOCITIES(NX,NY,NZ,NL,NPATCH,PARE,
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
-     &            PATCHRX,PATCHRY,PATCHRZ,RXPA,RYPA,RZPA,U2DM,U3DM,
-     &            U4DM,MASAP,NPART,LADO0,FLAG_FILTER,ABVC,KNEIGHBOURS,
+     &            PATCHRX,PATCHRY,PATCHRZ,
+     &            NPART,LADO0,FLAG_FILTER,KNEIGHBOURS,
      &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
 
        WRITE(*,*) 'Locating particles onto the grid'
        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
-     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &            KERNEL,NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
+     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
+     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ)
 
        CALL ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
-     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,RXPA,RYPA,RZPA,
-     &            U2DM,U3DM,U4DM,NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,
+     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
+     &            NPART,LADO0,LIHAL,LIHAL_IX,LIHAL_JY,
      &            LIHAL_KZ)
        WRITE(*,*) 'End velocity interpolation -----------------------'
 

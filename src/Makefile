@@ -47,7 +47,7 @@ endif
 
 EXEC=$(NAME)
 
-OBJ=read_gadget.o vortex.o
+OBJ=read_gadget.o particle_data.o vortex.o
 
 $(NAME): $(OBJ)
 	$(FC) $(FFLAGS) $(OBJ) -o $(EXEC) $(LIBS)
