@@ -8,11 +8,14 @@ $(info FFTW=$(FFTW))
 FILTER := $(if $(FILTER),$(FILTER),0)
 $(info FILTER=$(FILTER))
 
+# weighting scheme: number-weighted (0), mass-weighted (1), or volume-weighted (2)
+WEIGHT := $(if $(WEIGHT),$(WEIGHT),0)
+$(info WEIGHT=$(WEIGHT))
 
 #### This is an example for a local machine ####
 ifeq ($(COMP),1)          
  FC=gfortran 
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -23,7 +26,7 @@ endif
 #### This is for the LluisVives cluster at Universitat de València, where I locally installed coretran ####
 ifeq ($(COMP),2)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT)
  LIBS=-Wl,-rpath,$(HOME)/coretran_shared_gnu/coretran/lib $(HOME)/coretran_shared_gnu/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran_shared_gnu/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
@@ -34,7 +37,7 @@ endif
 #### Debugging option in my local machine ####
 ifeq ($(COMP),999)
  FC=gfortran
- FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER)
+ FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -80,4 +83,8 @@ info:
 	@echo ""
 	@echo "- FILTER (optional, default is 0): set to 1 if you want to "
 	@echo "                                   use the turbulent filter"
+	@echo ""
+	@echo "- WEIGHT (optional, default is 0): 0: number-weighted"
+	@echo "                                   1: mass-weighted"
+	@echo "                                   2: volume-weighted"
 	@echo ""

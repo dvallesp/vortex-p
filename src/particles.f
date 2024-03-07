@@ -2100,7 +2100,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       STEP=4
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
-!$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,MASAP,
+!$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,MASAP,VOL,
 !$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC,IKERNEL,TREE,XTREE,
 !$OMP+                   YTREE,ZTREE,PI,FLAG_MASS),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
@@ -2141,6 +2141,17 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        L0(IX,JY,KZ)=H_KERN
 
        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+#ifdef weight_scheme
+#if weight_scheme == 1
+       DO I=1,CONTA
+        DIST(I)=DIST(I)*MASAP(NEIGH(I))
+       END DO
+#elif weight_scheme == 2
+       DO I=1,CONTA 
+        DIST(I)=DIST(I)*VOL(NEIGH(I))
+       END DO
+#endif
+#endif
 
        BAS8=0.D0
        BAS8X=0.D0
@@ -2266,7 +2277,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,U2DM,U3DM,
 !$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,VISC0,ABVC,
 !$OMP+                   IKERNEL,TREE,XTREE,YTREE,ZTREE,FLAG_MASS,
-!$OMP+                   MASAP,PI),
+!$OMP+                   MASAP,VOL,PI),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
 !$OMP+            SCHEDULE(DYNAMIC), DEFAULT(NONE)
@@ -2305,6 +2316,17 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        L0(IX,JY,KZ)=H_KERN
 
        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+#ifdef weight_scheme
+#if weight_scheme == 1
+      DO I=1,CONTA
+       DIST(I)=DIST(I)*MASAP(NEIGH(I))
+      END DO
+#elif weight_scheme == 2
+      DO I=1,CONTA 
+       DIST(I)=DIST(I)*VOL(NEIGH(I))
+      END DO
+#endif
+#endif
 
        BAS8=0.D0
        BAS8X=0.D0
@@ -2430,7 +2452,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,II1,II2,JJ1,JJ2,KK1,KK2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
 !$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC,IKERNEL,
-!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP),
+!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
 !$OMP+            SCHEDULE(DYNAMIC), DEFAULT(NONE)
@@ -2464,6 +2486,17 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         L0(IX,JY,KZ)=H_KERN
 
         CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+#ifdef weight_scheme
+#if weight_scheme == 1
+        DO I=1,CONTA
+         DIST(I)=DIST(I)*MASAP(NEIGH(I))
+        END DO
+#elif weight_scheme == 2
+        DO I=1,CONTA 
+         DIST(I)=DIST(I)*VOL(NEIGH(I))
+        END DO
+#endif
+#endif
 
         BAS8=0.D0
         BAS8X=0.D0
@@ -2516,7 +2549,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
 !$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
 !$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,IKERNEL,SOLAP,
-!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP),
+!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,DIST,NEIGH,DA,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I,
 !$OMP+                    BASMASS,SEARCH),
@@ -2562,6 +2595,17 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           !   write(*,*) ipatch,ix,jy,kz,conta,h_kern,dxpa
           !  end if
           CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+#ifdef weight_scheme
+#if weight_scheme == 1
+          DO I=1,CONTA
+           DIST(I)=DIST(I)*MASAP(NEIGH(I))
+          END DO
+#elif weight_scheme == 2
+          DO I=1,CONTA 
+            DIST(I)=DIST(I)*VOL(NEIGH(I))
+          END DO
+#endif
+#endif
   
           BAS8=0.D0
           BAS8X=0.D0

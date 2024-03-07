@@ -138,6 +138,12 @@
           deallocate(abvc)
 #endif
 #endif
+
+#ifdef weight_scheme
+#if weight_scheme == 2
+          deallocate(vol)
+#endif
+#endif
         end if
 
        ! Allocate the particle arrays
@@ -147,6 +153,12 @@
 #ifdef use_filter 
 #if use_filter == 1
        allocate(abvc(parti))
+#endif
+#endif
+
+#ifdef weight_scheme
+#if weight_scheme == 2
+        allocate(vol(parti))
 #endif
 #endif
 
@@ -224,7 +236,30 @@
 #endif
 #endif
 
+#ifdef weight_scheme
+#if weight_scheme == 2
+        ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+        WRITE(*,*) 'Reading density ...'
+        CALL read_float(FIL2,'RHO ',SCR4,blocksize)
+        WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+        VOL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+        DEALLOCATE(SCR4)
+#endif
+#endif
+
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !
+
        END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#ifdef weight_scheme
+#if weight_scheme == 2
+!$OMP PARALLEL DO SHARED(VOL, MASAP, PARTI), PRIVATE(I), DEFAULT(NONE)
+       DO I=1,PARTI
+         VOL(I)=MASAP(I)/VOL(I)
+       END DO
+#endif 
+#endif
        
        NPART(0)=LOW2 !Retrocompatibility with general reader
 

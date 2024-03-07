@@ -7,6 +7,7 @@
         REAL,ALLOCATABLE::RXPA(:),RYPA(:),RZPA(:)
         REAL,ALLOCATABLE::U2DM(:),U3DM(:),U4DM(:)
         REAL,ALLOCATABLE::MASAP(:),KERNEL(:)
+
 #ifdef use_filter
 #if use_filter == 1
         REAL,ALLOCATABLE::ABVC(:)
@@ -14,6 +15,15 @@
         ! Dummy variable 
         REAL ABVC
 #endif
+#endif
+
+#ifdef weight_scheme 
+#if weight_scheme == 2
+        REAL,ALLOCATABLE::VOL(:)
+#else
+        ! Dummy variable 
+        REAL VOL
+#endif 
 #endif
 
         INTEGER,ALLOCATABLE::LIHAL(:)
