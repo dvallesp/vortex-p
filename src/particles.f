@@ -1936,8 +1936,15 @@ C        WRITE(*,*) LVAL(I,IPARE)
       REAL U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
       COMMON /VELOC/ U2,U3,U4,U12,U13,U14
 
-      REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
-      REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
+#ifdef use_filter
+#if use_filter == 1
+             REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+             REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
+#else 
+             ! Dummy variables
+             REAL VISC0, VISC1 
+#endif
+#endif
 
       !real u1(1:NMAX,1:NMAY,1:NMAZ)
       !real u11(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
@@ -2146,14 +2153,22 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
         BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
         BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
+#ifdef use_filter
+#if use_filter == 1
         BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
+#endif
+#endif
         !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
         BASMASS=BASMASS+MASAP(NEIGH(I))
        END DO
        U2(IX,JY,KZ)=BAS8X/BAS8
        U3(IX,JY,KZ)=BAS8Y/BAS8
        U4(IX,JY,KZ)=BAS8Z/BAS8
+#ifdef use_filter
+#if use_filter == 1
        VISC0(IX,JY,KZ)=BAS8M/BAS8
+#endif
+#endif
        !VISC0(IX,JY,KZ)=BAS8M
 
 
@@ -2225,6 +2240,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &              L0(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
      &              L0(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ  
      
+#ifdef use_filter
+#if use_filter == 1
        VISC0(IX,JY,KZ)=VISC0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
      &                 VISC0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
      &                 VISC0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
@@ -2233,6 +2250,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &                 VISC0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
      &                 VISC0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
      &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
+#endif
+#endif
 
       END DO 
       END DO 
@@ -2298,7 +2317,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
         BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
         BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
+#ifdef use_filter
+#if use_filter == 1
         BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
+#endif
+#endif
         !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
         BASMASS=BASMASS+MASAP(NEIGH(I))
        END DO
@@ -2306,7 +2329,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        U2(IX,JY,KZ)=BAS8X/BAS8
        U3(IX,JY,KZ)=BAS8Y/BAS8
        U4(IX,JY,KZ)=BAS8Z/BAS8
+#ifdef use_filter
+#if use_filter == 1
        VISC0(IX,JY,KZ)=BAS8M/BAS8
+#endif
+#endif
        !VISC0(IX,JY,KZ)=BAS8M
 
        IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
@@ -2378,6 +2405,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &              L0(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
      &              L0(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ  
      
+#ifdef use_filter
+#if use_filter == 1
        VISC0(IX,JY,KZ)=VISC0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
      &                 VISC0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
      &                 VISC0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
@@ -2386,6 +2415,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &                 VISC0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
      &                 VISC0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
      &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
+#endif
+#endif
 
       END DO 
       END DO
@@ -2445,7 +2476,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
          BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
          BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
          BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
+#ifdef use_filter
+#if use_filter == 1
          BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
+#endif
+#endif
          !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
          BASMASS=BASMASS+MASAP(NEIGH(I))
         END DO
@@ -2453,7 +2488,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         U2(IX,JY,KZ)=BAS8X/BAS8
         U3(IX,JY,KZ)=BAS8Y/BAS8
         U4(IX,JY,KZ)=BAS8Z/BAS8
+#ifdef use_filter
+#if use_filter == 1
         VISC0(IX,JY,KZ)=BAS8M/BAS8
+#endif
+#endif
         !VISC0(IX,JY,KZ)=BAS8M
 
         IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
@@ -2535,7 +2574,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
            BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
            BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
            BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
+#ifdef use_filter
+#if use_filter == 1
            BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
+#endif
+#endif
            !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
            BASMASS=BASMASS+MASAP(NEIGH(I))
           END DO
@@ -2543,7 +2586,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           U12(IX,JY,KZ,IPATCH)=BAS8X/BAS8
           U13(IX,JY,KZ,IPATCH)=BAS8Y/BAS8
           U14(IX,JY,KZ,IPATCH)=BAS8Z/BAS8
+#ifdef use_filter
+#if use_filter == 1
           VISC1(IX,JY,KZ,IPATCH)=BAS8M/BAS8
+#endif
+#endif
           !VISC1(IX,JY,KZ,IPATCH)=BAS8M
 
           IF (FLAG_MASS.EQ.1) 
@@ -2574,9 +2621,13 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
      &    U14(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
+#ifdef use_filter
+#if use_filter == 1
         CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
      &    VISC1(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
+#endif
+#endif
 
         LOW1=SUM(NPATCH(0:IR-1))+1
         LOW2=SUM(NPATCH(0:IR))
@@ -2611,9 +2662,13 @@ c      WRITE(*,*) K1,KK1,KK2,K2
              call finer_to_coarser(u,uw,fuin)
              u14(II,JJ,KK,JPATCH) = FUIN
 
+#ifdef use_filter
+#if use_filter == 1
              u(1:2,1:2,1:2) = VISC1(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              VISC1(II,JJ,KK,JPATCH) = FUIN
+#endif
+#endif
             else
              uw(1:2,1:2,1:2) = 1.
 
@@ -2633,9 +2688,13 @@ c      WRITE(*,*) K1,KK1,KK2,K2
              call finer_to_coarser(u,uw,fuin)
              u4(II,JJ,KK) = FUIN
 
+#ifdef use_filter
+#if use_filter == 1
              u(1:2,1:2,1:2) = VISC1(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              VISC0(II,JJ,KK) = FUIN
+#endif
+#endif
             end if
           END DO
           END DO
@@ -2656,6 +2715,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,0,BASX,BASY)
       write(*,*) 'vz min,max',BASX,BASY
+#ifdef use_filter
+#if use_filter == 1
       CALL P_MINMAX_IR(VISC0,VISC1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,0,BASX,BASY)
       IF (FLAG_MACHFIELD.EQ.0) THEN
@@ -2663,6 +2724,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       ELSE 
        WRITE(*,*) 'Mach min,max',BASX,BASY
       END IF
+#endif
+#endif
 
 
       DO IR=1,NL
@@ -2681,6 +2744,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,IR,BASX,BASY)
        write(*,*) 'vz min,max',BASX,BASY
+#ifdef use_filter
+#if use_filter == 1
        CALL P_MINMAX_IR(VISC0,VISC1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,IR,BASX,BASY)
        IF (FLAG_MACHFIELD.EQ.0) THEN
@@ -2688,6 +2753,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        ELSE 
         WRITE(*,*) 'Mach min,max',BASX,BASY
        END IF
+#endif
+#endif
       END DO
 
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,

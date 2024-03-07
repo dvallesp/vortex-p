@@ -96,9 +96,16 @@
        character*4 blocklabel
        ! End scratch variables for reading
 
+#ifdef use_filter
+#if use_filter == 1
        REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
        REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
- 
+#else 
+       ! Dummy variables
+       REAL VISC0, VISC1 
+#endif
+#endif
+
 
        real xmin,ymin,zmin,xmax,ymax,zmax
 
@@ -126,14 +133,22 @@
           deallocate(rxpa,rypa,rzpa)
           deallocate(u2dm,u3dm,u4dm)
           deallocate(masap,kernel)
+#ifdef use_filter
+#if use_filter == 1
           deallocate(abvc)
+#endif
+#endif
         end if
 
        ! Allocate the particle arrays
        allocate(rxpa(parti),rypa(parti),rzpa(parti))
        allocate(u2dm(parti),u3dm(parti),u4dm(parti))
        allocate(masap(parti),kernel(parti))
+#ifdef use_filter 
+#if use_filter == 1
        allocate(abvc(parti))
+#endif
+#endif
 
        NPART(:)=0
 
@@ -189,6 +204,8 @@
         KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
         DEALLOCATE(SCR4)       
 
+#ifdef use_filter
+#if use_filter == 1
         IF (FLAG_FILTER.EQ.1) THEN
           ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
           IF (FLAG_MACHFIELD.EQ.0) THEN
@@ -204,6 +221,8 @@
           END IF            
           DEALLOCATE(SCR4)      
         END IF
+#endif
+#endif
 
        END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        
@@ -233,7 +252,10 @@
      &                     MAXVAL(MASAP(LOW1:LOW2))
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
-       IF (FLAG_FILTER.EQ.1) THEN
+      
+#ifdef use_filter
+#if use_filter == 1
+      IF (FLAG_FILTER.EQ.1) THEN
         IF (FLAG_MACHFIELD.EQ.0) THEN
          WRITE(*,*) 'ABVC=',MINVAL(ABVC(LOW1:LOW2)),
      &                      MAXVAL(ABVC(LOW1:LOW2))
@@ -242,6 +264,8 @@
      &                      MAXVAL(ABVC(LOW1:LOW2))
         END IF
        END IF
+#endif
+#endif
 
        IF (XMIN.LT.DDXL.OR.XMAX.GT.DDXR.OR.
      &     YMIN.LT.DDYL.OR.YMAX.GT.DDYR.OR.
@@ -285,18 +309,30 @@
             SCR42(6,J)=U4DM(I)
             SCR42(7,J)=MASAP(I)
             SCR42(8,J)=KERNEL(I)
+#ifdef use_filter
+#if use_filter == 1
             IF (FLAG_FILTER.EQ.1) SCR42(9,J)=ABVC(I)
+#endif
+#endif
           END IF
         END DO
         DEALLOCATE(ELIM)
 
         DEALLOCATE(RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,KERNEL)
+#ifdef use_filter
+#if use_filter == 1
         DEALLOCATE(ABVC)
+#endif
+#endif
 
         ALLOCATE(RXPA(PARTI),RYPA(PARTI),RZPA(PARTI))
         ALLOCATE(U2DM(PARTI),U3DM(PARTI),U4DM(PARTI))
         ALLOCATE(MASAP(PARTI),KERNEL(PARTI))
+#ifdef use_filter
+#if use_filter == 1
         ALLOCATE(ABVC(PARTI))
+#endif
+#endif
 
 !$OMP PARALLEL DO SHARED(SCR42,RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,
 !$OMP+                   KERNEL,ABVC,PARTI,FLAG_FILTER), 
@@ -311,7 +347,11 @@
           U4DM(I)=SCR42(6,I)
           MASAP(I)=SCR42(7,I)
           KERNEL(I)=SCR42(8,I)
+#ifdef use_filter
+#if use_filter == 1
           IF (FLAG_FILTER.EQ.1) ABVC(I)=SCR42(9,I)
+#endif
+#endif
         END DO
 
         DEALLOCATE(SCR42)
@@ -360,6 +400,9 @@
      &                     MAXVAL(MASAP(LOW1:LOW2))
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
+       
+#ifdef use_filter
+#if use_filter == 1
        IF (FLAG_FILTER.EQ.1) THEN
         IF (FLAG_MACHFIELD.EQ.0) THEN
          WRITE(*,*) 'ABVC=',MINVAL(ABVC(LOW1:LOW2)),
@@ -369,6 +412,8 @@
      &                      MAXVAL(ABVC(LOW1:LOW2))
         END IF
        END IF
+#endif
+#endif
        
 
        WRITE(*,*) 'Routine create mesh ------------------------------'
@@ -410,6 +455,8 @@
        DEALLOCATE(LIHAL, LIHAL_IX, LIHAL_JY, LIHAL_KZ)
        WRITE(*,*) 'End velocity interpolation -----------------------'
 
+#ifdef use_filter
+#if use_filter == 1
        IF (FLAG_FILTER.EQ.1) THEN 
 *     All patches are extended with one extra cell per direction
         CALL EXTEND_VAR(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
@@ -420,6 +467,8 @@
      &                       PATCHX,PATCHY,PATCHZ,LADO0,VISC0,VISC1,
      &                       DIV_THR,ABVC_THR,FLAG_MACHFIELD,MACH_THR)
        END IF
+#endif
+#endif
 
        RETURN
        END
