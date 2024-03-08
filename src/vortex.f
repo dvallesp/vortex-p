@@ -1123,6 +1123,17 @@ c     &                       ERR_THR)
 #endif
 #endif
 
+#ifdef output_particles
+#if output_particles == 0
+        DEALLOCATE(RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,KERNEL)
+#ifdef use_filter
+#if use_filter == 1
+        DEALLOCATE(ABVC)
+#endif
+#endif
+#endif
+#endif
+
 *//////////////////////////////////// ! DO IFI=1,NFILE
        END DO
 *////////////////////////////////////

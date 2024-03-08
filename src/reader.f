@@ -519,6 +519,19 @@
 #endif
 #endif
 
+!      If we do not want to output the particles, we deallocate them
+!      here
+#ifdef output_particles
+#if output_particles == 0
+        DEALLOCATE(RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,KERNEL)
+#ifdef use_filter
+#if use_filter == 1
+        DEALLOCATE(ABVC)
+#endif
+#endif
+#endif
+#endif
+
        RETURN
        END
 
