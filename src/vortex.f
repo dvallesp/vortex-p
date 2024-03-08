@@ -120,12 +120,18 @@
        real DIVER(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
        COMMON /DIVERGENCE/ DIVER0, DIVER
 
-       ! runtime flags
-       INTEGER FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
-     &         FLAG_W_VELOCITIES, FLAG_FILTER, FLAG_W_FILTLEN,
-     &         FLAG_PARTICLES
-       COMMON /FLAGS/ FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
-     &                FLAG_W_VELOCITIES
+       ! runtime IO flags
+       INTEGER FLAG_VERBOSE
+       INTEGER FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+       INTEGER FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &         FL_GR_DIV,FL_GR_CURL
+       INTEGER FL_P_ERR,FL_P_RES
+       INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+       COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
+     &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+
 
        ! AMR grid parent cells
        INTEGER CR3AMR1(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
@@ -154,16 +160,14 @@
        INTEGER I,J,K,LOW1,LOW2,II,JJ,IX,JY,KZ,NL,IR,N1,N2,N3,FILT_MAXIT
        INTEGER NFILE,FIRST,EVERY,IFI,LAST,BOR,KNEIGHBOURS,IKERNEL
        INTEGER FILES_PER_SNAP,NL_INPUT,PARCHLIM,BORGRID,REFINE_THR
-       INTEGER FLAG_MACHFIELD,FLAG_MASS
+       INTEGER FLAG_MACHFIELD,FLAG_MASS,FLAG_FILTER
        REAL ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
        REAL OMEGA0,ACHE,FDM
        REAL CIO_XC0,CIO_YC0,CIO_ZC0,LADO_BKP,LADO0_BKP
        REAL CIO_XC,CIO_YC,CIO_ZC
        REAL ABVC_THR,DIV_THR,MACH_THR
        COMMON /COSMO/ OMEGA0,ACHE,FDM
-       LOGICAL FILE_EXISTS
-       CHARACTER*14 FILE5
-       CHARACTER*30 FILERR5
+
 
        ! grids
        INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
@@ -233,13 +237,20 @@
        READ(1,*) NX,NY,NZ
        READ(1,*) !Max box sidelength (in input length units) --------------------------->
        READ(1,*) LADO0
-       READ(1,*) !Output flags (1=yes; 0=no): verbose, write div/rot, write pot, write v>
-       READ(1,*) FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
-     &           FLAG_W_VELOCITIES
-       READ(1,*) !Output mass density (input units) instead of kernel lengths (1=yes) -->
-       READ(1,*) FLAG_MASS
        READ(1,*) !Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
        READ(1,*) DDXL,DDXR,DDYL,DDYR,DDZL,DDZR
+       READ(1,*) !***********************************************************************
+       READ(1,*) !*       Output customisation (0=no, 1=yes)                            *
+       READ(1,*) !***********************************************************************
+       READ(1,*) !Gridded data: kernel length, density (mutually exclusive), velocity -->
+       READ(1,*) FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+       READ(1,*) !Gridded results: vcomp, vsol, scalar_pot, vector_pot, div(v), curl(v)->
+       READ(1,*) FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &           FL_GR_DIV,FL_GR_CURL
+       READ(1,*) !Particle results: interpolation error, particle-wise results --------->
+       READ(1,*) FL_P_ERR,FL_P_RES
+       READ(1,*) !Filter results: gridded Mach, shocked cells, filtering length, vturb ->
+       READ(1,*) FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
        READ(1,*) !***********************************************************************
        READ(1,*) !*       Mesh creation parameters                                      *
        READ(1,*) !***********************************************************************
@@ -274,8 +285,6 @@
        READ(1,*) !***********************************************************************
        READ(1,*) !Multiscale filter: apply filter -------------------------------------->
        READ(1,*) FLAG_FILTER
-       READ(1,*) !Output filtering lengths (separate file) ----------------------------->
-       READ(1,*) FLAG_W_FILTLEN
        READ(1,*) !Filtering parameters: tolerance, growing step, max. num. of its. ----->
        READ(1,*) FILT_TOL, FILT_STEP, FILT_MAXIT
        READ(1,*) !***********************************************************************
@@ -289,6 +298,13 @@
        READ(1,*) FLAG_MACHFIELD, MACH_THR
 
        CLOSE(1)
+
+       IF (FL_GR_DEN.EQ.1.AND.FL_GR_KERNL.EQ.1) THEN 
+        WRITE(*,*) 'ERROR: FL_GR_DEN and FL_GR_KERNL cannot be both 1'
+        STOP 
+       END IF 
+       FLAG_MASS=0
+       IF (FL_GR_DEN.EQ.1) FLAG_MASS=1
 
        ! center of the domain (in input length units)
        CIO_XC0=0.5*(DDXL+DDXR)
@@ -313,19 +329,6 @@
        NFILE=INT((LAST-FIRST)/EVERY) + 1
        WRITE(*,*) 'NFILE=',NFILE
 
-* === first, we check that no output files will be overwritten
-       DO IFI=1,NFILE
-        ITER=FIRST+EVERY*(IFI-1)
-        CALL NOMFILE2(ITER,FILE5)
-        FILERR5='./output_files/'//FILE5
-        INQUIRE(FILE=FILERR5,EXIST=FILE_EXISTS)
-        IF (FILE_EXISTS) THEN
-         WRITE(*,*) 'The file ', FILERR5, 'already exists'
-         STOP 'Program will terminate'
-        END IF
-       END DO
-* === end of check ===========================================
-
 
 * ===========  this is global for a given output ============================
       !LADO0=MAX(DDXR-DDXL,DDYR-DDYL,DDZR-DDZL)
@@ -344,10 +347,6 @@
        DO IFI=1,NFILE
 *////////////////////////////////////
        ITER=FIRST+EVERY*(IFI-1)
-
-*      define the output file name
-       CALL NOMFILE2(ITER,FILE5)
-       FILERR5='./output_files/'//FILE5
 
        NL=NL_INPUT
 
@@ -461,7 +460,7 @@
         IF (flag_verbose.eq.1) write(*,*) 'Applying multiscale filter'
         call MULTISCALE_FILTER(NX,NY,NZ,NL,NPATCH,pare,
      &            PATCHNX,PATCHNY,PATCHNZ,patchx,patchy,patchz,
-     &            patchrx,patchry,patchrz,DX,ITER,FLAG_W_FILTLEN,
+     &            patchrx,patchry,patchrz,DX,ITER,
      &            FILT_TOL,FILT_STEP,FILT_MAXIT)
         IF (FLAG_VERBOSE.EQ.1) THEN
          write(*,*) 'Computation ended!'
@@ -532,10 +531,12 @@
         END DO
         END DO
 
-        IF (FLAG_W_DIVROT.EQ.1) THEN
-          CALL WRITE_DIVROT(FILERR5,NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
-     &                      PATCHNX,PATCHNY,PATCHNZ)
-        END IF
+#ifdef output_grid 
+#if output_grid==1
+        CALL WRITE_DIVROT(NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
+     &                    PATCHNX,PATCHNY,PATCHNZ)
+#endif
+#endif
 
 
 * >>>>>>>>>>>>>    THIS IS FOR EACH FIELD TO BE SOLVED <<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -935,10 +936,12 @@
        WRITE(*,*) 'Computation ended!'
 
 **** WARNING: NOW DIVER AND (ROTAX,ROTAY,ROTAZ) ARE SOLUTIONS OF POISSON EQ.
-       IF (FLAG_W_POTENTIALS.EQ.1) THEN
-         CALL WRITE_POTENTIALS(FILERR5,NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
+#ifdef output_grid
+#if output_grid==1
+         CALL WRITE_POTENTIALS(NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
      &                         PATCHNX,PATCHNY,PATCHNZ)
-       END IF
+#endif
+#endif
 
 **** ---> WE NEED TO COMPUTE: -GRAD(DIVER) AND ROT(ROTAX,ROTAY,ROTAZ)
 
@@ -1101,16 +1104,24 @@ c     &                       ERR_THR)
 
         WRITE(*,*) 'Computation ended!'
 
-        IF (FLAG_W_VELOCITIES.EQ.1) THEN
-          CALL WRITE_VELOCITIES(FILERR5,NX,NY,NZ,ITER,T,ZETA,NL,
+        
+#ifdef output_grid
+#if output_grid==1
+        CALL WRITE_VELOCITIES(NX,NY,NZ,ITER,T,ZETA,NL,
      &                          NPATCH, PATCHNX,PATCHNY,PATCHNZ)
-C          IF (FLAG_PARTICLES.EQ.1) THEN
+#endif
+#endif
+
+#ifdef output_particles 
+#if output_particles==1
+          IF (FL_P_RES.EQ.1) THEN
            CALL WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,
      &                          NPART,LADO0)
-C          END IF
-        END IF
+          END IF
+#endif
+#endif
 
 *//////////////////////////////////// ! DO IFI=1,NFILE
        END DO

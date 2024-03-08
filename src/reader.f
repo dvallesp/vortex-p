@@ -38,10 +38,7 @@
        INTEGER FLAG_MACHFIELD,FLAG_MASS
        REAL MACH_THR
 
-       INTEGER FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
-     &         FLAG_W_VELOCITIES,FLAG_FILTER
-       COMMON /FLAGS/ FLAG_VERBOSE, FLAG_W_DIVROT, FLAG_W_POTENTIALS,
-     &                FLAG_W_VELOCITIES
+       INTEGER FLAG_FILTER
 
        INTEGER NPATCH(0:NLEVELS),PARE(NPALEV)
        integer NPART(0:NLEVELS)
@@ -79,6 +76,17 @@
        REAL DDXL,DDXR,DDYL,DDYR,DDZL,DDZR
        REAL CIO_XC,CIO_YC,CIO_ZC
        COMMON /DOM_DECOMP/ DDXL,DDXR,DDYL,DDYR,DDZL,DDZR
+
+       INTEGER FLAG_VERBOSE
+       INTEGER FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+       INTEGER FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &         FL_GR_DIV,FL_GR_CURL
+       INTEGER FL_P_ERR,FL_P_RES
+       INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+       COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
+     &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
 
        CHARACTER*3 ITER_STRING
        CHARACTER*1 IFILE_STRING
@@ -479,15 +487,21 @@
      &            NPART,LADO0,FLAG_FILTER,KNEIGHBOURS,
      &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
 
-       WRITE(*,*) 'Locating particles onto the grid'
-       CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
-     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0)
+#ifdef output_particles
+#if output_particles == 1
+       IF (FL_P_ERR.EQ.1) THEN
+        WRITE(*,*) 'Locating particles onto the grid'
+        CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
+     &             PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
+     &             NPART,LADO0)
 
-       CALL ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
-     &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0)
-       DEALLOCATE(LIHAL, LIHAL_IX, LIHAL_JY, LIHAL_KZ)
+        CALL ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
+     &             PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
+     &             NPART,LADO0)
+        DEALLOCATE(LIHAL, LIHAL_IX, LIHAL_JY, LIHAL_KZ)
+       END IF
+#endif
+#endif
        WRITE(*,*) 'End velocity interpolation -----------------------'
 
 #ifdef use_filter
@@ -562,19 +576,18 @@
        CALL DIVER_FINA(NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &                 PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ)
 
-       open(55,file='output_files/diver_unfiltered_'//iter_string,
-     &      status='unknown', form='unformatted')
-
-        write(55) (((diver0(i,j,k),i=1,nx),j=1,ny),k=1,nz)
-        do ipatch=1,sum(npatch(0:nl))
-         n1=patchnx(ipatch)
-         n2=patchny(ipatch)
-         n3=patchnz(ipatch)
-         write(55) (((diver(i,j,k,ipatch),i=1,n1),j=1,n2),k=1,n3)
-        end do
-
-
-       close(55)
+C       open(55,file='output_files/diver_unfiltered_'//iter_string,
+C     &      status='unknown', form='unformatted')
+C
+C        write(55) (((diver0(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+C        do ipatch=1,sum(npatch(0:nl))
+C         n1=patchnx(ipatch)
+C         n2=patchny(ipatch)
+C         n3=patchnz(ipatch)
+C         write(55) (((diver(i,j,k,ipatch),i=1,n1),j=1,n2),k=1,n3)
+C        end do
+C
+C       close(55)
 
        DO K=1,NZ 
        DO J=1,NY

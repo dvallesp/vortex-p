@@ -839,7 +839,8 @@ C        WRITE(*,*) LVAL(I,IPARE)
       RETURN
       END
 
-
+#ifdef output_particles 
+#if output_particles == 1
 ************************************************************************
       SUBROUTINE ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
@@ -891,7 +892,9 @@ C        WRITE(*,*) LVAL(I,IPARE)
       real U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
       COMMON /VELOC/ U2,U3,U4,U12,U13,U14
 
-      CHARACTER*21 FILERR
+      CHARACTER*5 ITER_STRING 
+      CHARACTER*200 FILENOM 
+      WRITE(ITER_STRING,'(I5.5)') ITER
 
       DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
@@ -970,15 +973,19 @@ C        WRITE(*,*) LVAL(I,IPARE)
      &                               MAXVAL(ERR(1:SUM(NPART(0:NL))))
 
 *     Save errors to a file
-      CALL NOMFILE_PARTICLES_ERR(ITER,FILERR)
-      OPEN(98,FILE='output_files/'//FILERR,STATUS='UNKNOWN',
-     &     FORM='UNFORMATTED')
+
+      FILENOM='output_files/error-particles'//ITER_STRING
+      OPEN(98,FILE=FILENOM,STATUS='UNKNOWN',FORM='UNFORMATTED')
       WRITE(98) (ERR(IP),IP=1,SUM(NPART(0:NL)))
       CLOSE(98)
 
       RETURN
       END
+#endif 
+#endif
 
+#ifdef output_particles
+#if output_particles == 1
 ************************************************************************
       SUBROUTINE GRID_TO_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
@@ -1072,6 +1079,8 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
       RETURN
       END
+#endif
+#endif
 
 ************************************************************************
       SUBROUTINE KERNEL_CUBICSPLINE(N,N2,W,DIST)
@@ -2801,10 +2810,14 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
       END DO
 
+#ifdef output_grid 
+#if output_grid == 1
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,CR0AMR,CR0AMR1,
      &                          SOLAP,L0,L1,VISC0,VISC1)
+#endif
+#endif
 
       RETURN
       END

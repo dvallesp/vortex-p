@@ -1,5 +1,7 @@
+#ifdef output_grid
+#if output_grid == 1
 ***********************************************************************
-       SUBROUTINE WRITE_DIVROT(FILERR5,NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
+       SUBROUTINE WRITE_DIVROT(NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
      &            PATCHNX,PATCHNY,PATCHNZ)
 ***********************************************************************
 *     Writes the divergence and each component of the rotational
@@ -10,7 +12,6 @@
       INCLUDE 'vortex_parameters.dat'
 
 *     FUNCTION ARGUMENTS
-      CHARACTER*30 FILERR5
       INTEGER NX, NY, NZ, NL, ITER
       real T, ZETA
       INTEGER NPATCH(0:NLEVELS)
@@ -29,92 +30,65 @@
       real DIVER(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
       COMMON /DIVERGENCE/ DIVER0, DIVER
 
+      INTEGER FLAG_VERBOSE
+      INTEGER FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+      INTEGER FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &         FL_GR_DIV,FL_GR_CURL
+      INTEGER FL_P_ERR,FL_P_RES
+      INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+      COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
+     &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+
 *     VARIABLES
       INTEGER IR, I, LOW1, LOW2, IX, J, K, N1, N2, N3
       real*4, ALLOCATABLE::SCR4(:,:,:)
       real*4 scrvar1, scrvar2
 
-*     OPEN THE OUTPUT FILE
-      OPEN(25,FILE=FILERR5,STATUS='UNKNOWN',FORM='UNFORMATTED',
-     &     POSITION='APPEND')
+      CHARACTER*5 ITER_STRING
+      CHARACTER*200 FILENOM
 
-*     WRITE GENERAL DATA
-      scrvar1 = T
-      scrvar2 = ZETA
-      WRITE(25) ITER, scrvar1, scrvar2, NL
+      WRITE(ITER_STRING,'(I5.5)') ITER
 
-
-*     WRITE THE DIVERGENCE FIELD
-      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
-
-      SCR4(1:NX,1:NY,1:NZ) = DIVER0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-
-      DEALLOCATE(SCR4)
-
-      ALLOCATE(SCR4(NAMRX,NAMRY,NAMRZ))
-
-      DO IR=1,NL
-
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-
-          N1=PATCHNX(I)
-          N2=PATCHNY(I)
-          N3=PATCHNZ(I)
-
-          SCR4(1:N1,1:N2,1:N3)=DIVER(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-
+      IF (FL_GR_DIV.EQ.1) THEN
+       FILENOM='output_files/divv'//ITER_STRING
+       OPEN(99, FILE=FILENOM, STATUS='UNKNOWN', FORM='UNFORMATTED')
+        WRITE(99) (((DIVER0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        LOW1=SUM(NPATCH(0:NL))
+        DO I=1,LOW1 
+         N1=PATCHNX(I)
+         N2=PATCHNY(I)
+         N3=PATCHNZ(I)
+         WRITE(99) (((DIVER(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
         END DO
-      END DO
+       CLOSE(99)
+      END IF
 
-      DEALLOCATE(SCR4)
+      IF (FL_GR_CURL.EQ.1) THEN
+       FILENOM='output_files/curlv'//ITER_STRING
+       OPEN(99, FILE=FILENOM, STATUS='UNKNOWN', FORM='UNFORMATTED')
+       WRITE(99) (((ROTAX_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       WRITE(99) (((ROTAY_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       WRITE(99) (((ROTAZ_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       LOW1=SUM(NPATCH(0:NL))
+       DO I=1,LOW1
+        N1=PATCHNX(I)
+        N2=PATCHNY(I)
+        N3=PATCHNZ(I)
+        WRITE(99) (((ROTAX_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((ROTAY_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((ROTAZ_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+       END DO
+       CLOSE(99)
+      END IF
 
-*     WRITE THE ROTATIONAL FIELDS (x, y, z)
-      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
-
-      SCR4(1:NX,1:NY,1:NZ) = ROTAX_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ) = ROTAY_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ) = ROTAZ_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-
-      DEALLOCATE(SCR4)
-
-      ALLOCATE(SCR4(NAMRX,NAMRY,NAMRZ))
-
-      DO IR=1,NL
-
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-
-          N1=PATCHNX(I)
-          N2=PATCHNY(I)
-          N3=PATCHNZ(I)
-
-          SCR4(1:N1,1:N2,1:N3)=ROTAX_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=ROTAY_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=ROTAZ_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-
-        END DO
-      END DO
-
-      DEALLOCATE(SCR4)
-
-      CLOSE(25)
-
+      RETURN
       END
 
 
 ***********************************************************************
-       SUBROUTINE WRITE_POTENTIALS(FILERR5,NX,NY,NZ,ITER,T,ZETA,NL,
+       SUBROUTINE WRITE_POTENTIALS(NX,NY,NZ,ITER,T,ZETA,NL,
      &            NPATCH,PATCHNX,PATCHNY,PATCHNZ)
 ***********************************************************************
 *     Writes the scalar and the vector potentials to a file
@@ -124,7 +98,6 @@
       INCLUDE 'vortex_parameters.dat'
 
 *     FUNCTION ARGUMENTS
-      CHARACTER*30 FILERR5
       INTEGER NX, NY, NZ, NL, ITER
       real T, ZETA
       INTEGER NPATCH(0:NLEVELS)
@@ -143,163 +116,65 @@
       real DIVER(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
       COMMON /DIVERGENCE/ DIVER0, DIVER
 
-*     VARIABLES
-      INTEGER IR, I, LOW1, LOW2, IX, J, K, N1, N2, N3
-      real*4, ALLOCATABLE::SCR4(:,:,:)
-
-*     OPEN THE OUTPUT FILE
-      OPEN(25,FILE=FILERR5,STATUS='UNKNOWN',FORM='UNFORMATTED',
-     &     POSITION='APPEND')
-
-      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
-
-*     WRITE THE SCALAR POTENTIAL
-      SCR4(1:NX,1:NY,1:NZ) = DIVER0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-
-      DEALLOCATE(SCR4)
-
-      ALLOCATE(SCR4(NAMRX,NAMRY,NAMRZ))
-
-      DO IR=1,NL
-
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-
-          N1=PATCHNX(I)
-          N2=PATCHNY(I)
-          N3=PATCHNZ(I)
-
-          SCR4(1:N1,1:N2,1:N3)=DIVER(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-
-        END DO
-      END DO
-
-      DEALLOCATE(SCR4)
-
-*     WRITE THE VECTOR POTENTIAL (x, y, z)
-      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
-
-      SCR4(1:NX,1:NY,1:NZ) = ROTAX_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ) = ROTAY_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ) = ROTAZ_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-
-      DEALLOCATE(SCR4)
-
-      ALLOCATE(SCR4(NAMRX,NAMRX,NAMRX))
-
-      DO IR=1,NL
-
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-
-          N1=PATCHNX(I)
-          N2=PATCHNY(I)
-          N3=PATCHNZ(I)
-
-          SCR4(1:N1,1:N2,1:N3)=ROTAX_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=ROTAY_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=ROTAZ_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-
-        END DO
-      END DO
-
-
-      DEALLOCATE(SCR4)
-
-      CLOSE(25)
-
-      END
-
-
-***********************************************************************
-       SUBROUTINE WRITE_TOTALVELOCITY(FILERR5,NX,NY,NZ,ITER,T,ZETA,NL,
-     &                             NPATCH,PATCHNX,PATCHNY,PATCHNZ)
-***********************************************************************
-*     Writes the initial velocity field to a file (DEPRECATED)
-***********************************************************************
-      IMPLICIT NONE
-
-      INCLUDE 'vortex_parameters.dat'
-
-*     FUNCTION ARGUMENTS
-      CHARACTER*30 FILERR5
-      INTEGER NX, NY, NZ, NL, ITER
-      real T, ZETA
-      INTEGER NPATCH(0:NLEVELS)
-      INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
-
-*     INPUTS FROM COMMON MODULES
-
-      real U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
-      real U3(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
-      real U4(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
-      real U12(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
-      real U13(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
-      real U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
-      COMMON /VELOC/ U2,U3,U4,U12,U13,U14
+      INTEGER FLAG_VERBOSE
+      INTEGER FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+      INTEGER FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &         FL_GR_DIV,FL_GR_CURL
+      INTEGER FL_P_ERR,FL_P_RES
+      INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+      COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
+     &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
 
 *     VARIABLES
       INTEGER IR, I, LOW1, LOW2, IX, J, K, N1, N2, N3
       real*4, ALLOCATABLE::SCR4(:,:,:)
+      real*4 scrvar1, scrvar2
 
-*     OPEN THE OUTPUT FILE
-      OPEN(25,FILE=FILERR5,STATUS='UNKNOWN',FORM='UNFORMATTED',
-     &     POSITION='APPEND')
+      CHARACTER*5 ITER_STRING
+      CHARACTER*200 FILENOM
 
-*     WRITE THE TOTAL VELOCITY FIELD (x, y, z)
-      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
+      WRITE(ITER_STRING,'(I5.5)') ITER
 
-      SCR4(1:NX,1:NY,1:NZ)=U2(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ)=U3(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ)=U4(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-
-      DEALLOCATE(SCR4)
-
-      ALLOCATE(SCR4(NAMRX,NAMRY,NAMRZ))
-
-      DO IR=1,NL
-
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-
-          N1=PATCHNX(I)
-          N2=PATCHNY(I)
-          N3=PATCHNZ(I)
-
-          SCR4(1:N1,1:N2,1:N3)=U12(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=U13(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=U14(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-
+      IF (FL_GR_SPOT.EQ.1) THEN
+       FILENOM='output_files/spot'//ITER_STRING
+       OPEN(99, FILE=FILENOM, STATUS='UNKNOWN', FORM='UNFORMATTED')
+        WRITE(99) (((DIVER0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        LOW1=SUM(NPATCH(0:NL))
+        DO I=1,LOW1 
+         N1=PATCHNX(I)
+         N2=PATCHNY(I)
+         N3=PATCHNZ(I)
+         WRITE(99) (((DIVER(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
         END DO
-      END DO
+       CLOSE(99)
+      END IF
 
-      DEALLOCATE(SCR4)
+      IF (FL_GR_VPOT.EQ.1) THEN
+       FILENOM='output_files/vpot'//ITER_STRING
+       OPEN(99, FILE=FILENOM, STATUS='UNKNOWN', FORM='UNFORMATTED')
+       WRITE(99) (((ROTAX_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       WRITE(99) (((ROTAY_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       WRITE(99) (((ROTAZ_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       LOW1=SUM(NPATCH(0:NL))
+       DO I=1,LOW1
+        N1=PATCHNX(I)
+        N2=PATCHNY(I)
+        N3=PATCHNZ(I)
+        WRITE(99) (((ROTAX_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((ROTAY_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((ROTAZ_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+       END DO
+       CLOSE(99)
+      END IF
 
-      CLOSE(25)
-
+      RETURN
       END
 
 
-
 ***********************************************************************
-       SUBROUTINE WRITE_VELOCITIES(FILERR5,NX,NY,NZ,ITER,T,ZETA,NL,
+       SUBROUTINE WRITE_VELOCITIES(NX,NY,NZ,ITER,T,ZETA,NL,
      &                             NPATCH,PATCHNX,PATCHNY,PATCHNZ)
 ***********************************************************************
 *     Writes the total, the compressive and the rotational velocities
@@ -310,7 +185,6 @@
       INCLUDE 'vortex_parameters.dat'
 
 *     FUNCTION ARGUMENTS
-      CHARACTER*30 FILERR5
       INTEGER NX, NY, NZ, NL, ITER
       real T, ZETA
       INTEGER NPATCH(0:NLEVELS)
@@ -343,126 +217,70 @@
        real U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
        COMMON /VELOC_ORIGINAL/ U2,U3,U4,U12,U13,U14
 
+      INTEGER FLAG_VERBOSE
+      INTEGER FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+      INTEGER FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &         FL_GR_DIV,FL_GR_CURL
+      INTEGER FL_P_ERR,FL_P_RES
+      INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+      COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
+     &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+
 *     VARIABLES
       INTEGER IR, I, LOW1, LOW2, IX, J, K, N1, N2, N3
       real*4, ALLOCATABLE::SCR4(:,:,:)
+      real*4 scrvar1, scrvar2
 
-*     OPEN THE OUTPUT FILE
-      OPEN(25,FILE=FILERR5,STATUS='UNKNOWN',FORM='UNFORMATTED',
-     &     POSITION='APPEND')
+      CHARACTER*5 ITER_STRING
+      CHARACTER*200 FILENOM
 
-*     WRITE THE TOTAL VELOCITY
-c      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
-c
-c      SCR4(1:NX,1:NY,1:NZ)=U2(1:NX,1:NY,1:NZ)
-c      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-c      SCR4(1:NX,1:NY,1:NZ)=U3(1:NX,1:NY,1:NZ)
-c      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-c      SCR4(1:NX,1:NY,1:NZ)=U4(1:NX,1:NY,1:NZ)
-c      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-c
-c      DEALLOCATE(SCR4)
-c
-c      ALLOCATE(SCR4(NAMRX,NAMRY,NAMRZ))
-c
-c      DO IR=1,NL
-c
-c       LOW1=SUM(NPATCH(0:IR-1))+1
-c       LOW2=SUM(NPATCH(0:IR))
-c       DO I=LOW1,LOW2
-c
-c         N1=PATCHNX(I)
-c         N2=PATCHNY(I)
-c         N3=PATCHNZ(I)
-c
-c         SCR4(1:N1,1:N2,1:N3)=U12(1:N1,1:N2,1:N3,I)
-c         WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-c         SCR4(1:N1,1:N2,1:N3)=U13(1:N1,1:N2,1:N3,I)
-c         WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-c         SCR4(1:N1,1:N2,1:N3)=U14(1:N1,1:N2,1:N3,I)
-c         WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-c
-c       END DO
-c      END DO
-c
-c      DEALLOCATE(SCR4)
+      WRITE(ITER_STRING,'(I5.5)') ITER
 
-*     WRITE THE COMPRESSIONAL VELOCITY
-      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
+      IF (FL_GR_VCOMP.EQ.1) THEN
+       FILENOM='output_files/vcomp'//ITER_STRING
+       OPEN(99, FILE=FILENOM, STATUS='UNKNOWN', FORM='UNFORMATTED')
+       WRITE(99) (((U2P(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       WRITE(99) (((U3P(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       WRITE(99) (((U4P(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       LOW1=SUM(NPATCH(0:NL))
+       DO I=1,LOW1
+        N1=PATCHNX(I)
+        N2=PATCHNY(I)
+        N3=PATCHNZ(I)
+        WRITE(99) (((U12P(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((U13P(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((U14P(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+       END DO
+       CLOSE(99)
+      END IF
 
-      SCR4(1:NX,1:NY,1:NZ)=U2P(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ)=U3P(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ)=U4P(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+      IF (FL_GR_VSOL.EQ.1) THEN
+       FILENOM='output_files/vsol'//ITER_STRING
+       OPEN(99, FILE=FILENOM, STATUS='UNKNOWN', FORM='UNFORMATTED')
+       WRITE(99) (((ROTAX_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       WRITE(99) (((ROTAY_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       WRITE(99) (((ROTAZ_0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       LOW1=SUM(NPATCH(0:NL))
+       DO I=1,LOW1
+        N1=PATCHNX(I)
+        N2=PATCHNY(I)
+        N3=PATCHNZ(I)
+        WRITE(99) (((ROTAX_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((ROTAY_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((ROTAZ_1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+       END DO
+       CLOSE(99)
+      END IF
 
-      DEALLOCATE(SCR4)
-
-      ALLOCATE(SCR4(NAMRX,NAMRY,NAMRZ))
-
-      DO IR=1,NL
-
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-
-          N1=PATCHNX(I)
-          N2=PATCHNY(I)
-          N3=PATCHNZ(I)
-
-          SCR4(1:N1,1:N2,1:N3)=U12P(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=U13P(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=U14P(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-
-        END DO
-      END DO
-
-      DEALLOCATE(SCR4)
-
-*     WRITE THE ROTATIONAL VELOCITY
-      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
-
-      SCR4(1:NX,1:NY,1:NZ)=ROTAX_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ)=ROTAY_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ)=ROTAZ_0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-
-      DEALLOCATE(SCR4)
-
-      ALLOCATE(SCR4(NAMRX,NAMRY,NAMRZ))
-
-      DO IR=1,NL
-
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-
-          N1=PATCHNX(I)
-          N2=PATCHNY(I)
-          N3=PATCHNZ(I)
-
-          SCR4(1:N1,1:N2,1:N3)=ROTAX_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=ROTAY_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=ROTAZ_1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-
-        END DO
-      END DO
-
-      DEALLOCATE(SCR4)
-
-      CLOSE(25)
-
+      RETURN
       END
+#endif
+#endif
 
+#ifdef output_grid 
+#if output_grid == 1
 **********************************************************************
       SUBROUTINE WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,
      &                          PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
@@ -508,75 +326,127 @@ c      DEALLOCATE(SCR4)
 
       INTEGER IX,JY,KZ,I,LOW1,LOW2,IR,IPATCH,J,K,N1,N2,N3
 
-      CHARACTER*13 FILNOMGRIDVARS
-      CHARACTER*10 FILNOMGRIDS
-
       INTEGER NXBAS,NYBAS,NZBAS,ITER
       COMMON /ITERI/ NXBAS,NYBAS,NZBAS,ITER
 
-      CALL NOMFILE_GRIDVARS(ITER,FILNOMGRIDVARS,FILNOMGRIDS)
+      ! runtime IO flags
+      INTEGER FLAG_VERBOSE
+      INTEGER FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+      INTEGER FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &         FL_GR_DIV,FL_GR_CURL
+      INTEGER FL_P_ERR,FL_P_RES
+      INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+      COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
+     &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
 
-      write(*,*) 'Writing grids data', filnomgrids
-      OPEN (23,FILE='output_files/'//FILNOMGRIDS,STATUS='UNKNOWN')
-      WRITE(23,*) ITER,' ',0.0,' ',NL,' ',0.0,' ',0.0
-      WRITE(23,*) 0.0
-      IR=0
-      WRITE(23,*) IR,0,0,NX,NY,NZ
-      DO IR=1,NL
-       WRITE(23,*) IR,' ',NPATCH(IR),' ',0,' ',0,' ',0
-       WRITE(23,*) '----------------- within level=',IR,' -----------'
-       LOW1=SUM(NPATCH(0:IR-1))+1
-       LOW2=SUM(NPATCH(0:IR))
-       DO I=LOW1,LOW2
-        WRITE(23,*) PATCHNX(I),' ',PATCHNY(I),' ',PATCHNZ(I)
-        WRITE(23,*) PATCHX(I),' ',PATCHY(I),' ',PATCHZ(I)
-        WRITE(23,*) PATCHRX(I),' ',PATCHRY(I),' ',PATCHRZ(I)
-        WRITE(23,*) PARE(I)
+      CHARACTER*5 ITER_STRING
+      CHARACTER*200 FILENOM
+      WRITE(ITER_STRING,'(I5.5)') ITER
+
+!     Grid description is written always
+      FILENOM='output_files/grids'//ITER_STRING
+      write(*,*) 'Writing grids data', FILENOM
+      OPEN (23,FILE=FILENOM,STATUS='UNKNOWN')
+       WRITE(23,*) ITER,' ',0.0,' ',NL,' ',0.0,' ',0.0
+       WRITE(23,*) 0.0
+       IR=0
+       WRITE(23,*) IR,0,0,NX,NY,NZ
+       DO IR=1,NL
+        WRITE(23,*) IR,' ',NPATCH(IR),' ',0,' ',0,' ',0
+        WRITE(23,*) '----------------- within level=',IR,' -----------'
+        LOW1=SUM(NPATCH(0:IR-1))+1
+        LOW2=SUM(NPATCH(0:IR))
+        DO I=LOW1,LOW2
+         WRITE(23,*) PATCHNX(I),' ',PATCHNY(I),' ',PATCHNZ(I)
+         WRITE(23,*) PATCHX(I),' ',PATCHY(I),' ',PATCHZ(I)
+         WRITE(23,*) PATCHRX(I),' ',PATCHRY(I),' ',PATCHRZ(I)
+         WRITE(23,*) PARE(I)
         END DO
        END DO
-       CLOSE(23)
+      CLOSE(23)
 
-       OPEN(99,FILE='output_files/'//FILNOMGRIDVARS,STATUS='UNKNOWN',
-     &     FORM='UNFORMATTED')
+!      Grid overlaps are also always written 
+      FILENOM='output_files/grid_overlaps'//ITER_STRING
+      OPEN(99,FILE=FILENOM,STATUS='UNKNOWN',FORM='UNFORMATTED')
+       WRITE(99) (((CR0AMR(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+       LOW1=SUM(NPATCH(0:NL))
+       DO IPATCH=1,LOW1
+        N1=PATCHNX(IPATCH)
+        N2=PATCHNY(IPATCH)
+        N3=PATCHNZ(IPATCH)
+        WRITE(99) (((CR0AMR1(I,J,K,IPATCH),I=1,N1),J=1,N2),K=1,N3)
+        WRITE(99) (((SOLAP(I,J,K,IPATCH),I=1,N1),J=1,N2),K=1,N3)
+       END DO 
+      CLOSE(99)
 
-       write(99) (((L0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-       write(99) (((u2(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-       write(99) (((u3(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-       write(99) (((u4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-#ifdef use_filter
-#if use_filter == 1
-       write(99) (((mach0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-#endif
-#endif
-       write(99) (((cr0amr(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-       low1=sum(npatch(0:nl))
-       do ipatch=1,low1
-        n1=patchnx(ipatch)
-        n2=patchny(ipatch)
-        n3=patchnz(ipatch)
-        write(99) (((L1(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
-        write(99) (((u12(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
-        write(99) (((u13(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
-        write(99) (((u14(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
-#ifdef use_filter
-#if use_filter == 1
-        write(99) (((mach1(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
-#endif
-#endif
-        write(99) (((cr0amr1(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
-        write(99) (((solap(I,J,K,ipatch),I=1,n1),J=1,n2),K=1,n3)
-       end do
+!     Write smoothing length OR density 
+      IF (FL_GR_DEN.EQ.1.OR.FL_GR_KERNL.EQ.1) THEN 
+       FILENOM='output_files/gridded_density'//ITER_STRING
+       IF (FL_GR_KERNL.EQ.1) 
+     &       FILENOM='output_files/gridded_kernel_length'//ITER_STRING
+       OPEN(99,FILE=FILENOM,STATUS='UNKNOWN',FORM='UNFORMATTED')
+        WRITE(99) (((L0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        LOW1=SUM(NPATCH(0:NL))
+        DO IPATCH=1,LOW1
+         N1=PATCHNX(IPATCH)
+         N2=PATCHNY(IPATCH)
+         N3=PATCHNZ(IPATCH)
+         WRITE(99) (((L1(I,J,K,IPATCH),I=1,N1),J=1,N2),K=1,N3)
+        END DO
        CLOSE(99)
+      END IF
 
-       RETURN
-       END
+!     Write velocities
+      IF (FL_GR_VEL.EQ.1) THEN 
+       FILENOM='output_files/gridded_velocity'//ITER_STRING
+       OPEN(99,FILE=FILENOM,STATUS='UNKNOWN',FORM='UNFORMATTED')
+        WRITE(99) (((U2(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        WRITE(99) (((U3(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        WRITE(99) (((U4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        LOW1=SUM(NPATCH(0:NL))
+        DO IPATCH=1,LOW1
+         N1=PATCHNX(IPATCH)
+         N2=PATCHNY(IPATCH)
+         N3=PATCHNZ(IPATCH)
+         WRITE(99) (((U12(I,J,K,IPATCH),I=1,N1),J=1,N2),K=1,N3)
+         WRITE(99) (((U13(I,J,K,IPATCH),I=1,N1),J=1,N2),K=1,N3)
+         WRITE(99) (((U14(I,J,K,IPATCH),I=1,N1),J=1,N2),K=1,N3)
+        END DO
+       CLOSE(99)
+      END IF
 
+!     Write mach number field
+#ifdef use_filter
+#if use_filter == 1
+      IF (FL_FILT_MACH.EQ.1) THEN 
+       FILENOM='output_files/gridded_mach'//ITER_STRING
+       OPEN(99,FILE=FILENOM,STATUS='UNKNOWN',FORM='UNFORMATTED')
+        WRITE(99) (((MACH0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        LOW1=SUM(NPATCH(0:NL))
+        DO IPATCH=1,LOW1
+         N1=PATCHNX(IPATCH)
+         N2=PATCHNY(IPATCH)
+         N3=PATCHNZ(IPATCH)
+         WRITE(99) (((MACH1(I,J,K,IPATCH),I=1,N1),J=1,N2),K=1,N3)
+        END DO
+       CLOSE(99)
+      END IF
+#endif 
+#endif
 
+      RETURN
+      END
+#endif 
+#endif
+
+#ifdef output_particles 
+#if output_particles == 1
 *********************************************************************
       SUBROUTINE WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                           PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
-     &                           PATCHRY,PATCHRZ,PARE,
-     &                           NPART,LADO0)
+     &                           PATCHRY,PATCHRZ,PARE,NPART,LADO0)
 ***********************************************************************
 *     Writes the GRIDS and CR0AMR/SOLAP variables for the created AMR
 *     structure
@@ -625,15 +495,18 @@ c      DEALLOCATE(SCR4)
 
       INTEGER IX,JY,KZ,I,LOW1,LOW2,IR,IP,NPARTTOT
 
-      CHARACTER*24 FILNOM
+      CHARACTER*5 ITER_STRING 
+      CHARACTER*200 FILENOM
 
       INTEGER NXBAS,NYBAS,NZBAS,ITER
       COMMON /ITERI/ NXBAS,NYBAS,NZBAS,ITER
 
+      WRITE(ITER_STRING,'(I5.5)') ITER
+      FILENOM='output_files/velocity-particles'//ITER_STRING
+
+
       NPARTTOT=SUM(NPART(0:NLEVELS))
-      CALL NOMFILE3(ITER,FILNOM)
-      OPEN(99,FILE='output_files/'//FILNOM,STATUS='UNKNOWN',
-     &     FORM='UNFORMATTED')
+      OPEN(99,FILE=FILENOM,STATUS='UNKNOWN',FORM='UNFORMATTED')
 
       WRITE(99) NPARTTOT
       WRITE(99) (RXPA(I),I=1,NPARTTOT)
@@ -718,6 +591,8 @@ c      DEALLOCATE(SCR4)
 
       RETURN
       END
+#endif
+#endif
 
 **********************************************************************
        SUBROUTINE WRITE_FILTLEN(FILERR5,NX,NY,NZ,ITER,NL,NPATCH,

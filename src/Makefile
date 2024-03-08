@@ -12,10 +12,23 @@ $(info FILTER=$(FILTER))
 WEIGHT := $(if $(WEIGHT),$(WEIGHT),0)
 $(info WEIGHT=$(WEIGHT))
 
+# output preferences (for efficient compilation)
+OUTPUT_GRID := $(if $(OUTPUT_GRID),$(OUTPUT_GRID),1)
+$(info OUTPUT_GRID=$(OUTPUT_GRID))
+
+OUTPUT_PARTICLES := $(if $(OUTPUT_PARTICLES),$(OUTPUT_PARTICLES),1)
+$(info OUTPUT_PARTICLES=$(OUTPUT_PARTICLES))
+
+OUTPUT_FILTER:=$(if $(OUTPUT_FILTER),$(OUTPUT_FILTER),1)
+ifeq ($(FILTER),0)
+  OUTPUT_FILTER=0
+endif
+$(info OUTPUT_FILTER=$(OUTPUT_FILTER))
+
 #### This is an example for a local machine ####
 ifeq ($(COMP),1)          
  FC=gfortran 
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -26,7 +39,7 @@ endif
 #### This is for the LluisVives cluster at Universitat de València, where I locally installed coretran ####
 ifeq ($(COMP),2)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER)
  LIBS=-Wl,-rpath,$(HOME)/coretran_shared_gnu/coretran/lib $(HOME)/coretran_shared_gnu/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran_shared_gnu/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
@@ -37,7 +50,7 @@ endif
 #### Debugging option in my local machine ####
 ifeq ($(COMP),999)
  FC=gfortran
- FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT)
+ FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -78,13 +91,23 @@ info:
 	@echo "   In particular, you might need to change the paths to the "
 	@echo "     coretran library and to the FFTW library (if using it)"
 	@echo ""
-	@echo "- FFTW (optional, default is 1): set to 0 if you do not have "
-	@echo "                                 FFTW"
+	@echo "- FFTW (optional, default: 1): set to 0 if you do not have "
+	@echo "                    FFTW"
 	@echo ""
-	@echo "- FILTER (optional, default is 0): set to 1 if you want to "
-	@echo "                                   use the turbulent filter"
+	@echo "- FILTER (optional, default: 0): set to 1 if you want to use "
+	@echo "                    the turbulent filter"
 	@echo ""
-	@echo "- WEIGHT (optional, default is 0): 0: number-weighted"
-	@echo "                                   1: mass-weighted"
-	@echo "                                   2: volume-weighted"
+	@echo "- WEIGHT (optional, default: 0): 0: number-weighted"
+	@echo "                                 1: mass-weighted"
+	@echo "                                 2: volume-weighted"
+	@echo ""
+	@echo "- OUTPUT_GRID (optional, default: 1): set to 0 if you do "
+	@echo "                    not want to output gridded data"
+	@echo ""
+	@echo "- OUTPUT_PARTICLES (optional, default: 1): set to 0 if you "
+	@echo "                    do not want to output particle data"
+	@echo ""
+	@echo "- OUTPUT_FILTER (optional, default: 1): set to 0 if you do "
+	@echo "                    not want to output data about the "
+	@echo "                    turbulent filter"
 	@echo ""

@@ -9,12 +9,19 @@ Cells per direction (NX,NY,NZ) --------------------------------------->
 128,128,128
 Max box sidelength (in input length units) --------------------------->
 50.e3
-Output flags (1=yes; 0=no): verbose, write div/rot, write pot, write v>
-1,1,1,1
-Output mass density (input units) instead of kernel lengths (1=yes) -->
-1
 Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
 -19972.0312, 30027.9688, -27619.4688, 22380.5312, -24089.4375, 25910.5625
+***********************************************************************
+*       Output customisation (0=no, 1=yes)                            *
+***********************************************************************
+Gridded data: kernel length, density (mutually exclusive), velocity -->
+0,1,1
+Gridded results: vcomp, vsol, scalar_pot, vector_pot, div(v), curl(v)->
+1,1,1,1,1,1
+Particle results: interpolation error, particle-wise results --------->
+1,1
+Filter results: gridded Mach, shocked cells, filtering length, vturb ->
+1,1,1,1
 ***********************************************************************
 *       Mesh creation parameters                                      *
 ***********************************************************************
@@ -43,8 +50,6 @@ SOR presion parameter, SOR max iter, border for AMR patches ---------->
 ***********************************************************************
 Multiscale filter: apply filter -------------------------------------->
 0
-Output filtering lengths (separate file) ----------------------------->
-1
 Filtering parameters: tolerance, growing step, max. num. of its. ----->
 0.1,1.05,200
 ***********************************************************************

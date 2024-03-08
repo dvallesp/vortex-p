@@ -1,7 +1,7 @@
 ************************************************************************
       SUBROUTINE MULTISCALE_FILTER(NX,NY,NZ,NL,NPATCH,pare,
      &            PATCHNX,PATCHNY,PATCHNZ,patchx,patchy,patchz,
-     &            patchrx,patchry,patchrz,DX,output_iter,flag_w_filtlen,
+     &            patchrx,patchry,patchrz,DX,output_iter,
      &            tol,step,maxit)
 ************************************************************************
 *     Implements the multiscale filtering technique described in
@@ -19,7 +19,7 @@
       INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
       real PATCHrX(NPALEV),PATCHrY(NPALEV),PATCHrZ(NPALEV)
       REAL DX
-      INTEGER output_iter, flag_w_filtlen, maxit
+      INTEGER output_iter, maxit
       real tol, step
 
 *     global variables
@@ -1048,12 +1048,10 @@ C     &                                                k,iter,l,err
         end do
       end do
 
-      if (flag_w_filtlen.eq.1) then
-        CALL NOMFILE_FILTLEN(output_iter,FILENOM)
-        FILERR5 = './output_files/'//FILENOM
-        CALL WRITE_FILTLEN(FILERR5,NX,NY,NZ,ITER,NL,NPATCH,
-     &            PATCHNX,PATCHNY,PATCHNZ,L0,L1)
-      end if
+      CALL NOMFILE_FILTLEN(output_iter,FILENOM)
+      FILERR5 = './output_files/'//FILENOM
+      CALL WRITE_FILTLEN(FILERR5,NX,NY,NZ,ITER,NL,NPATCH,
+     &                   PATCHNX,PATCHNY,PATCHNZ,L0,L1)
 
       RETURN
       END
