@@ -158,7 +158,7 @@
 
 *      LOCAL VARIABLES
        INTEGER I,J,K,LOW1,LOW2,II,JJ,IX,JY,KZ,NL,IR,N1,N2,N3,FILT_MAXIT
-       INTEGER NFILE,FIRST,EVERY,IFI,LAST,BOR,KNEIGHBOURS,IKERNEL
+       INTEGER NFILE,FIRST,EVERY,IFI,LAST,BOR,KNEIGHBOURS
        INTEGER FILES_PER_SNAP,NL_INPUT,PARCHLIM,BORGRID,REFINE_THR
        INTEGER FLAG_MACHFIELD,FLAG_MASS,FLAG_FILTER
        REAL ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
@@ -273,8 +273,6 @@
        READ(1,*) !***********************************************************************
        READ(1,*) ! Number of neighbours for interpolation ------------------------------>
        READ(1,*) KNEIGHBOURS
-       READ(1,*) !Kernel (1=W4, 2=C4, 3=C6) -------------------------------------------->
-       READ(1,*) IKERNEL
        READ(1,*) !***********************************************************************
        READ(1,*) !*       Poisson solver                                                *
        READ(1,*) !***********************************************************************
@@ -357,7 +355,7 @@
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
      &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,
-     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR,
+     &            FLAG_FILTER,KNEIGHBOURS,DIV_THR,ABVC_THR,
      &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
 
 

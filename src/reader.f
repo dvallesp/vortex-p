@@ -4,7 +4,7 @@
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
      &            NPART,
-     &            FLAG_FILTER,KNEIGHBOURS,IKERNEL,DIV_THR,ABVC_THR,
+     &            FLAG_FILTER,KNEIGHBOURS,DIV_THR,ABVC_THR,
      &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
 ***********************************************************************
 *     Reads the GAS particles of the simulation, builds a set of AMR
@@ -33,7 +33,7 @@
        INTEGER NX,NY,NZ,ITER,NDXYZ,LOW1,LOW2,FILES_PER_SNAP
        real T,AAA,BBB,CCC,MAP,ZETA,LADO0
        INTEGER I,J,K,IX,NL,IR,IRR,N1,N2,N3,NL_PARTICLE_GRID
-       INTEGER REFINE_THR,PARCHLIM,BORGRID,KNEIGHBOURS,IKERNEL
+       INTEGER REFINE_THR,PARCHLIM,BORGRID,KNEIGHBOURS
        REAL DIV_THR,ABVC_THR
        INTEGER FLAG_MACHFIELD,FLAG_MASS
        REAL MACH_THR
@@ -485,7 +485,7 @@
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,
      &            NPART,LADO0,FLAG_FILTER,KNEIGHBOURS,
-     &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
+     &            VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
 
 #ifdef output_particles
 #if output_particles == 1

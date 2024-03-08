@@ -1083,7 +1083,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
 #endif
 
 ************************************************************************
-      SUBROUTINE KERNEL_CUBICSPLINE(N,N2,W,DIST)
+      SUBROUTINE KERNEL_FUNC(N,N2,W,DIST)
 ************************************************************************
 *     DIST contains initially the distance (particle to cell), and it is
 *     updated with the (unnormalised) value of the kernel
@@ -1095,6 +1095,9 @@ C        WRITE(*,*) LVAL(I,IPARE)
       REAL DISTS
       INTEGER I
 
+#ifdef ikernel 
+#if ikernel == 0 
+!     Cubic spline kernel
       DO I=1,N2
        DISTS=DIST(I)/W
        IF (DISTS.LE.1.0) THEN
@@ -1105,23 +1108,8 @@ C        WRITE(*,*) LVAL(I,IPARE)
         DIST(I)=0.0
        END IF
       END DO
-
-      RETURN
-      END
-
-************************************************************************
-      SUBROUTINE KERNEL_WENDLAND_C4(N,N2,W,DIST)
-************************************************************************
-*     DIST contains initially the distance (particle to cell), and it is
-*     updated with the (unnormalised) value of the kernel
-      IMPLICIT NONE
-      INTEGER N,N2 ! N is the dimension of the array dist;
-                   ! N2, the actual number of particles filled in
-      REAL W,DIST(N)
-
-      REAL DISTS
-      INTEGER I
-
+#elif ikernel == 1
+!     Wendland C4 kernel
       DO I=1,N2
        DISTS=DIST(I)/W
        IF (DISTS.LE.2.0) THEN
@@ -1130,23 +1118,8 @@ C        WRITE(*,*) LVAL(I,IPARE)
         DIST(I)=0.0
        END IF
       END DO
-
-      RETURN
-      END
-
-************************************************************************
-      SUBROUTINE KERNEL_WENDLAND_C6(N,N2,W,DIST)
-************************************************************************
-*     DIST contains initially the distance (particle to cell), and it is
-*     updated with the (unnormalised) value of the kernel
-      IMPLICIT NONE
-      INTEGER N,N2 ! N is the dimension of the array dist;
-                   ! N2, the actual number of particles filled in
-      REAL W,DIST(N)
-
-      REAL DISTS
-      INTEGER I
-
+#elif ikernel == 2
+!     Wendland C6 kernel
       DO I=1,N2
        DISTS=DIST(I)/W
        IF (DISTS.LE.2.0) THEN
@@ -1156,32 +1129,11 @@ C        WRITE(*,*) LVAL(I,IPARE)
         DIST(I)=0.0
        END IF
       END DO
+#endif
+#endif
 
       RETURN
       END
-
-************************************************************************
-      SUBROUTINE KERNEL_FUNC(N,N2,W,DIST,IKERNEL)
-************************************************************************
-*     DIST contains initially the distance (particle to cell), and it is
-*     updated with the (unnormalised) value of the kernel
-      IMPLICIT NONE
-      INTEGER N,N2 ! N is the dimension of the array dist;
-                   ! N2, the actual number of particles filled in
-      REAL W,DIST(N)
-      INTEGER IKERNEL
-
-      IF (IKERNEL.EQ.1) THEN
-       CALL KERNEL_CUBICSPLINE(N,N2,W,DIST)
-      ELSE IF (IKERNEL.EQ.2) THEN
-       CALL KERNEL_WENDLAND_C4(N,N2,W,DIST)
-      ELSE IF (IKERNEL.EQ.3) THEN
-       CALL KERNEL_WENDLAND_C6(N,N2,W,DIST)
-      END IF
-
-      RETURN
-      END
-
 
 
 ************************************************************************
@@ -1889,7 +1841,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
      &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,
      &            NPART,LADO0,FLAG_FILTER,KNEIGHBOURS,
-     &            IKERNEL,VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
+     &            VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
 ************************************************************************
 *     Compute the velocity field on the grid
 ************************************************************************
@@ -1914,7 +1866,7 @@ C        WRITE(*,*) LVAL(I,IPARE)
       INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
       REAL LADO0
-      INTEGER FLAG_FILTER,IKERNEL,FLAG_MACHFIELD,FLAG_MASS
+      INTEGER FLAG_FILTER,FLAG_MACHFIELD,FLAG_MASS
 *     COMMON VARIABLES
       REAL DX,DY,DZ
       COMMON /ESPACIADO/ DX,DY,DZ
@@ -1986,16 +1938,16 @@ C        WRITE(*,*) LVAL(I,IPARE)
       integer omp_get_thread_num
       WRITE(*,*) 'Each cell-center value is computed using at least',
      &            KNEIGHBOURS,'particles'
-      IF (IKERNEL.EQ.1) THEN 
+
+#ifdef ikernel 
+#if ikernel == 0
        WRITE(*,*) 'Kernel: cubic spline (W4)'
-      ELSE IF (IKERNEL.EQ.2) THEN
+#elif ikernel == 1
        WRITE(*,*) 'Kernel: Wendland C4'
-      ELSE IF (IKERNEL.EQ.3) THEN
+#elif ikernel == 2
        WRITE(*,*) 'Kernel: Wendland C6'
-      ELSE 
-       WRITE(*,*) 'Kernel is badly specified... Use 1, 2 or 3'
-       STOP 
-      END IF
+#endif
+#endif
 
       MEDIOLADO0=0.5*LADO0
       PI=ACOS(-1.0)
@@ -2110,7 +2062,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,MASAP,VOL,
-!$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC,IKERNEL,TREE,XTREE,
+!$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC,TREE,XTREE,
 !$OMP+                   YTREE,ZTREE,PI,FLAG_MASS),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
@@ -2149,7 +2101,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST)
 #ifdef weight_scheme
 #if weight_scheme == 1
        DO I=1,CONTA
@@ -2285,7 +2237,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,II1,II2,JJ1,
 !$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,U2DM,U3DM,
 !$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,VISC0,ABVC,
-!$OMP+                   IKERNEL,TREE,XTREE,YTREE,ZTREE,FLAG_MASS,
+!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,
 !$OMP+                   MASAP,VOL,PI),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
@@ -2324,7 +2276,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST)
 #ifdef weight_scheme
 #if weight_scheme == 1
       DO I=1,CONTA
@@ -2460,7 +2412,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,II1,II2,JJ1,JJ2,KK1,KK2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
-!$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC,IKERNEL,
+!$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC,
 !$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
@@ -2494,7 +2446,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         H_KERN=DIST(CONTA)
         L0(IX,JY,KZ)=H_KERN
 
-        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST)
 #ifdef weight_scheme
 #if weight_scheme == 1
         DO I=1,CONTA
@@ -2557,7 +2509,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
 !$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
-!$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,IKERNEL,SOLAP,
+!$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,SOLAP,
 !$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,DIST,NEIGH,DA,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I,
@@ -2603,7 +2555,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           !  if (isnan(h_kern).or.conta.lt.kneighbours) then 
           !   write(*,*) ipatch,ix,jy,kz,conta,h_kern,dxpa
           !  end if
-          CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST,IKERNEL)
+          CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST)
 #ifdef weight_scheme
 #if weight_scheme == 1
           DO I=1,CONTA

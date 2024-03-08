@@ -12,6 +12,10 @@ $(info FILTER=$(FILTER))
 WEIGHT := $(if $(WEIGHT),$(WEIGHT),0)
 $(info WEIGHT=$(WEIGHT))
 
+# kernel family (0: cubic spline; 1: Wendland C4; 2: Wendland C6)
+KERNEL := $(if $(KERNEL),$(KERNEL),0)
+$(info KERNEL=$(KERNEL))
+
 # output preferences (for efficient compilation)
 OUTPUT_GRID := $(if $(OUTPUT_GRID),$(OUTPUT_GRID),1)
 $(info OUTPUT_GRID=$(OUTPUT_GRID))
@@ -28,7 +32,7 @@ $(info OUTPUT_FILTER=$(OUTPUT_FILTER))
 #### This is an example for a local machine ####
 ifeq ($(COMP),1)          
  FC=gfortran 
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -39,7 +43,7 @@ endif
 #### This is for the LluisVives cluster at Universitat de València, where I locally installed coretran ####
 ifeq ($(COMP),2)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL)
  LIBS=-Wl,-rpath,$(HOME)/coretran_shared_gnu/coretran/lib $(HOME)/coretran_shared_gnu/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran_shared_gnu/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
@@ -50,7 +54,7 @@ endif
 #### Debugging option in my local machine ####
 ifeq ($(COMP),999)
  FC=gfortran
- FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER)
+ FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -99,7 +103,11 @@ info:
 	@echo ""
 	@echo "- WEIGHT (optional, default: 0): 0: number-weighted"
 	@echo "                                 1: mass-weighted"
-	@echo "                                 2: volume-weighted"
+	@echo "                                 2: volume-weighted"	
+	@echo ""
+	@echo "- KERNEL (optional, default: 0): 0: cubic spline"
+	@echo "                                 1: Wendland C4"
+	@echo "                                 2: Wendland C6"
 	@echo ""
 	@echo "- OUTPUT_GRID (optional, default: 1): set to 0 if you do "
 	@echo "                    not want to output gridded data"
