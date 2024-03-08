@@ -2815,7 +2815,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,CR0AMR,CR0AMR1,
-     &                          SOLAP,L0,L1,VISC0,VISC1)
+     &                          SOLAP,L0,L1,VISC0,VISC1,FLAG_MACHFIELD)
 #endif
 #endif
 

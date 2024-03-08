@@ -285,7 +285,8 @@
       SUBROUTINE WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,
      &                          PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &                          PATCHRX,PATCHRY,PATCHRZ,PARE,CR0AMR,
-     &                          CR0AMR1,SOLAP,L0,L1,MACH0,MACH1)
+     &                          CR0AMR1,SOLAP,L0,L1,MACH0,MACH1,
+     &                          FLAG_MACHFIELD)
 ***********************************************************************
 *     Writes the GRIDS and CR0AMR/SOLAP variables for the created AMR
 *     structure
@@ -293,7 +294,7 @@
       IMPLICIT NONE
       INCLUDE 'vortex_parameters.dat'
 
-      INTEGER NL,NX,NY,NZ
+      INTEGER NL,NX,NY,NZ,FLAG_MACHFIELD
       INTEGER NPATCH(0:NLEVELS)
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
@@ -367,7 +368,7 @@
        END DO
       CLOSE(23)
 
-!      Grid overlaps are also always written 
+!     Grid overlaps are also always written 
       FILENOM='output_files/grid_overlaps'//ITER_STRING
       OPEN(99,FILE=FILENOM,STATUS='UNKNOWN',FORM='UNFORMATTED')
        WRITE(99) (((CR0AMR(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
@@ -421,7 +422,11 @@
 #ifdef use_filter
 #if use_filter == 1
       IF (FL_FILT_MACH.EQ.1) THEN 
-       FILENOM='output_files/gridded_mach'//ITER_STRING
+       IF (FLAG_MACHFIELD.EQ.1) THEN 
+        FILENOM='output_files/gridded_mach'//ITER_STRING
+       ELSE 
+        FILENOM='output_files/gridded_abvc'//ITER_STRING
+       END IF
        OPEN(99,FILE=FILENOM,STATUS='UNKNOWN',FORM='UNFORMATTED')
         WRITE(99) (((MACH0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
         LOW1=SUM(NPATCH(0:NL))
@@ -594,8 +599,10 @@
 #endif
 #endif
 
+#ifdef output_filter 
+#if output_filter == 1
 **********************************************************************
-       SUBROUTINE WRITE_FILTLEN(FILERR5,NX,NY,NZ,ITER,NL,NPATCH,
+       SUBROUTINE WRITE_FILTLEN(NX,NY,NZ,NL,NPATCH,
      &            PATCHNX,PATCHNY,PATCHNZ,L0,L1)
 ***********************************************************************
 *     Writes the filter length to a separate file.
@@ -605,8 +612,7 @@
       INCLUDE 'vortex_parameters.dat'
 
 *     FUNCTION ARGUMENTS
-      CHARACTER*30 FILERR5
-      INTEGER NX, NY, NZ, NL, ITER
+      INTEGER NX, NY, NZ, NL
       INTEGER NPATCH(0:NLEVELS)
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       real L0(1:NMAX,1:NMAY,1:NMAZ)
@@ -623,45 +629,58 @@
       INTEGER IR, I, LOW1, LOW2, IX, J, K, N1, N2, N3
       real*4, ALLOCATABLE::SCR4(:,:,:)
 
-*     OPEN THE OUTPUT FILE
-      OPEN(25,FILE=FILERR5,STATUS='UNKNOWN',FORM='UNFORMATTED',
-     &     POSITION='APPEND')
+      ! runtime IO flags
+      INTEGER FLAG_VERBOSE
+      INTEGER FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+      INTEGER FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &         FL_GR_DIV,FL_GR_CURL
+      INTEGER FL_P_ERR,FL_P_RES
+      INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+      COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
+     &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
 
-*     WRITE THE 'COHERENCE' LENGTH
+      INTEGER NXBAS,NYBAS,NZBAS,ITER
+      COMMON /ITERI/ NXBAS,NYBAS,NZBAS,ITER
 
-      ALLOCATE(SCR4(NMAX,NMAY,NMAZ))
-      SCR4(1:NX,1:NY,1:NZ) = L0(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ) = U2(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ) = U3(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      SCR4(1:NX,1:NY,1:NZ) = U4(1:NX,1:NY,1:NZ)
-      WRITE(25) (((SCR4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
-      DEALLOCATE(SCR4)
+      CHARACTER*5 ITER_STRING
+      CHARACTER*200 FILENOM
+      WRITE(ITER_STRING,'(I5.5)') ITER
 
-      ALLOCATE(SCR4(NAMRX,NAMRY,NAMRZ))
-      DO IR=1,NL
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-        DO I=LOW1,LOW2
-          N1=PATCHNX(I)
-          N2=PATCHNY(I)
-          N3=PATCHNZ(I)
-          SCR4(1:N1,1:N2,1:N3)=L1(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=U12(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=U13(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
-          SCR4(1:N1,1:N2,1:N3)=U14(1:N1,1:N2,1:N3,I)
-          WRITE(25) (((SCR4(IX,J,K),IX=1,N1),J=1,N2),K=1,N3)
+      IF (FL_FILT_LEN.EQ.1) THEN 
+       FILENOM='output_files/gridded_filtlen'//ITER_STRING
+       OPEN(99, FILE=FILENOM, STATUS='UNKNOWN', FORM='UNFORMATTED')
+        WRITE(99) (((L0(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        LOW1=SUM(NPATCH(0:NL))
+        DO I=1,LOW1
+         N1=PATCHNX(I)
+         N2=PATCHNY(I)
+         N3=PATCHNZ(I)
+         WRITE(99) (((L1(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
         END DO
-      END DO
-      DEALLOCATE(SCR4)
+       CLOSE(99)
+      END IF
 
-      CLOSE(25)
+      IF (FL_FILT_VTURB.EQ.1) THEN 
+       FILENOM='output_files/gridded_vturb'//ITER_STRING
+       OPEN(99, FILE=FILENOM, STATUS='UNKNOWN', FORM='UNFORMATTED')
+        WRITE(99) (((U2(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        WRITE(99) (((U3(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        WRITE(99) (((U4(I,J,K),I=1,NX),J=1,NY),K=1,NZ)
+        LOW1=SUM(NPATCH(0:NL))
+        DO I=1,LOW1
+         N1=PATCHNX(I)
+         N2=PATCHNY(I)
+         N3=PATCHNZ(I)
+         WRITE(99) (((U12(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+         WRITE(99) (((U13(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+         WRITE(99) (((U14(IX,J,K,I),IX=1,N1),J=1,N2),K=1,N3)
+        END DO
+       CLOSE(99)
+      END IF
 
+      RETURN
       END
 
 **********************************************************************
@@ -688,7 +707,7 @@
 
 *     OPEN THE OUTPUT FILE
       WRITE(ITER_STRING,'(I5.5)') ITER
-      FILERR5='./output_files/shocked_'//ITER_STRING
+      FILERR5='./output_files/shocked'//ITER_STRING
       
       OPEN(25,FILE=FILERR5,STATUS='UNKNOWN',FORM='UNFORMATTED')
 
@@ -710,3 +729,5 @@
       CLOSE(25)
 
       END
+#endif
+#endif

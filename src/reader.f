@@ -522,6 +522,8 @@
        RETURN
        END
 
+#ifdef use_filter 
+#if use_filter == 1
 ***********************************************************************
        SUBROUTINE IDENTIFY_SHOCKS(ITER,NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
      &                            PATCHNY,PATCHNZ,PATCHRX,PATCHRY,
@@ -566,6 +568,17 @@
       COMMON /SHOCKED/ SHOCK0,SHOCK1
 
       INTEGER I,J,K,IPATCH,N1,N2,N3,LOW1,LOW2,IR
+
+      INTEGER FLAG_VERBOSE
+      INTEGER FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL
+      INTEGER FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &         FL_GR_DIV,FL_GR_CURL
+      INTEGER FL_P_ERR,FL_P_RES
+      INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+      COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
+     &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
+     &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
 
       character*5 iter_string 
       write(iter_string, '(I5.5)') iter
@@ -657,8 +670,12 @@ C       close(55)
       
       END IF
 
-      CALL WRITE_SHOCKED(NX,NY,NZ,ITER,NL,NPATCH,PATCHNX,PATCHNY,
-     &                   PATCHNZ,SHOCK0,SHOCK1)
+      IF (FL_FILT_SHOCK.EQ.1) THEN
+       CALL WRITE_SHOCKED(NX,NY,NZ,ITER,NL,NPATCH,PATCHNX,PATCHNY,
+     &                    PATCHNZ,SHOCK0,SHOCK1)
+      END IF
 
       RETURN 
       END 
+#endif 
+#endif

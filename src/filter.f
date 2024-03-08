@@ -277,7 +277,7 @@
         DO IR=1,NL
           IF (IPATCH.LE.SUM(NPATCH(0:IR))) EXIT
         END DO
-        write(*,*) 'starting',ir,ipatch
+        !write(*,*) 'starting',ir,ipatch
         dxpa_i = dx/(2.0**ir)
 
 c        write(*,*) ipatch, sum(cr0amr1(1:n1,1:n2,1:n3,ipatch) *
@@ -520,16 +520,6 @@ C     &                                                k,iter,l,err
 
       write(*,*) 'refinement levels done!'
 
-
-      write(*,*) '------------------------'
-      write(*,*) 'pre synchro'
-      do ir=0,nl
-      CALL P_MINMAX_IR(L0,L1,0,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
-     &                 NPATCH,ir,BASX,BASY)
-      write(*,*) 'L ir,min,max',ir,BASX,BASY
-      end do
-      write(*,*) '------------------------'
-
 *     refill refined and overlapping cells
       DO IR=NL,1,-1
         CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
@@ -718,7 +708,7 @@ C     &                                                k,iter,l,err
         DO IR=1,NL
           IF (IPATCH.LE.SUM(NPATCH(0:IR))) EXIT
         END DO
-        write(*,*) 'starting2',ir,ipatch
+        !write(*,*) 'starting2',ir,ipatch
         dxpa_i = dx/(2.0**ir)
 
         do k=1,n3
@@ -979,7 +969,7 @@ C     &                                                k,iter,l,err
 
 
       write(*,*) '------------------------'
-      write(*,*) 'post synchro'
+      write(*,*) 'after filter'
       do ir=0,nl 
         CALL P_MINMAX_IR(L0,L1,0,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                 NPATCH,ir,BASX,BASY)
@@ -994,25 +984,6 @@ C     &                                                k,iter,l,err
      &                 PATCHNX,PATCHNY,PATCHNZ,NPATCH,ir,BASX,BASY)
             write(*,*) 'abs(u4bulk) ir,min,max',ir,BASX,BASY
       end do
-      write(*,*) '------------------------'
-      open(99, file='output_files/velocities_after_synchro.dat', 
-     &  form='unformatted',status='unknown')
-
-        write(99) (((l0(i,j,k),i=1,nx),j=1,ny),k=1,nz)
-        write(99) (((u2bulk(i,j,k),i=1,nx),j=1,ny),k=1,nz)
-        write(99) (((u3bulk(i,j,k),i=1,nx),j=1,ny),k=1,nz)
-        write(99) (((u4bulk(i,j,k),i=1,nx),j=1,ny),k=1,nz)
-        do i=1,sum(npatch)
-         n1=patchnx(i)
-         n2=patchny(i)
-         n3=patchnz(i)
-         write(99) (((l1(ix,j,k,i),ix=1,n1),j=1,n2),k=1,n3)
-         write(99) (((u12bulk(ix,j,k,i),ix=1,n1),j=1,n2),k=1,n3)
-         write(99) (((u13bulk(ix,j,k,i),ix=1,n1),j=1,n2),k=1,n3)
-         write(99) (((u14bulk(ix,j,k,i),ix=1,n1),j=1,n2),k=1,n3)
-        end do
-
-      close(99)
 
       ! U2,U3,U4,U12,U13,U14 gets updated with the values of the
       ! velocity fluctuation
@@ -1048,9 +1019,7 @@ C     &                                                k,iter,l,err
         end do
       end do
 
-      CALL NOMFILE_FILTLEN(output_iter,FILENOM)
-      FILERR5 = './output_files/'//FILENOM
-      CALL WRITE_FILTLEN(FILERR5,NX,NY,NZ,ITER,NL,NPATCH,
+      CALL WRITE_FILTLEN(NX,NY,NZ,NL,NPATCH,
      &                   PATCHNX,PATCHNY,PATCHNZ,L0,L1)
 
       RETURN

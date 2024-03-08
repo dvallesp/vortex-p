@@ -20,7 +20,7 @@ Gridded results: vcomp, vsol, scalar_pot, vector_pot, div(v), curl(v)->
 1,1,1,1,1,1
 Particle results: interpolation error, particle-wise results --------->
 1,1
-Filter results: gridded Mach, shocked cells, filtering length, vturb ->
+Filter: gridded Mach/ABVC, shocked cells, filtering length, vturb ---->
 1,1,1,1
 ***********************************************************************
 *       Mesh creation parameters                                      *
