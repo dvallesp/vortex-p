@@ -420,7 +420,7 @@ def read_vcomp(it, path='', parameters_path=None,
 
 
 def read_vsol(it, path='', parameters_path=None, 
-               filename='vcomp',
+               filename='vsol',
                digits=5, grids_path=None, grids_filename='grids'):
     """
     Reads the vsolXXXXX file, which contains the solenoidal part of 
@@ -928,4 +928,4 @@ def read_velocityparticles(it, path='', parameters_path=None,
                 fr.skip_record(f)
 
     return results
-    
+
