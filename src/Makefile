@@ -51,6 +51,19 @@ ifeq ($(COMP),2)
  endif
 endif
 
+#################################################################################
+#### This is for the installation of coretran suggested in the documentation ####
+ifeq ($(COMP),3)
+ FC=gfortran
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL)
+ LIBS=-Wl,-rpath,$(HOME)/coretran/lib $(HOME)/coretran/lib/libcoretran.so
+ INC=-I$(HOME)/coretran/library/include/coretran/
+ ifeq ($(FFTW),1)
+  LIBS +=-L/usr/local/lib64 -lfftw3f_omp -lfftw3f
+ endif
+endif
+#################################################################################
+
 #### Debugging option in my local machine ####
 ifeq ($(COMP),999)
  FC=gfortran
