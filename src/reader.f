@@ -1,5 +1,165 @@
 ***********************************************************************
-       SUBROUTINE READ_GADGET(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,
+      SUBROUTINE READ_GADGET_UNFORMATTED_NPART(ITER, FILES_PER_SNAP,
+     &             FLAG_FILTER, FLAG_MACHFIELD)
+***********************************************************************
+*       Reads the number of gas particles in the simulation
+***********************************************************************
+      use gadget_read
+      use particle_data  ! contains PARTI
+      implicit none 
+
+      integer iter, files_per_snap, flag_filter, flag_machfield 
+
+      CHARACTER*3 ITER_STRING
+      CHARACTER*1 IFILE_STRING
+      INTEGER IFILE
+      CHARACTER*200 FIL1,FIL2
+
+      integer npart_gadget(6), nall(6), blocksize
+      real*8 massarr(6)
+      integer basint1,basint2,basint3,basint4
+      real*8 bas81,bas82,bas83,bas84,bas85,bas86
+
+      parti=0
+      do ifile=0,files_per_snap-1 
+        WRITE(ITER_STRING,'(I3.3)') ITER
+        FIL1='./simulation/snapdir_'//ITER_STRING//'/snap_'//ITER_STRING
+        IF (FILES_PER_SNAP.EQ.1) THEN
+          FIL2=FIL1
+        ELSE
+          WRITE(IFILE_STRING,'(I1.1)') IFILE
+          FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
+        END IF
+
+        CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
+     &                  basint1,basint2,nall,basint3,basint4,bas83,
+     &                  bas84,bas85,bas86,blocksize)
+
+        parti=parti+npart_gadget(1)
+      end do 
+
+      return 
+      end 
+***********************************************************************
+
+***********************************************************************
+      SUBROUTINE READ_GADGET_UNFORMATTED(ITER, FILES_PER_SNAP,
+     &             FLAG_FILTER, FLAG_MACHFIELD, LOW2)
+***********************************************************************
+*       Reads the GAS particle data of the simulation
+***********************************************************************
+      use gadget_read 
+      use particle_data
+      implicit none 
+
+      integer iter, files_per_snap, flag_filter, flag_machfield 
+
+      CHARACTER*3 ITER_STRING
+      CHARACTER*1 IFILE_STRING
+      INTEGER IFILE
+      CHARACTER*200 FIL1,FIL2
+
+      integer npart_gadget(6), nall(6), blocksize
+      real*8 massarr(6)
+      integer basint1,basint2,basint3,basint4
+      real*8 bas81,bas82,bas83,bas84,bas85,bas86
+      integer low1,low2
+      REAL*4,ALLOCATABLE::SCR4(:)
+      REAL*4,ALLOCATABLE::SCR42(:,:)
+
+      LOW2=0
+      DO IFILE=0,FILES_PER_SNAP-1 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*     READING DATA
+      WRITE(ITER_STRING,'(I3.3)') ITER
+      FIL1='./simulation/snapdir_'//ITER_STRING//'/snap_'//ITER_STRING
+      IF (FILES_PER_SNAP.EQ.1) THEN
+        FIL2=FIL1
+      ELSE
+        WRITE(IFILE_STRING,'(I1.1)') IFILE
+        FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
+      END IF
+
+      WRITE(*,*) 'Reading iteration file: ',ITER,' ',
+     &              TRIM(ADJUSTL(FIL2))
+
+      CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
+     &                  basint1,basint2,nall,basint3,basint4,bas83,
+     &                  bas84,bas85,bas86,blocksize)
+      WRITE(*,*) npart_gadget(1), 'gas particles'
+      LOW1=LOW2+1
+      LOW2=LOW1+NPART_GADGET(1)-1
+      
+      ALLOCATE(SCR42(3,SUM(NPART_GADGET(1:6))))
+      WRITE(*,*) 'Reading positions ...'
+      CALL read_float3(FIL2,'POS ',SCR42,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
+      RXPA(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
+      RYPA(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
+      RZPA(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
+
+      WRITE(*,*) 'Reading velocities ...'
+      CALL read_float3(FIL2,'VEL ',SCR42,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
+      U2DM(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
+      U3DM(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
+      U4DM(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
+
+      DEALLOCATE(SCR42)
+
+      ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+      WRITE(*,*) 'Reading masses ...'
+      CALL read_float(FIL2,'MASS',SCR4,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+      MASAP(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+
+      WRITE(*,*) 'Reading kernel length ...'
+      CALL read_float(FIL2,'HSML',SCR4,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+      KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
+      DEALLOCATE(SCR4)       
+
+#ifdef use_filter
+#if use_filter == 1
+      IF (FLAG_FILTER.EQ.1) THEN
+        ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+        IF (FLAG_MACHFIELD.EQ.0) THEN
+          WRITE(*,*) 'Reading ABVC ...'
+          CALL read_float(FIL2,'ABVC',SCR4,blocksize)
+          WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+          ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
+        ELSE 
+          WRITE(*,*) 'Reading MACH ...'
+          CALL read_float(FIL2,'MACH',SCR4,blocksize)
+          WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+          ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
+        END IF            
+        DEALLOCATE(SCR4)      
+      END IF
+#endif
+#endif
+
+#ifdef weight_scheme
+#if weight_scheme == 2
+      ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+      WRITE(*,*) 'Reading density ...'
+      CALL read_float(FIL2,'RHO ',SCR4,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+      VOL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+      DEALLOCATE(SCR4)
+#endif
+#endif
+
+      END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      return 
+      end 
+***********************************************************************
+
+
+
+***********************************************************************
+       SUBROUTINE READ_PARTICLES(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,
      &            NL_PARTICLE_GRID,REFINE_THR,PARCHLIM,BORGRID,
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
@@ -24,7 +184,6 @@
 *     CR0AMR: whether a cell is refined (=0) or it isn't (=1)
 ***********************************************************************
 
-       USE gadget_read
        USE particle_data
        IMPLICIT NONE
 
@@ -92,17 +251,10 @@
        CHARACTER*1 IFILE_STRING
        INTEGER IFILE
 
-       ! Scratch variables for reading
-       REAL*4,ALLOCATABLE::SCR4(:)
+       ! Scratch variables for restricting the domain
        REAL*4,ALLOCATABLE::SCR42(:,:)
        INTEGER,ALLOCATABLE::ELIM(:)
-       integer npart_gadget(6),nall(6),blocksize
-       real*8 massarr(6)
-       integer basint1,basint2,basint3,basint4,basint5,basint6,basint7
-       real*4 bas41,bas42,bas43,bas44,bas45,bas46,bas47
-       real*8 bas81,bas82,bas83,bas84,bas85,bas86,bas87
-       character*4 blocklabel
-       ! End scratch variables for reading
+       ! End scratch variables for restricting the domain
 
 #ifdef use_filter
 #if use_filter == 1
@@ -117,24 +269,15 @@
 
        real xmin,ymin,zmin,xmax,ymax,zmax
 
+************************************************************************
+**************** CHANGE FOR OTHER SIMULATION CODES *********************
+************************************************************************
        ! First, get the number of particles to be read in the snapshot 
-       parti=0
-       do ifile=0,files_per_snap-1 
-        WRITE(ITER_STRING,'(I3.3)') ITER
-        FIL1='./simulation/snapdir_'//ITER_STRING//'/snap_'//ITER_STRING
-        IF (FILES_PER_SNAP.EQ.1) THEN
-          FIL2=FIL1
-        ELSE
-          WRITE(IFILE_STRING,'(I1.1)') IFILE
-          FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
-        END IF
-
-        CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
-     &                  basint1,basint2,nall,basint3,basint4,bas83,
-     &                  bas84,bas85,bas86,blocksize)
-
-        parti=parti+npart_gadget(1)
-       end do 
+       CALL READ_GADGET_UNFORMATTED_NPART(ITER, FILES_PER_SNAP,
+     &                                    FLAG_FILTER, FLAG_MACHFIELD)
+************************************************************************
+************************************************************************
+************************************************************************
 
        ! Deallocate the particle arrays if they were allocated
        if (allocated(rxpa)) then 
@@ -172,93 +315,15 @@
 
        NPART(:)=0
 
-       LOW2=0
-       DO IFILE=0,FILES_PER_SNAP-1 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-*       READING DATA
-        WRITE(ITER_STRING,'(I3.3)') ITER
-        FIL1='./simulation/snapdir_'//ITER_STRING//'/snap_'//ITER_STRING
-        IF (FILES_PER_SNAP.EQ.1) THEN
-          FIL2=FIL1
-        ELSE
-          WRITE(IFILE_STRING,'(I1.1)') IFILE
-          FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
-        END IF
-
-        WRITE(*,*) 'Reading iteration file: ',ITER,' ',
-     &              TRIM(ADJUSTL(FIL2))
-
-        CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
-     &                  basint1,basint2,nall,basint3,basint4,bas83,
-     &                  bas84,bas85,bas86,blocksize)
-        WRITE(*,*) npart_gadget(1), 'gas particles'
-        LOW1=LOW2+1
-        LOW2=LOW1+NPART_GADGET(1)-1
-        
-        ALLOCATE(SCR42(3,SUM(NPART_GADGET(1:6))))
-        WRITE(*,*) 'Reading positions ...'
-        CALL read_float3(FIL2,'POS ',SCR42,blocksize)
-        WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
-        RXPA(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
-        RYPA(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
-        RZPA(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
-
-        WRITE(*,*) 'Reading velocities ...'
-        CALL read_float3(FIL2,'VEL ',SCR42,blocksize)
-        WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
-        U2DM(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
-        U3DM(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
-        U4DM(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
-
-        DEALLOCATE(SCR42)
-
-        ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
-        WRITE(*,*) 'Reading masses ...'
-        CALL read_float(FIL2,'MASS',SCR4,blocksize)
-        WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-        MASAP(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
-
-        WRITE(*,*) 'Reading kernel length ...'
-        CALL read_float(FIL2,'HSML',SCR4,blocksize)
-        WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-        KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
-        DEALLOCATE(SCR4)       
-
-#ifdef use_filter
-#if use_filter == 1
-        IF (FLAG_FILTER.EQ.1) THEN
-          ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
-          IF (FLAG_MACHFIELD.EQ.0) THEN
-            WRITE(*,*) 'Reading ABVC ...'
-            CALL read_float(FIL2,'ABVC',SCR4,blocksize)
-            WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-            ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
-          ELSE 
-            WRITE(*,*) 'Reading MACH ...'
-            CALL read_float(FIL2,'MACH',SCR4,blocksize)
-            WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-            ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
-          END IF            
-          DEALLOCATE(SCR4)      
-        END IF
-#endif
-#endif
-
-#ifdef weight_scheme
-#if weight_scheme == 2
-        ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
-        WRITE(*,*) 'Reading density ...'
-        CALL read_float(FIL2,'RHO ',SCR4,blocksize)
-        WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-        VOL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
-        DEALLOCATE(SCR4)
-#endif
-#endif
-
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !
-
-       END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+************************************************************************
+**************** CHANGE FOR OTHER SIMULATION CODES *********************
+************************************************************************
+       ! First, get the number of particles to be read in the snapshot 
+       CALL READ_GADGET_UNFORMATTED(ITER, FILES_PER_SNAP,
+     &                        FLAG_FILTER, FLAG_MACHFIELD, LOW2)
+************************************************************************
+************************************************************************
+************************************************************************
 
 #ifdef weight_scheme
 #if weight_scheme == 2
