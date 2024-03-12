@@ -403,7 +403,7 @@
         PARTI=PARTI-J
         
         WRITE(*,*) 'Particles outside the domain:',J
-        ALLOCATE(SCR42(9,J))
+        ALLOCATE(SCR42(9,PARTI))
 
         J=0
         DO I=LOW1,LOW2 
