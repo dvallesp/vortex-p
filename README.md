@@ -10,7 +10,7 @@ This project has been supported by the Agencia Estatal de Investigación Españo
 
 ### Documentation 
 
-<center><button type="button" name="button" class="btn" onclick="location.href='https://vortex-particles.github.io';">Go to the code documentation</button></center>
+[Go to the code documentation](https://vortex-particles.github.io)
 
 ### References 
 
