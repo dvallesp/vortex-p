@@ -1,39 +1,19 @@
-# ``vortex`` code
-### Implements Helmholtz-Hodge decomposition for an AMR velocity field.
-#### Developed by David Vallés-Pérez, Susana Planelles and Vicent Quilis
+# ``vortex-p`` code
+### Implements Helmholtz-Hodge decomposition for particle-based, moving-mesh or meshless simulations
+#### Developed by David Vallés-Pérez
+#### In collaboration with Klaus Dolag, Susana Planelles, Vicent Quilis, Frederick Groth, and Tirso Marín-Gilabert
 
-``vortex`` has been developed at the Departament d'Astronomia i Astrofísica of the Universitat de València, in the Computational Cosmology group. This project has been supported by the Spanish Ministerio de Ciencia e Innovación (MICINN, grants AYA2016-77237-C3-3-P and PID2019-107427GB-C33) and by the Generalitat Valenciana (grant PROMETEO/2019/071).
+This project has been mainly developed at the Universitäts-Sternwarte München and the Departament d'Astronomia i Astrofísica of the Universitat de València.
+The original ``vortex`` code was developed at the Departament d'Astronomia i Astrofísica of the Universitat de València, in the Computational Cosmology group. 
 
+This project has been supported by the Agencia Estatal de Investigación Española (AEI; grant PID2022-138855NB-C33), by the Ministerio de Ciencia e Innovación (MCIN) within the Plan de Recuperación, Transformación y Resiliencia del Gobierno de España through the project ASFAE/2022/001, with funding from European Union NextGenerationEU (PRTR-C17.I1), and by the Generalitat Valenciana (grant CIPROM/2022/49).
 
-##### Repository organisation
-The folder ``./src`` contains the source code, written in FORTRAN and parallellised according to the OpenMP standard.
-The folder ``./test`` contains Python code to generate a set of idealised tests and to assess the performance of the code in such tests.
+### Documentation 
 
-##### GENERAL CONSIDERATIONS
+<center><button type="button" name="button" class="btn" onclick="location.href='https://vortex-particles.github.io';">Go to the code documentation</button></center>
 
-Besides the source code, the following files are needed:
+### References 
 
-1) ``vortex_parameters.dat``. This file dimensions the arrays, and therefore the code needs to be compiled when these parameters are changed.
-2) ``vortex.dat``. This file contains runtime parameters. They can be changed once the code has been compiled.
-3) Simulation data. By default, we read the simulation data in a folder simu_masclet, which contains the "gas" files. In order to use vortex on other code's outputs, the functions in ``reader.f`` (actual reader of the outputs) and ``nomfile.f`` (names of the simulation data files) need to be adapted.
-
-The outputs of the code are written, by default, inside a folder ``output_files``. This folder needs to be created before running vortex. The output file will be saved as ``velocitiesXXXXX`` (XXXXX is the iteration number). This behaviour can be changed in ``nomfile.f``. As an additional safety measure, the code stops if a file with the same name is already in the folder.
-
-The code is parallelised according to the OpenMP standard directives. For the code to run in parallel, it has to be compiled with the flag ``-fopenmp`` (gfortran), and the environment variable ``OMP_NUM_THREADS`` needs to be set to the number of cores we want to run the code with.
-
-##### Code structure
-
-The routines in this programme are distributed in the following files:
-
-- ``vortex.f``: main program, contains the main execution workflow.
-- ``poisson.f``: solve Poisson's equations, both for the coarse grid and for the refinement patches
-- ``diff.f`` or ``diff_ho.f``: perform the finite differences of the velocity field and of the potentials (first one to 1st order centered derivatives; second file for higher order derivatives)
-- ``interp.f``: linearly interpolate from coarser to finer grids
-- ``grids.f``: build the base and AMR grids
-- ``overlaps.f``: handle the overlaps between different refinement patches
-- ``outliers.f``: find cells where the reconstruction is not reliable and interpolate their values from the parent, coarser cells
-- ``boundaries.f``: special treatments for patches boundaries (currently deprecated)
-- ``filter.f``: filter out turbulent motions using a multi-scale algorithm
-- ``writer.f``: write the output files
-- ``reader.f``: read the input data (may need to be adapted to read data from other simulation codes
-- ``nomfile.f``: generates the filenames for I/O
+- For the original AMR-HHD algorithm: Vallés-Pérez, D., Planelles, S. & Quilis, V., "Unravelling cosmic velocity flows: a Helmholtz-Hodge decomposition algorithm for cosmological simulations", [Computer Physics Communications 263, 107892](https://doi.org/10.1016/j.cpc.2021.107892) (2021). [(arXiv link)](https://arxiv.org/abs/2102.06217)
+- For the AMR implementation of the multi-scale filter: Vallés-Pérez, D., Planelles, S. & Quilis, V., "Troubled cosmic flows: turbulence, enstrophy, and helicity from the assembly history of the intracluster medium", [MNRAS 504(1):510](https://doi.org/10.1093/mnras/stab880) (2021). [(arXiv link)](https://arxiv.org/abs/2103.13449)
+- For the vortex-p code: Vallés-Pérez, D. et al., "vortex-p: a Helmholtz-Hodge and Reynolds decomposition algorithm for particle-based simulations", in prep.
