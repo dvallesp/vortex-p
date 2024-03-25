@@ -748,10 +748,14 @@ C       close(55)
       
       END IF
 
+#ifdef output_filter 
+#if output_filter == 1
       IF (FL_FILT_SHOCK.EQ.1) THEN
        CALL WRITE_SHOCKED(NX,NY,NZ,ITER,NL,NPATCH,PATCHNX,PATCHNY,
      &                    PATCHNZ,SHOCK0,SHOCK1)
       END IF
+#endif
+#endif
 
       RETURN 
       END 

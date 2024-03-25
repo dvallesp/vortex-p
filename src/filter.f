@@ -1019,8 +1019,12 @@ C     &                                                k,iter,l,err
         end do
       end do
 
+#ifdef output_filter 
+#if output_filter==1
       CALL WRITE_FILTLEN(NX,NY,NZ,NL,NPATCH,
      &                   PATCHNX,PATCHNY,PATCHNZ,L0,L1)
+#endif
+#endif
 
       RETURN
       END
