@@ -1090,16 +1090,18 @@ C        WRITE(*,*) LVAL(I,IPARE)
       IMPLICIT NONE
       INTEGER N,N2 ! N is the dimension of the array dist;
                    ! N2, the actual number of particles filled in
-      REAL W,DIST(N)
+      REAL W,DIST(N) ! W is the total width of the kernel 
+      REAL H
 
       REAL DISTS
       INTEGER I
 
 #ifdef ikernel 
 #if ikernel == 0 
-!     Cubic spline kernel
+!     Cubic spline kernel (M4)
+      H=W/2.0
       DO I=1,N2
-       DISTS=DIST(I)/W
+       DISTS=DIST(I)/H
        IF (DISTS.LE.1.0) THEN
         DIST(I)=1.0-1.5*DISTS**2*(1-0.5*DISTS)
        ELSE IF (DISTS.LE.2.0) THEN
@@ -1110,8 +1112,9 @@ C        WRITE(*,*) LVAL(I,IPARE)
       END DO
 #elif ikernel == 1
 !     Wendland C4 kernel
+      H=W/2.0
       DO I=1,N2
-       DISTS=DIST(I)/W
+       DISTS=DIST(I)/H
        IF (DISTS.LE.2.0) THEN
         DIST(I)=(1. - .5*DISTS)**6 * (35./12.*DISTS**2 + 3.*DISTS + 1.)
        ELSE
@@ -1120,14 +1123,41 @@ C        WRITE(*,*) LVAL(I,IPARE)
       END DO
 #elif ikernel == 2
 !     Wendland C6 kernel
+      H=W/2.0
       DO I=1,N2
-       DISTS=DIST(I)/W
+       DISTS=DIST(I)/H
        IF (DISTS.LE.2.0) THEN
         DIST(I)=(1. - .5*DISTS)**8 * (4.*DISTS**3 + 25./4.*DISTS**2 +
      &                                4.*DISTS + 1.)
        ELSE
         DIST(I)=0.0
        END IF
+      END DO
+#elif ikernel == 3
+!     Quartic spline kernel (M5)
+      H=W/2.5
+      DO I=1,N2
+       DISTS=DIST(I)/H
+       IF (DISTS.GT.2.5) THEN 
+        DIST(I)=0.0 
+       ELSE
+        DIST(I)=(2.5-DISTS)**4
+        IF (DISTS.LT.1.5) DIST(I)=DIST(I)-5.0*(1.5-DISTS)**4
+        IF (DISTS.LT.0.5) DIST(I)=DIST(I)+10.0*(0.5-DISTS)**4 
+       END IF 
+      END DO 
+#elif ikernel == 4
+!     Quintic spline kernel (M6)
+      H=W/3.0
+      DO I=1,N2
+       DISTS=DIST(I)/H
+       IF (DISTS.GT.3.0) THEN 
+        DIST(I)=0.0 
+       ELSE
+        DIST(I)=(3.0-DISTS)**5
+        IF (DISTS.LT.2.0) DIST(I)=DIST(I)-6.0*(2.0-DISTS)**5
+        IF (DISTS.LT.1.0) DIST(I)=DIST(I)+15.0*(1.0-DISTS)**5 
+       END IF 
       END DO
 #endif
 #endif
@@ -2101,7 +2131,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST)
+       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
 #ifdef weight_scheme
 #if weight_scheme == 1
        DO I=1,CONTA
@@ -2276,7 +2306,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        H_KERN=DIST(CONTA)
        L0(IX,JY,KZ)=H_KERN
 
-       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST)
+       CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
 #ifdef weight_scheme
 #if weight_scheme == 1
       DO I=1,CONTA
@@ -2446,7 +2476,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         H_KERN=DIST(CONTA)
         L0(IX,JY,KZ)=H_KERN
 
-        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST)
+        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
 #ifdef weight_scheme
 #if weight_scheme == 1
         DO I=1,CONTA
@@ -2555,7 +2585,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           !  if (isnan(h_kern).or.conta.lt.kneighbours) then 
           !   write(*,*) ipatch,ix,jy,kz,conta,h_kern,dxpa
           !  end if
-          CALL KERNEL_FUNC(CONTA,CONTA,H_KERN/2.,DIST)
+          CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
 #ifdef weight_scheme
 #if weight_scheme == 1
           DO I=1,CONTA
