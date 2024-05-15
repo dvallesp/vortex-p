@@ -1971,11 +1971,15 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
 #ifdef ikernel 
 #if ikernel == 0
-       WRITE(*,*) 'Kernel: cubic spline (W4)'
+       WRITE(*,*) 'Kernel: cubic spline (M4)'
 #elif ikernel == 1
        WRITE(*,*) 'Kernel: Wendland C4'
 #elif ikernel == 2
        WRITE(*,*) 'Kernel: Wendland C6'
+#elif ikernel == 3
+       WRITE(*,*) 'Kernel: quartic spline (M5)'
+#elif ikernel == 4
+       WRITE(*,*) 'Kernel: quintic spline (M6)'
 #endif
 #endif
 
