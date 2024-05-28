@@ -304,6 +304,21 @@
        FLAG_MASS=0
        IF (FL_GR_DEN.EQ.1) FLAG_MASS=1
 
+#if defined(use_filter) && defined(weight_filter) 
+#if use_filter==1 && weight_filter==1
+       IF (FLAG_MASS.EQ.0) THEN 
+        WRITE(*,*) 'Warning! If using the filter and mass-weighting,'
+        WRITE(*,*) ' kernel lengths cannot be returned. Density is,'
+        WRITE(*,*) ' instead.'
+        FLAG_MASS=1 
+        IF (FL_GR_KERNL.EQ.1) THEN 
+         WRITE(*,*) 'ERROR: FL_GR_KERNL cannot be 1'
+         STOP 
+        END IF
+       END IF 
+#endif
+#endif
+
        ! center of the domain (in input length units)
        CIO_XC0=0.5*(DDXL+DDXR)
        CIO_YC0=0.5*(DDYL+DDYR)

@@ -16,6 +16,10 @@ $(info WEIGHT=$(WEIGHT))
 KERNEL := $(if $(KERNEL),$(KERNEL),0)
 $(info KERNEL=$(KERNEL))
 
+# weighting scheme for the multiscale filter (0: volume-weighted; 1: mass-weighted)
+WEIGHT_FILTER := $(if $(WEIGHT_FILTER),$(WEIGHT_FILTER),0)
+$(info WEIGHT_FILTER=$(WEIGHT_FILTER))
+
 # output preferences (for efficient compilation)
 OUTPUT_GRID := $(if $(OUTPUT_GRID),$(OUTPUT_GRID),1)
 $(info OUTPUT_GRID=$(OUTPUT_GRID))
@@ -32,7 +36,7 @@ $(info OUTPUT_FILTER=$(OUTPUT_FILTER))
 #### This is an example for a local machine ####
 ifeq ($(COMP),1)          
  FC=gfortran 
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -43,7 +47,7 @@ endif
 #### This is for the LluisVives cluster at Universitat de València, where I locally installed coretran ####
 ifeq ($(COMP),2)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER)
  LIBS=-Wl,-rpath,$(HOME)/coretran_shared_gnu/coretran/lib $(HOME)/coretran_shared_gnu/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran_shared_gnu/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
@@ -55,7 +59,7 @@ endif
 #### This is for the installation of coretran suggested in the documentation ####
 ifeq ($(COMP),3)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER)
  LIBS=-Wl,-rpath,$(HOME)/coretran/lib $(HOME)/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
@@ -67,7 +71,7 @@ endif
 #### Debugging option in my local machine ####
 ifeq ($(COMP),999)
  FC=gfortran
- FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL)
+ FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -123,6 +127,12 @@ info:
 	@echo "                                 2: Wendland C6"
 	@echo "                                 3: quartic spline (M5)"
 	@echo "                                 4: quintic spline (M6)"
+	@echo ""
+	@echo "- WEIGHT_FILTER (optional, default: 0): the weighting scheme 
+	@echo "                    for computing the bulk velocity in the "
+	@echo "                    multiscale filter:
+	@echo "                                 0: volume-weighted"
+	@echo "                                 1: mass-weighted"
 	@echo ""
 	@echo "- OUTPUT_GRID (optional, default: 1): set to 0 if you do "
 	@echo "                    not want to output gridded data"

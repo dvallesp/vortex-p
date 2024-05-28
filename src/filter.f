@@ -64,6 +64,14 @@
       INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
       COMMON /SHOCKED/ SHOCK0,SHOCK1
 
+#ifdef weight_filter
+#if weight_filter == 1
+      REAL DENSI_IN0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL DENSI_IN1(NAMRX,NAMRY,NAMRZ,NPALEV)
+      COMMON /DENSI/ DENSI_IN0,DENSI_IN1
+#endif 
+#endif
+
 *     Auxiliary variables
       real u2bulk(1:NMAX,1:NMAY,1:NMAZ)
       real u3bulk(1:NMAX,1:NMAY,1:NMAZ)
@@ -93,12 +101,8 @@
 
 
       lado0 = nx * dx
-      write(*,*) 'in filter'
-      write(*,*) minval(dens0),maxval(dens0)
-      write(*,*) minval(dens1(:,:,:,1:sum(npatch(1:nl)))), 
-     &           maxval(dens1(:,:,:,1:sum(npatch(1:nl))))
 
-*     DENS0, DENS1 PROPORTIONAL TO CELLS MASSES!!!
+*     DENS0, DENS1 PROPORTIONAL TO CELLS MASSES or VOLUME!!!
       dens0 = 1.0
       DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
@@ -109,6 +113,35 @@
          DENS1(:,:,:,I) = 1 / 8.0**IR
        END DO
       END DO
+
+#ifdef weight_filter
+#if weight_filter == 1
+!$omp parallel do shared(nx,ny,nz,densi_in0,dens0),
+!$omp+            private(i,j,k), 
+!$omp+            default(none)
+      do k=1,nz 
+      do j=1,ny 
+      do i=1,nx 
+        dens0(i,j,k) = densi_in0(i,j,k) * dens0(i,j,k)
+      end do 
+      end do 
+      end do
+
+      do ir=1,nl 
+        low1=sum(npatch(0:ir-1))+1
+        low2=sum(npatch(0:ir))
+!$omp parallel do shared(low1,low2,densi_in1,dens1,ir),
+!$omp+            private(i), default(none)
+        do i=low1,low2
+          dens1(:,:,:,i) = densi_in1(:,:,:,i) * dens1(:,:,:,i) 
+        end do
+      end do
+#endif 
+#endif
+
+      write(*,*) 'in filter'
+      call P_MINMAX(dens0,dens1,0,0,NX,NY,NZ,NL,
+     &                    PATCHNX,PATCHNY,PATCHNZ,NPATCH)
 
       call veinsgrid_all_l(NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,solap)

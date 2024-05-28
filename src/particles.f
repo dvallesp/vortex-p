@@ -1946,6 +1946,11 @@ C        WRITE(*,*) LVAL(I,IPARE)
 
       REAL L0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL L1(NAMRX,NAMRY,NAMRZ,NPALEV)
+#ifdef weight_filter
+#if weight_filter == 1
+      COMMON /DENSI/ L0,L1
+#endif 
+#endif
 
       INTEGER IX,JY,KZ,IR,I,J,K,IPATCH,LOW1,LOW2,CONTA,KNEIGHBOURS
       INTEGER N1,N2,N3,II,JJ,KK,JPATCH,I1,I2,J1,J2,K1,K2,STEP
