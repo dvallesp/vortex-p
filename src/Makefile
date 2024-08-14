@@ -27,31 +27,49 @@ $(info OUTPUT_GRID=$(OUTPUT_GRID))
 OUTPUT_PARTICLES := $(if $(OUTPUT_PARTICLES),$(OUTPUT_PARTICLES),1)
 $(info OUTPUT_PARTICLES=$(OUTPUT_PARTICLES))
 
+# reader 
+READER := $(if $(READER),$(READER),0)
+$(info READER=$(READER))
+
 OUTPUT_FILTER:=$(if $(OUTPUT_FILTER),$(OUTPUT_FILTER),1)
 ifeq ($(FILTER),0)
   OUTPUT_FILTER=0
 endif
 $(info OUTPUT_FILTER=$(OUTPUT_FILTER))
 
+HDF5:=0
+ifeq ($(READER),1)
+  HDF5=1
+endif
+$(info HDF5=$(HDF5))
+
 #### This is an example for a local machine ####
 ifeq ($(COMP),1)          
  FC=gfortran 
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
   LIBS +=-L/usr/local/lib64 -lfftw3f_omp -lfftw3f
+ endif
+ ifeq ($(HDF5),1)
+  INC += -I/usr/include/hdf5/serial/
+  LIBS += -L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_serial_fortran -lhdf5hl_fortran
  endif
 endif
 
 #### This is for the LluisVives cluster at Universitat de València, where I locally installed coretran ####
 ifeq ($(COMP),2)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER)
  LIBS=-Wl,-rpath,$(HOME)/coretran_shared_gnu/coretran/lib $(HOME)/coretran_shared_gnu/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran_shared_gnu/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
   LIBS +=-L/storage/apps/FFTW/3.3.8/INTEL/IMPI/lib -lfftw3f_omp -lfftw3f
+ endif
+ ifeq ($(HDF5),1)
+  INC +=-I/storage/apps/HDF5/GCC/1.14.1/include
+  LIBS +=-L/storage/apps/HDF5/GCC/1.14.1/lib -lhdf5_fortran -lhdf5hl_fortran
  endif
 endif
 
@@ -59,11 +77,15 @@ endif
 #### This is for the installation of coretran suggested in the documentation ####
 ifeq ($(COMP),3)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER)
  LIBS=-Wl,-rpath,$(HOME)/coretran/lib $(HOME)/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
   LIBS +=-L/usr/local/lib64 -lfftw3f_omp -lfftw3f
+ endif
+ ifeq ($(HDF5),1)
+  INC += -I/usr/include/hdf5/serial/
+  LIBS += -L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_serial_fortran -lhdf5hl_fortran
  endif
 endif
 #################################################################################
@@ -71,11 +93,15 @@ endif
 #### Debugging option in my local machine ####
 ifeq ($(COMP),999)
  FC=gfortran
- FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER)
+ FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
   LIBS +=-L/usr/local/lib64 -lfftw3f_omp -lfftw3f
+ endif
+ ifeq ($(HDF5),1)
+  INC += -I/usr/include/hdf5/serial/
+  LIBS += -L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_serial_fortran -lhdf5hl_fortran
  endif
 endif
 
@@ -111,6 +137,11 @@ info:
 	@echo "                    to modify them for your own machine(s)."
 	@echo "   In particular, you might need to change the paths to the "
 	@echo "     coretran library and to the FFTW library (if using it)"
+	@echo ""
+	@echo "- READER (optional, default: 0): which code to read the"
+	@echo "                    outputs from. Options:"
+	@echo "                                  0: Gadget unformatted"
+	@echo "                                  1: AREPO HDF5"
 	@echo ""
 	@echo "- FFTW (optional, default: 1): set to 0 if you do not have "
 	@echo "                    FFTW"
