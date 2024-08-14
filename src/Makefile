@@ -128,9 +128,9 @@ info:
 	@echo "                                 3: quartic spline (M5)"
 	@echo "                                 4: quintic spline (M6)"
 	@echo ""
-	@echo "- WEIGHT_FILTER (optional, default: 0): the weighting scheme 
+	@echo "- WEIGHT_FILTER (optional, default: 0): the weighting scheme" 
 	@echo "                    for computing the bulk velocity in the "
-	@echo "                    multiscale filter:
+	@echo "                    multiscale filter:"
 	@echo "                                 0: volume-weighted"
 	@echo "                                 1: mass-weighted"
 	@echo ""
