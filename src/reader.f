@@ -398,7 +398,7 @@
         CALL h5dopen_f(group_id, "Mach", attr_id, status)
         CALL h5dget_type_f(attr_id, memtype_id, status)
         CALL h5dread_f(attr_id, memtype_id, SCR4, dims1d, status)
-        ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
+        ABVC(LOW1:LOW2)=SCR4(1:NumPart_ThisFile(1))  
         CALL h5dclose_f(attr_id, status)         
         DEALLOCATE(SCR4)      
       END IF
@@ -412,7 +412,7 @@
       CALL h5dopen_f(group_id, "Density", attr_id, status)
       CALL h5dget_type_f(attr_id, memtype_id, status)
       CALL h5dread_f(attr_id, memtype_id, SCR4, dims1d, status)
-      VOL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+      VOL(LOW1:LOW2)=SCR4(1:NumPart_ThisFile(1))
       CALL h5dclose_f(attr_id, status)
       DEALLOCATE(SCR4)
 #endif
