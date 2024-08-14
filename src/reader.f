@@ -1,3 +1,5 @@
+#ifdef reader 
+#if reader==0
 ***********************************************************************
       SUBROUTINE READ_GADGET_UNFORMATTED_NPART(ITER, FILES_PER_SNAP,
      &             FLAG_FILTER, FLAG_MACHFIELD)
@@ -155,6 +157,228 @@
       return 
       end 
 ***********************************************************************
+#endif
+
+#if reader==1 
+***********************************************************************
+      SUBROUTINE READ_AREPO_HDF5_NPART(ITER, FILES_PER_SNAP, 
+     & FLAG_FILTER, FLAG_MACHFIELD)
+***********************************************************************
+*       Reads the number of gas particles in the simulation
+***********************************************************************
+        use hdf5
+        use particle_data  ! contains PARTI
+        implicit none 
+
+        integer :: iter, files_per_snap, flag_filter, flag_machfield
+        CHARACTER*3 ITER_STRING
+        CHARACTER*1 IFILE_STRING
+        INTEGER :: IFILE
+        CHARACTER*200 FIL1, FIL2
+
+        integer(hid_t) :: file_id, group_id, attr_id, mem_space_id, 
+     & file_space_id
+        INTEGER(HID_T) :: memtype_id
+        integer :: status
+        integer, dimension(6) :: NumPart_ThisFile
+        integer(hsize_t), dimension(1) :: dims = 6
+
+        ! Default values for optional parameters
+        integer(hid_t) :: xfer_prp
+        !parameter (xfer_prp = H5P_DEFAULT_F)  ! Default transfer property list
+
+        parti = 0
+        do ifile = 0, files_per_snap - 1 
+          WRITE(ITER_STRING, '(I3.3)') ITER
+          FIL1 = './simulation/snapshot_' // ITER_STRING
+          IF (FILES_PER_SNAP .EQ. 1) THEN
+            FIL2 = FIL1
+          ELSE
+            WRITE(IFILE_STRING, '(I1.1)') IFILE
+            FIL2 = TRIM(ADJUSTL(FIL1)) // '.' // IFILE_STRING
+          END IF
+          FIL2 = TRIM(ADJUSTL(FIL2)) // '.hdf5'
+
+          ! Open the HDF5 file in read-only mode
+          CALL h5fopen_f(FIL2, H5F_ACC_RDONLY_F, file_id, status)
+          IF (status /= 0) THEN
+            PRINT *, "Error opening file: ", FIL2
+            STOP
+          END IF
+
+          ! Open the Header group
+          CALL h5gopen_f(file_id, "/Header", group_id, status)
+          IF (status /= 0) THEN
+            PRINT *, "Error opening group: /Header"
+            CALL h5fclose_f(file_id, status)
+            STOP
+          END IF
+      
+          ! Open the NumPart_ThisFile attribute
+          CALL h5aopen_f(group_id, "NumPart_ThisFile",
+     &                   attr_id, status)
+          IF (status /= 0) THEN
+            PRINT *, "Error opening dataset: NumPart_ThisFile"
+            CALL h5gclose_f(group_id, status)
+            CALL h5fclose_f(file_id, status)
+            STOP
+          END IF
+
+          ! Get the datatype of the attribute to confirm it is H5T_NATIVE_INTEGER
+          CALL h5aget_type_f(attr_id, memtype_id, status)
+          IF (status /= 0) THEN
+            PRINT *, "Error getting attribute type"
+            CALL h5aclose_f(attr_id, status)
+            CALL h5gclose_f(group_id, status)
+            CALL h5fclose_f(file_id, status)
+            STOP
+          END IF
+      
+          ! Read the attribute into the NumPart_ThisFile array
+          CALL h5aread_f(attr_id, memtype_id, NumPart_ThisFile,
+     &                   dims, status)
+
+          IF (status /= 0) THEN
+            PRINT *, "Error reading attribute: NumPart_ThisFile"
+            CALL h5aclose_f(attr_id, status)
+            CALL h5gclose_f(group_id, status)
+            CALL h5fclose_f(file_id, status)
+            STOP
+          END IF
+
+          ! Print the contents of NumPart_ThisFile
+          ! PRINT *, "NumPart_ThisFile: ", NumPart_ThisFile
+
+          ! Close the dataset, group, and file
+          CALL h5aclose_f(attr_id, status)
+          CALL h5gclose_f(group_id, status)
+          CALL h5fclose_f(file_id, status)
+
+          ! We just read PartType0
+          parti = parti + NumPart_ThisFile(1)
+        end do 
+
+        write(*,*) 'Total number of particles: ', parti
+        stop
+        RETURN
+      END
+***********************************************************************
+
+***********************************************************************
+      SUBROUTINE READ_AREPO_HDF5(ITER, FILES_PER_SNAP,
+     &             FLAG_FILTER, FLAG_MACHFIELD, LOW2)
+***********************************************************************
+*       Reads the GAS particle data of the simulation
+***********************************************************************
+      use gadget_read 
+      use particle_data
+      implicit none 
+
+      integer iter, files_per_snap, flag_filter, flag_machfield 
+
+      CHARACTER*3 ITER_STRING
+      CHARACTER*1 IFILE_STRING
+      INTEGER IFILE
+      CHARACTER*200 FIL1,FIL2
+
+      integer npart_gadget(6), nall(6), blocksize
+      real*8 massarr(6)
+      integer basint1,basint2,basint3,basint4
+      real*8 bas81,bas82,bas83,bas84,bas85,bas86
+      integer low1,low2
+      REAL*4,ALLOCATABLE::SCR4(:)
+      REAL*4,ALLOCATABLE::SCR42(:,:)
+
+      LOW2=0
+      DO IFILE=0,FILES_PER_SNAP-1 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*     READING DATA
+      WRITE(ITER_STRING,'(I3.3)') ITER
+      FIL1='./simulation/snapdir_'//ITER_STRING//'/snap_'//ITER_STRING
+      IF (FILES_PER_SNAP.EQ.1) THEN
+        FIL2=FIL1
+      ELSE
+        WRITE(IFILE_STRING,'(I1.1)') IFILE
+        FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
+      END IF
+
+      WRITE(*,*) 'Reading iteration file: ',ITER,' ',
+     &              TRIM(ADJUSTL(FIL2))
+
+      CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
+     &                  basint1,basint2,nall,basint3,basint4,bas83,
+     &                  bas84,bas85,bas86,blocksize)
+      WRITE(*,*) npart_gadget(1), 'gas particles'
+      LOW1=LOW2+1
+      LOW2=LOW1+NPART_GADGET(1)-1
+      
+      ALLOCATE(SCR42(3,SUM(NPART_GADGET(1:6))))
+      WRITE(*,*) 'Reading positions ...'
+      CALL read_float3(FIL2,'POS ',SCR42,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
+      RXPA(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
+      RYPA(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
+      RZPA(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
+
+      WRITE(*,*) 'Reading velocities ...'
+      CALL read_float3(FIL2,'VEL ',SCR42,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
+      U2DM(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
+      U3DM(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
+      U4DM(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
+
+      DEALLOCATE(SCR42)
+
+      ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+      WRITE(*,*) 'Reading masses ...'
+      CALL read_float(FIL2,'MASS',SCR4,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+      MASAP(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+
+      WRITE(*,*) 'Reading kernel length ...'
+      CALL read_float(FIL2,'HSML',SCR4,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+      KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
+      DEALLOCATE(SCR4)       
+
+#ifdef use_filter
+#if use_filter == 1
+      IF (FLAG_FILTER.EQ.1) THEN
+        ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+        IF (FLAG_MACHFIELD.EQ.0) THEN
+          WRITE(*,*) 'Reading ABVC ...'
+          CALL read_float(FIL2,'ABVC',SCR4,blocksize)
+          WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+          ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
+        ELSE 
+          WRITE(*,*) 'Reading MACH ...'
+          CALL read_float(FIL2,'MACH',SCR4,blocksize)
+          WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+          ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
+        END IF            
+        DEALLOCATE(SCR4)      
+      END IF
+#endif
+#endif
+
+#ifdef weight_scheme
+#if weight_scheme == 2
+      ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+      WRITE(*,*) 'Reading density ...'
+      CALL read_float(FIL2,'RHO ',SCR4,blocksize)
+      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+      VOL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+      DEALLOCATE(SCR4)
+#endif
+#endif
+
+      END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      return 
+      end 
+***********************************************************************
+#endif
+#endif
 
 
 
@@ -273,8 +497,16 @@
 **************** CHANGE FOR OTHER SIMULATION CODES *********************
 ************************************************************************
        ! First, get the number of particles to be read in the snapshot 
+#ifdef reader
+#if reader == 0
        CALL READ_GADGET_UNFORMATTED_NPART(ITER, FILES_PER_SNAP,
      &                                    FLAG_FILTER, FLAG_MACHFIELD)
+#endif
+#if reader == 1
+       CALL READ_AREPO_HDF5_NPART(ITER, FILES_PER_SNAP,
+     &                                    FLAG_FILTER, FLAG_MACHFIELD)
+#endif
+#endif
 ************************************************************************
 ************************************************************************
 ************************************************************************
@@ -319,8 +551,16 @@
 **************** CHANGE FOR OTHER SIMULATION CODES *********************
 ************************************************************************
        ! First, get the number of particles to be read in the snapshot 
+#ifdef reader
+#if reader == 0
        CALL READ_GADGET_UNFORMATTED(ITER, FILES_PER_SNAP,
      &                        FLAG_FILTER, FLAG_MACHFIELD, LOW2)
+#endif
+#if reader == 1
+       CALL READ_AREPO_HDF5(ITER, FILES_PER_SNAP,
+     &                        FLAG_FILTER, FLAG_MACHFIELD, LOW2)
+#endif
+#endif
 ************************************************************************
 ************************************************************************
 ************************************************************************
