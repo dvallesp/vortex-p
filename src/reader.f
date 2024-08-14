@@ -395,7 +395,7 @@
           WRITE(*,*) 'WARNING! In AREPO, we always read Mach!'
         END IF 
         WRITE(*,*) 'Reading MACH ...'
-        CALL h5dopen_f(group_id, "Mach", attr_id, status)
+        CALL h5dopen_f(group_id, "Machnumber", attr_id, status)
         CALL h5dget_type_f(attr_id, memtype_id, status)
         CALL h5dread_f(attr_id, memtype_id, SCR4, dims1d, status)
         ABVC(LOW1:LOW2)=SCR4(1:NumPart_ThisFile(1))  
