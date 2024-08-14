@@ -259,7 +259,6 @@
         end do 
 
         write(*,*) 'Total number of particles: ', parti
-        stop
         RETURN
       END
 ***********************************************************************
@@ -270,7 +269,7 @@
 ***********************************************************************
 *       Reads the GAS particle data of the simulation
 ***********************************************************************
-      use gadget_read 
+      use hdf5
       use particle_data
       implicit none 
 
@@ -281,9 +280,15 @@
       INTEGER IFILE
       CHARACTER*200 FIL1,FIL2
 
-      integer npart_gadget(6), nall(6), blocksize
-      real*8 massarr(6)
-      integer basint1,basint2,basint3,basint4
+      integer(hid_t) :: file_id, group_id, attr_id, mem_space_id, 
+     & file_space_id
+      INTEGER(HID_T) :: memtype_id
+      integer :: status
+      integer, dimension(6) :: NumPart_ThisFile
+      integer(hsize_t), dimension(1) :: dims1d
+      integer(hsize_t), dimension(2) :: dims2d
+      
+      integer basint1,basint2,basint3,basint4,i
       real*8 bas81,bas82,bas83,bas84,bas85,bas86
       integer low1,low2
       REAL*4,ALLOCATABLE::SCR4(:)
@@ -293,69 +298,108 @@
       DO IFILE=0,FILES_PER_SNAP-1 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 *     READING DATA
-      WRITE(ITER_STRING,'(I3.3)') ITER
-      FIL1='./simulation/snapdir_'//ITER_STRING//'/snap_'//ITER_STRING
-      IF (FILES_PER_SNAP.EQ.1) THEN
-        FIL2=FIL1
+      WRITE(ITER_STRING, '(I3.3)') ITER
+      FIL1 = './simulation/snapshot_' // ITER_STRING
+      IF (FILES_PER_SNAP .EQ. 1) THEN
+        FIL2 = FIL1
       ELSE
-        WRITE(IFILE_STRING,'(I1.1)') IFILE
-        FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
+        WRITE(IFILE_STRING, '(I1.1)') IFILE
+        FIL2 = TRIM(ADJUSTL(FIL1)) // '.' // IFILE_STRING
       END IF
+      FIL2 = TRIM(ADJUSTL(FIL2)) // '.hdf5'
 
+      ! Open the HDF5 file in read-only mode
       WRITE(*,*) 'Reading iteration file: ',ITER,' ',
      &              TRIM(ADJUSTL(FIL2))
 
-      CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
-     &                  basint1,basint2,nall,basint3,basint4,bas83,
-     &                  bas84,bas85,bas86,blocksize)
-      WRITE(*,*) npart_gadget(1), 'gas particles'
+      CALL h5fopen_f(FIL2, H5F_ACC_RDONLY_F, file_id, status)
+      IF (status /= 0) THEN
+        PRINT *, "Error opening file: ", FIL2
+        STOP
+      END IF
+
+      dims1d(1) = 6
+      CALL h5gopen_f(file_id, "/Header", group_id, status)
+      CALL h5aopen_f(group_id, "NumPart_ThisFile",
+     &                   attr_id, status)
+      CALL h5aget_type_f(attr_id, memtype_id, status)
+      CALL h5aread_f(attr_id, memtype_id, NumPart_ThisFile,
+     &                   dims1d, status)
+
+      WRITE(*,*) NumPart_ThisFile(1), 'gas particles'
       LOW1=LOW2+1
-      LOW2=LOW1+NPART_GADGET(1)-1
+      LOW2=LOW1+NumPart_ThisFile(1)-1
+
+      CALL h5aclose_f(attr_id, status)
+      CALL h5gclose_f(group_id, status)
+
+      dims1d(1) = NumPart_ThisFile(1)
+      dims2d(1) = NumPart_ThisFile(1)
+      dims2d(2) = 3
+
+      CALL h5gopen_f(file_id, "/PartType0",
+     &                   group_id, status)
+      if (status /= 0) then
+        PRINT *, "Error opening group: /PartType0"
+        CALL h5fclose_f(file_id, status)
+        STOP
+      end if
       
-      ALLOCATE(SCR42(3,SUM(NPART_GADGET(1:6))))
+      ALLOCATE(SCR42(3,NumPart_ThisFile(1)))
+
       WRITE(*,*) 'Reading positions ...'
-      CALL read_float3(FIL2,'POS ',SCR42,blocksize)
-      WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
-      RXPA(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
-      RYPA(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
-      RZPA(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
+      CALL h5dopen_f(group_id, "Coordinates", attr_id, status)
+      CALL h5dget_type_f(attr_id, memtype_id, status)
+      CALL h5dread_f(attr_id, memtype_id, SCR42, dims2d, status)
+      RXPA(LOW1:LOW2)=SCR42(1,1:NumPart_ThisFile(1))
+      RYPA(LOW1:LOW2)=SCR42(2,1:NumPart_ThisFile(1))
+      RZPA(LOW1:LOW2)=SCR42(3,1:NumPart_ThisFile(1))
+      CALL h5dclose_f(attr_id, status)
 
       WRITE(*,*) 'Reading velocities ...'
-      CALL read_float3(FIL2,'VEL ',SCR42,blocksize)
-      WRITE(*,*) ' found for ',(blocksize-8)/12,' particles'
-      U2DM(LOW1:LOW2)=SCR42(1,1:NPART_GADGET(1))
-      U3DM(LOW1:LOW2)=SCR42(2,1:NPART_GADGET(1))
-      U4DM(LOW1:LOW2)=SCR42(3,1:NPART_GADGET(1))
+      CALL h5dopen_f(group_id, "Velocities", attr_id, status)
+      CALL h5dget_type_f(attr_id, memtype_id, status)
+      CALL h5dread_f(attr_id, memtype_id, SCR42, dims2d, status)
+      U2DM(LOW1:LOW2)=SCR42(1,1:NumPart_ThisFile(1))
+      U3DM(LOW1:LOW2)=SCR42(2,1:NumPart_ThisFile(1))
+      U4DM(LOW1:LOW2)=SCR42(3,1:NumPart_ThisFile(1))
+      CALL h5dclose_f(attr_id, status)
 
       DEALLOCATE(SCR42)
 
-      ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+      ALLOCATE(SCR4(NumPart_ThisFile(1)))
       WRITE(*,*) 'Reading masses ...'
-      CALL read_float(FIL2,'MASS',SCR4,blocksize)
-      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-      MASAP(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+      CALL h5dopen_f(group_id, "Masses", attr_id, status)
+      CALL h5dget_type_f(attr_id, memtype_id, status)
+      CALL h5dread_f(attr_id, memtype_id, SCR4, dims1d, status)
+      MASAP(LOW1:LOW2)=SCR4(1:NumPart_ThisFile(1))
+      CALL h5dclose_f(attr_id, status)
 
-      WRITE(*,*) 'Reading kernel length ...'
-      CALL read_float(FIL2,'HSML',SCR4,blocksize)
-      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-      KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
-      DEALLOCATE(SCR4)       
+      WRITE(*,*) 'Reading effective kernel length ...' ! We read volume
+      CALL h5dopen_f(group_id, "Volume", attr_id, status)
+      CALL h5dget_type_f(attr_id, memtype_id, status)
+      CALL h5dread_f(attr_id, memtype_id, SCR4, dims1d, status)
+!$omp parallel do shared(numPart_ThisFile, scr4, kernel, low1), 
+!$omp+            private(i), default(none)
+      do i=1,NumPart_ThisFile(1)
+        kernel(low1+i-1) = (0.2387*SCR4(i))**0.33333
+      end do
+      CALL h5dclose_f(attr_id, status)
+      DEALLOCATE(SCR4)
 
 #ifdef use_filter
 #if use_filter == 1
       IF (FLAG_FILTER.EQ.1) THEN
-        ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+        ALLOCATE(SCR4(NumPart_ThisFile(1)))
         IF (FLAG_MACHFIELD.EQ.0) THEN
-          WRITE(*,*) 'Reading ABVC ...'
-          CALL read_float(FIL2,'ABVC',SCR4,blocksize)
-          WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-          ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
-        ELSE 
-          WRITE(*,*) 'Reading MACH ...'
-          CALL read_float(FIL2,'MACH',SCR4,blocksize)
-          WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
-          ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
-        END IF            
+          WRITE(*,*) 'WARNING! In AREPO, we always read Mach!'
+        END IF 
+        WRITE(*,*) 'Reading MACH ...'
+        CALL h5dopen_f(group_id, "Mach", attr_id, status)
+        CALL h5dget_type_f(attr_id, memtype_id, status)
+        CALL h5dread_f(attr_id, memtype_id, SCR4, dims1d, status)
+        ABVC(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))  
+        CALL h5dclose_f(attr_id, status)         
         DEALLOCATE(SCR4)      
       END IF
 #endif
@@ -363,14 +407,19 @@
 
 #ifdef weight_scheme
 #if weight_scheme == 2
-      ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
+      ALLOCATE(SCR4(NumPart_ThisFile(1)))
       WRITE(*,*) 'Reading density ...'
-      CALL read_float(FIL2,'RHO ',SCR4,blocksize)
-      WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
+      CALL h5dopen_f(group_id, "Density", attr_id, status)
+      CALL h5dget_type_f(attr_id, memtype_id, status)
+      CALL h5dread_f(attr_id, memtype_id, SCR4, dims1d, status)
       VOL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
+      CALL h5dclose_f(attr_id, status)
       DEALLOCATE(SCR4)
 #endif
 #endif
+        
+      CALL h5gclose_f(group_id, status)
+      CALL h5fclose_f(file_id, status)
 
       END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
