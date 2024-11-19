@@ -2105,7 +2105,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   YTREE,ZTREE,PI,FLAG_MASS),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
-!$OMP+            SCHEDULE(DYNAMIC), DEFAULT(NONE)
+!$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=1,NZ+1,STEP
       DO JY=1,NY+1,STEP
       DO IX=1,NX+1,STEP
@@ -2280,7 +2280,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   MASAP,VOL,PI),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
-!$OMP+            SCHEDULE(DYNAMIC), DEFAULT(NONE)
+!$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=K1,K2+1,STEP
       DO JY=J1,J2+1,STEP
       DO IX=I1,I2+1,STEP
@@ -2455,7 +2455,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
-!$OMP+            SCHEDULE(DYNAMIC), DEFAULT(NONE)
+!$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=KK1,KK2
       DO JY=JJ1,JJ2
             !write(*,*) kz,jy
@@ -2553,7 +2553,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,DIST,NEIGH,DA,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I,
 !$OMP+                    BASMASS,SEARCH),
-!$OMP+            SCHEDULE(DYNAMIC,1), DEFAULT(NONE)
+!$OMP+            SCHEDULE(DYNAMIC,1)!, DEFAULT(NONE)
        DO IPATCH=LOW1,LOW2 
             !write(*,*) ir,ipatch
         N1=PATCHNX(IPATCH)
