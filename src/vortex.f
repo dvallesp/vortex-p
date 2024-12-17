@@ -162,6 +162,7 @@
        INTEGER FILES_PER_SNAP,NL_INPUT,PARCHLIM,BORGRID,REFINE_THR
        INTEGER FLAG_MACHFIELD,FLAG_MASS,FLAG_FILTER
        REAL ZI,LADO,LADO0,ZETA,LIM,ERR_THR,T,FILT_TOL,FILT_STEP
+       REAL FILT_MAXLENGTH
        REAL OMEGA0,ACHE,FDM
        REAL CIO_XC0,CIO_YC0,CIO_ZC0,LADO_BKP,LADO0_BKP
        REAL CIO_XC,CIO_YC,CIO_ZC
@@ -281,10 +282,12 @@
        READ(1,*) !***********************************************************************
        READ(1,*) !*       Multifiltering                                                *
        READ(1,*) !***********************************************************************
-       READ(1,*) !Multiscale filter: apply filter -------------------------------------->
+       READ(1,*) !Apply filter (1: multiscale filter; 2: fix-scale filter) ------------->
        READ(1,*) FLAG_FILTER
        READ(1,*) !Filtering parameters: tolerance, growing step, max. num. of its. ----->
        READ(1,*) FILT_TOL, FILT_STEP, FILT_MAXIT
+       READ(1,*) !Maximum (for multiscale) or fix filt. length (input length units) ---->
+       READ(1,*) FILT_MAXLENGTH
        READ(1,*) !***********************************************************************
        READ(1,*) !*       On-the-fly shock detection                                    *
        READ(1,*) !***********************************************************************
@@ -469,12 +472,13 @@
 #ifdef use_filter 
 #if use_filter==1
 *     Filter velocities (if specified to do so in vortex.dat)
-      IF (FLAG_FILTER.EQ.1) THEN
+      IF (FLAG_FILTER.GE.1) THEN
         IF (flag_verbose.eq.1) write(*,*) 'Applying multiscale filter'
         call MULTISCALE_FILTER(NX,NY,NZ,NL,NPATCH,pare,
      &            PATCHNX,PATCHNY,PATCHNZ,patchx,patchy,patchz,
      &            patchrx,patchry,patchrz,DX,ITER,
-     &            FILT_TOL,FILT_STEP,FILT_MAXIT)
+     &            FILT_TOL,FILT_STEP,FILT_MAXIT,FILT_MAXLENGTH,
+     &            FLAG_FILTER)
         IF (FLAG_VERBOSE.EQ.1) THEN
          write(*,*) 'Computation ended!'
          write(*,*) 'filtered velocity: min and max values'

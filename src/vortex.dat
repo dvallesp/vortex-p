@@ -4,13 +4,13 @@
 *       General parameters block                                      *
 ***********************************************************************
 Files: first, last, every, num files per snapshot -------------------->
-144,144,1,2
+107,107,1,1
 Cells per direction (NX,NY,NZ) --------------------------------------->
 128,128,128
 Max box sidelength (in input length units) --------------------------->
-50.e3
+40.e3
 Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
--19972.0312, 30027.9688, -27619.4688, 22380.5312, -24089.4375, 25910.5625
+0,40.e3,0,40.e3,0,40.e3
 ***********************************************************************
 *       Output customisation (0=no, 1=yes)                            *
 ***********************************************************************
@@ -44,12 +44,14 @@ Number of neighbours for interpolation ------------------------------->
 SOR presion parameter, SOR max iter, border for AMR patches ---------->
 1e-9,1000,2
 ***********************************************************************
-*       Multifiltering                                                *
+*       Turbulent filter                                              *
 ***********************************************************************
-Multiscale filter: apply filter -------------------------------------->
+Apply filter (1: multiscale filter; 2: fix-scale filter) ------------->
 0
 Filtering parameters: tolerance, growing step, max. num. of its. ----->
 0.1,1.05,200
+Maximum (for multiscale) or fix filt. length (input length units) ---->
+1000.0
 ***********************************************************************
 *       On-the-fly shock detection (for multifiltering)               *
 ***********************************************************************

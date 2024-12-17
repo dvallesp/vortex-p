@@ -2,7 +2,7 @@
       SUBROUTINE MULTISCALE_FILTER(NX,NY,NZ,NL,NPATCH,pare,
      &            PATCHNX,PATCHNY,PATCHNZ,patchx,patchy,patchz,
      &            patchrx,patchry,patchrz,DX,output_iter,
-     &            tol,step,maxit)
+     &            tol,step,maxit,maxlength,flag_filter)
 ************************************************************************
 *     Implements the multiscale filtering technique described in
 *     Vazza et al. 2012 to an AMR grid (instead of a fixed grid).
@@ -20,7 +20,8 @@
       real PATCHrX(NPALEV),PATCHrY(NPALEV),PATCHrZ(NPALEV)
       REAL DX
       INTEGER output_iter, maxit
-      real tol, step
+      real tol, step, maxlength
+      INTEGER flag_filter
 
 *     global variables
 *     original velocity: at the end, the filtered velocity will be
@@ -146,6 +147,8 @@
       call veinsgrid_all_l(NL,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &            PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,solap)
 
+
+      IF (flag_filter.eq.1) THEN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !!!!! for each cell, we ought to find the optimum coherence length
       ! we first initialize the lengths
       L0 = 0.!3.0 * DX
@@ -164,7 +167,7 @@
 !$OMP+                   DENS0,U2,U3,U4,NL,NPATCH,PATCHNX,PATCHNY,
 !$OMP+                   PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,CR0AMR1,SOLAP,
 !$OMP+                   RX,RY,RZ,DENS1,U12,U13,U14,TOL,U2BULK,U3BULK,
-!$OMP+                   U4BULK,STEP,MAXIT,DX,SHOCK0,SHOCK1),
+!$OMP+                   U4BULK,STEP,MAXIT,DX,SHOCK0,SHOCK1,MAXLENGTH),
 !$OMP+            PRIVATE(I,J,K,MARCA,ITER,L,THISX,THISY,THISZ,BAS1,
 !$OMP+                    BAS2,BAS3,BAS4,L2,II,JJ,KK,IRR,LLOW1,LLOW2,
 !$OMP+                    JPATCH,NN1,NN2,NN3,IIXX,JJYY,KKZZ,ERR,
@@ -276,6 +279,11 @@
 *             the sphere grows
               if (marca.eq.1) l = max(l*step, l+dx)
               iter = iter+1
+
+              if (l.gt.maxlength) then 
+                l = maxlength
+                marca = 0
+              end if
             end do iter_while_c
             if (cr0amr(i,j,k).eq.1) l0(i,j,k) = l
             !if (cr0amr(i,j,k).eq.1) write(*,*) i,j,k,iter,l,err !DEBUGGING
@@ -291,7 +299,8 @@
 !$OMP+                   DENS0,U2,U3,U4,NL,NPATCH,PATCHNX,PATCHNY,
 !$OMP+                   PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,CR0AMR1,SOLAP,
 !$OMP+                   RX,RY,RZ,DENS1,U12,U13,U14,TOL,U12BULK,U13BULK,
-!$OMP+                   U14BULK,STEP,MAXIT,DX,SHOCK0,SHOCK1,LOW1,LOW2),
+!$OMP+                   U14BULK,STEP,MAXIT,DX,SHOCK0,SHOCK1,LOW1,LOW2,
+!$OMP+                   MAXLENGTH),
 !$OMP+            PRIVATE(I,J,K,MARCA,ITER,L,THISX,THISY,THISZ,BAS1,
 !$OMP+                    BAS2,BAS3,BAS4,L2,II,JJ,KK,IRR,LLOW1,LLOW2,
 !$OMP+                    JPATCH,NN1,NN2,NN3,IIXX,JJYY,KKZZ,ERR,
@@ -537,6 +546,11 @@ c     &                         solap(1:n1,1:n2,1:n3,ipatch))
 *             the sphere grows
             if (marca.eq.1) l = max(l*step, l+dxpa_i)
             iter = iter+1
+
+            if (l.gt.maxlength) then 
+              l = maxlength
+              marca = 0
+            end if
           end do iter_while
           if (cr0amr1(i,j,k,ipatch).eq.1.and.
      &        solap(i,j,k,ipatch).eq.1) l1(i,j,k,ipatch) = l
@@ -633,6 +647,35 @@ C     &                                                k,iter,l,err
      &                 U14BULK,L1,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                 PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                 PATCHRY,PATCHRZ,NL)
+
+
+      ELSE IF (flag_filter.eq.2) THEN !~ fix filtering length ~~~~~~~~~~~~~
+!$OMP PARALLEL DO SHARED(NX,NY,NZ,MAXLENGTH,L0),
+!$OMP+            PRIVATE(I,J,K), DEFAULT(NONE)
+        do k=1,nz
+        do j=1,ny
+        do i=1,nx 
+          l0(i,j,k) = maxlength
+        end do 
+        end do 
+        end do
+
+!$OMP PARALLEL DO SHARED(NPATCH,PATCHNX,PATCHNY,PATCHNZ,MAXLENGTH,L1),
+!$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ), DEFAULT(NONE)
+        do i=1,sum(npatch)
+          n1 = patchnx(i)
+          n2 = patchny(i)
+          n3 = patchnz(i)
+
+          do kz=1,n3
+          do jy=1,n2 
+          do ix=1,n1
+            l1(ix,jy,kz,i) = maxlength
+          end do
+          end do
+          end do
+        end do
+      END IF !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **************************************************************************
       write(*,*) 'And now use the smooth L to recompute the bulk'
