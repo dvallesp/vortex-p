@@ -13,7 +13,7 @@
       integer iter, files_per_snap, flag_filter, flag_machfield 
 
       CHARACTER*3 ITER_STRING
-      CHARACTER*1 IFILE_STRING
+      CHARACTER*7 IFILE_STRING
       INTEGER IFILE
       CHARACTER*200 FIL1,FIL2
 
@@ -29,8 +29,8 @@
         IF (FILES_PER_SNAP.EQ.1) THEN
           FIL2=FIL1
         ELSE
-          WRITE(IFILE_STRING,'(I1.1)') IFILE
-          FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
+          WRITE(IFILE_STRING,'(I7.1)') IFILE
+          FIL2=TRIM(ADJUSTL(FIL1))//'.'//TRIM(ADJUSTL(IFILE_STRING))
         END IF
 
         CALL read_head(FIL2,npart_gadget,massarr,bas81,bas82,
@@ -57,7 +57,7 @@
       integer iter, files_per_snap, flag_filter, flag_machfield 
 
       CHARACTER*3 ITER_STRING
-      CHARACTER*1 IFILE_STRING
+      CHARACTER*7 IFILE_STRING
       INTEGER IFILE
       CHARACTER*200 FIL1,FIL2
 
@@ -78,8 +78,8 @@
       IF (FILES_PER_SNAP.EQ.1) THEN
         FIL2=FIL1
       ELSE
-        WRITE(IFILE_STRING,'(I1.1)') IFILE
-        FIL2=TRIM(ADJUSTL(FIL1))//'.'//IFILE_STRING
+        WRITE(IFILE_STRING,'(I7.1)') IFILE
+        FIL2=TRIM(ADJUSTL(FIL1))//'.'//TRIM(ADJUSTL(IFILE_STRING))
       END IF
 
       WRITE(*,*) 'Reading iteration file: ',ITER,' ',
