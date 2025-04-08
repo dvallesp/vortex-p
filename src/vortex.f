@@ -265,7 +265,7 @@
        END IF
        READ(1,*) !Number of particles for a cell to be refinable ----------------------->
        READ(1,*) REFINE_THR
-       READ(1,*) !Minimum size of a refinement patch to be accepted -------------------->
+       READ(1,*) !Minimum size of a refinement patch to be accepted (<0: octree-like)--->
        READ(1,*) PARCHLIM
        READ(1,*) !Cells not to be refined from the border  (base grid) ----------------->
        READ(1,*) BORGRID

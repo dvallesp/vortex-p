@@ -815,10 +815,17 @@
 
        WRITE(*,*) 'Routine create mesh ------------------------------'
        NPATCH(0:IR)=0
-       CALL CREATE_MESH(NX,NY,NZ,NL_PARTICLE_GRID,NPATCH,
+       if (parchlim.gt.0) then
+        CALL CREATE_MESH(NX,NY,NZ,NL_PARTICLE_GRID,NPATCH,
      &            PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
      &            PATCHRX,PATCHRY,PATCHRZ,
      &            NPART,LADO0,REFINE_THR,PARCHLIM,BORGRID)
+       else
+        CALL CREATE_MESH_OCTREE(NX,NY,NZ,NL_PARTICLE_GRID,NPATCH,
+     &            PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &            PATCHRX,PATCHRY,PATCHRZ,
+     &            NPART,LADO0,REFINE_THR,PARCHLIM,BORGRID)
+       end if
        
        NL=NL_PARTICLE_GRID
        DO IR=1,NL_PARTICLE_GRID

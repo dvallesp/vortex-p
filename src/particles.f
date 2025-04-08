@@ -710,6 +710,366 @@ C        WRITE(*,*) LVAL(I,IPARE)
       END
 
 ************************************************************************
+      subroutine create_mesh_octree(NX,NY,NZ,NL_MESH,NPATCH,PARE,
+     &            PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &            PATCHRX,PATCHRY,PATCHRZ,
+     &            NPART,LADO0,REFINE_THR,PARCHLIM,BORGRID)
+************************************************************************
+       
+      use particle_data
+      IMPLICIT NONE
+
+      INCLUDE 'vortex_parameters.dat'
+
+*     function parameters
+      INTEGER NX,NY,NZ,NL_MESH
+      INTEGER NPATCH(0:NLEVELS),NPART(0:NLEVELS),PARE(NPALEV)
+      INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
+      INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
+      REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
+      REAL LADO0
+      INTEGER REFINE_THR,PARCHLIM,BORGRID
+
+*     COMMON VARIABLES
+      real DX,DY,DZ
+      COMMON /ESPACIADO/ DX,DY,DZ
+
+      real  RADX(0:NMAX+1),RADMX(0:NMAX+1),
+     &      RADY(0:NMAY+1),RADMY(0:NMAY+1),
+     &      RADZ(0:NMAZ+1),RADMZ(0:NMAZ+1)
+      COMMON /GRID/  RADX,RADMX,RADY,RADMY,RADZ,RADMZ
+
+      integer cr0amr(1:NMAX,1:NMAY,1:NMAZ)
+      integer cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
+      common /cr0/ cr0amr, cr0amr1
+
+*     Local variables
+      integer nmax_parent, cellsbox, nmax_child
+      integer ii, jj, kk, ix, jy, kz, i1, j1, k1, i2, j2, k2
+      integer n1, n2, n3, nbis, low1, low2, ir, ipatch, irpa
+      integer np1, np2, np3, i, conta2(2,2,2), nparttot
+      real xl, yl, zl, dxpa, dypa, dzpa, xr, yr, zr, xm, ym, zm
+      real xp, yp, zp
+      integer, allocatable :: conta1(:,:,:)
+
+      integer, allocatable :: lnpatch(:)
+      integer, allocatable :: lpatchnx(:,:),lpatchny(:,:),lpatchnz(:,:)
+      integer, allocatable :: lpatchx(:,:), lpatchy(:,:), lpatchz(:,:)
+      real, allocatable :: lpatchrx(:,:), lpatchry(:,:), lpatchrz(:,:)
+      integer lipatch
+
+      npatch(:)=0
+
+      if (nl_mesh.eq.0) then 
+       cr0amr(1:nx,1:ny,1:nz)=1
+       return 
+      end if
+
+      nmax_child = namrx
+      nmax_parent = nmax_child / 2 
+      if (mod(nx,nmax_parent).ne.0) then
+       write(*,*) 'nx not divisible by nmax_parent'
+       stop
+      end if
+
+!$omp parallel do shared(nx,ny,nz,cr0amr),
+!$omp+            private(ix,jy,kz), default(none)
+      do kz=1,nz
+      do jy=1,ny
+      do ix=1,nx
+       cr0amr(ix,jy,kz) = 1
+      end do
+      end do
+      end do
+
+*     FIRST LEVEL OF REFINEMENT ========================================
+      n1 = nx / nmax_parent 
+      n2 = ny / nmax_parent
+      n3 = nz / nmax_parent
+
+      cellsbox = nmax_parent ** 3
+
+      xl = -float(nx)*dx/2.
+      yl = -float(ny)*dy/2.
+      zl = -float(nz)*dz/2.
+
+      ir = 1
+      ! Caution: here dxpa are the sizes of the blocks candidates for refinement
+      dxpa = nmax_parent*dx
+      dypa = nmax_parent*dy
+      dzpa = nmax_parent*dz
+      
+      allocate(conta1(1:n1,1:n2,1:n3))
+      conta1(:,:,:) = 0
+
+      nparttot = sum(npart)
+!$omp parallel do shared(nparttot,rxpa,rypa,rzpa,
+!$omp+                   xl,yl,zl,dxpa,dypa,dzpa,
+!$omp+                   n1,n2,n3),
+!$omp+            private(ix,jy,kz,i), 
+!$omp+            default(none)
+!$omp+            reduction(+:conta1)
+      do i = 1, nparttot
+       ix = int((rxpa(i)-xl)/dxpa) + 1
+       jy = int((rypa(i)-yl)/dypa) + 1
+       kz = int((rzpa(i)-zl)/dzpa) + 1
+       if (ix.ge.1.and.ix.le.n1.and.
+     &     jy.ge.1.and.jy.le.n2.and.
+     &     kz.ge.1.and.kz.le.n3) then
+          conta1(ix,jy,kz) = conta1(ix,jy,kz) + 1
+       end if 
+      end do
+
+C      write(*,*) 'maxval minval conta1', maxval(conta1), minval(conta1)
+C      write(*,*) 'sum conta1', sum(conta1)
+
+
+      ! Caution: here dxpa are the cell sizes at level 0 (base grid)
+      dxpa = dx / 2.0 ** (ir-1)
+      dypa = dy / 2.0 ** (ir-1)
+      dzpa = dz / 2.0 ** (ir-1)
+
+      ipatch = 0
+
+      do ix = 1, n1 
+      do jy = 1, n2
+      do kz = 1, n3
+       if (conta1(ix,jy,kz).ge.refine_thr*cellsbox) then
+        ! Accept the patch 
+        ipatch = ipatch + 1
+        
+        patchnx(ipatch) = nmax_child
+        patchny(ipatch) = nmax_child
+        patchnz(ipatch) = nmax_child 
+
+        i1 = (ix-1) * nmax_parent + 1
+        j1 = (jy-1) * nmax_parent + 1
+        k1 = (kz-1) * nmax_parent + 1
+        i2 = i1 + nmax_parent - 1
+        j2 = j1 + nmax_parent - 1
+        k2 = k1 + nmax_parent - 1
+
+        patchx(ipatch) = i1
+        patchy(ipatch) = j1
+        patchz(ipatch) = k1
+
+        patchrx(ipatch) = xl + (i1 - 0.5) * dxpa
+        patchry(ipatch) = yl + (j1 - 0.5) * dypa
+        patchrz(ipatch) = zl + (k1 - 0.5) * dzpa
+
+        pare(ipatch) = 0
+
+        cr0amr(i1:i2,j1:j2,k1:k2) = 0
+
+C        write(*,*) 'accepted patch:', ipatch, 'conta1:', i1,j1,k1,
+C     &                   i2,j2,k2,patchrx(ipatch),patchry(ipatch),
+C     &                   patchrz(ipatch)
+       end if
+      end do 
+      end do 
+      end do
+
+      deallocate(conta1)
+
+      npatch(ir) = ipatch
+      
+      write(*,*) 'At l=',ir,', patches:', npatch(ir)
+      ix = count(cr0amr(:,:,:).eq.0)
+      write(*,*) '  --> l=',ir-1,' cells refined:', ix
+            write(*,*) '    ... fraction ', float(ix) / (float(nx)**3.),
+     &            'wrt. the whole domain'
+
+*     SUBSEQUENT LEVELS OF REFINEMENT ================================
+      do irpa=1, nl_mesh-1 
+       if (npatch(irpa).eq.0) then
+         write(*,*) 'Mesh building stops at level: ', irpa
+         write(*,*) 'There are no more candidate patches'
+         exit
+       end if
+
+       dxpa = dx / 2.0 ** irpa
+       dypa = dy / 2.0 ** irpa
+       dzpa = dz / 2.0 ** irpa
+
+       low1 = sum(npatch(0:irpa-1)) + 1
+       low2 = sum(npatch(0:irpa))
+
+       allocate(lnpatch(low1:low2))
+       allocate(lpatchnx(8, low1:low2))
+       allocate(lpatchny(8, low1:low2))
+       allocate(lpatchnz(8, low1:low2))
+       allocate(lpatchx(8, low1:low2))
+       allocate(lpatchy(8, low1:low2))
+       allocate(lpatchz(8, low1:low2))
+       allocate(lpatchrx(8, low1:low2))
+       allocate(lpatchry(8, low1:low2))
+       allocate(lpatchrz(8, low1:low2))
+
+!$omp parallel do shared(low1,low2,patchnx,patchny,patchnz,
+!$omp+                   patchx,patchy,patchz,patchrx,patchry,
+!$omp+                   patchrz,irpa,cr0amr1,refine_thr,npart,
+!$omp+                   rxpa,rypa,rzpa,dxpa,dypa,dzpa,cellsbox,
+!$omp+                   nmax_child,lpatchnx,lpatchny,lpatchnz,
+!$omp+                   lpatchx,lpatchy,lpatchz,lpatchrx,
+!$omp+                   lpatchry,lpatchrz,lnpatch,nmax_parent,
+!$omp+                   nparttot),
+!$omp+            private(ipatch,ix,jy,kz,xl,yl,zl,xr,yr,zr,
+!$omp+                    np1,np2,np3,xm,ym,zm,i,conta2,xp,yp,zp,
+!$omp+                    lipatch,i1,j1,k1,i2,j2,k2),
+!$omp+            default(none)
+       do ipatch = low1, low2 
+        np1 = patchnx(ipatch)
+        np2 = patchny(ipatch)
+        np3 = patchnz(ipatch)
+
+        xl = patchrx(ipatch) - dxpa
+        yl = patchry(ipatch) - dypa
+        zl = patchrz(ipatch) - dzpa
+
+        xr = xl + np1 * dxpa
+        yr = yl + np2 * dypa
+        zr = zl + np3 * dzpa
+
+C        write(*,*) 'ip,xl,yl,zl,xr,yr,zr:', ipatch,xl,yl,zl,xr,yr,zr
+
+        xm = (xl + xr) / 2.0
+        ym = (yl + yr) / 2.0
+        zm = (zl + zr) / 2.0
+
+        conta2(1:2,1:2,1:2) = 0
+
+        do i = 1, nparttot
+          xp = rxpa(i)
+          yp = rypa(i)
+          zp = rzpa(i)
+
+          if (xp.lt.xl) cycle 
+          if (xp.ge.xr) cycle
+          if (yp.lt.yl) cycle
+          if (yp.ge.yr) cycle
+          if (zp.lt.zl) cycle
+          if (zp.ge.zr) cycle
+
+          !write(*,*) 'ipatch:', ipatch, 'xp,yp,zp:', xp,yp,zp
+
+          ix = merge(1, 2, xp .lt. xm)
+          jy = merge(1, 2, yp .lt. ym)
+          kz = merge(1, 2, zp .lt. zm)
+
+          conta2(ix,jy,kz) = conta2(ix,jy,kz) + 1
+        end do
+
+C        write(*,*) 'conta2 ipatch:', ipatch, conta2,sum(conta2)
+
+        cr0amr1(1:np1, 1:np2, 1:np3, ipatch) = 1
+
+        lipatch = 0
+        do ix = 1, 2
+        do jy = 1, 2
+        do kz = 1, 2
+C         write(*,*) 'ip,ix,jy,kz:', ipatch,ix, jy, kz, conta2(ix,jy,kz),
+C     &                         refine_thr*cellsbox
+         if (conta2(ix,jy,kz).ge.refine_thr*cellsbox) then
+          lipatch = lipatch + 1
+
+          lpatchnx(lipatch,ipatch) = nmax_child
+          lpatchny(lipatch,ipatch) = nmax_child
+          lpatchnz(lipatch,ipatch) = nmax_child
+
+          i1 = (ix-1) * nmax_parent + 1
+          j1 = (jy-1) * nmax_parent + 1
+          k1 = (kz-1) * nmax_parent + 1
+
+          i2 = i1 + nmax_parent - 1
+          j2 = j1 + nmax_parent - 1
+          k2 = k1 + nmax_parent - 1
+
+          lpatchx(lipatch,ipatch) = i1
+          lpatchy(lipatch,ipatch) = j1
+          lpatchz(lipatch,ipatch) = k1
+          
+          lpatchrx(lipatch,ipatch) = xl + (i1 - 0.5) * dxpa
+          lpatchry(lipatch,ipatch) = yl + (j1 - 0.5) * dypa
+          lpatchrz(lipatch,ipatch) = zl + (k1 - 0.5) * dzpa
+
+          cr0amr1(i1:i2,j1:j2,k1:k2,ipatch) = 0
+         end if
+        end do 
+        end do 
+        end do
+        
+        lnpatch(ipatch) = lipatch 
+       end do
+
+       ipatch = low2
+       do i = low1, low2 
+        if (lnpatch(i).eq.0) cycle
+        
+        do lipatch = 1, lnpatch(i)
+         ipatch = ipatch + 1
+
+         patchnx(ipatch) = lpatchnx(lipatch,i)
+         patchny(ipatch) = lpatchny(lipatch,i)
+         patchnz(ipatch) = lpatchnz(lipatch,i)
+
+         patchx(ipatch) = lpatchx(lipatch,i)
+         patchy(ipatch) = lpatchy(lipatch,i)
+         patchz(ipatch) = lpatchz(lipatch,i)
+
+         patchrx(ipatch) = lpatchrx(lipatch,i)
+         patchry(ipatch) = lpatchry(lipatch,i)
+         patchrz(ipatch) = lpatchrz(lipatch,i)
+
+         pare(ipatch) = i
+        end do
+
+        npatch(irpa+1) = ipatch - low2 
+        if (ipatch.gt.NPALEV) stop 'NPALEV too small'
+       end do
+
+       deallocate(lnpatch)
+       deallocate(lpatchnx, lpatchny, lpatchnz)
+       deallocate(lpatchx, lpatchy, lpatchz)
+       deallocate(lpatchrx, lpatchry, lpatchrz)
+
+       ix = count(cr0amr1(:,:,:,low1:low2).eq.0)
+       write(*,*) 'At l=',irpa+1,', patches:', npatch(irpa+1)
+       write(*,*) '  --> l=',irpa,' cells refined:', ix          
+       write(*,*) '    ... which is a fraction of:',
+     &            float(ix) / float(nmax_child**3 * npatch(irpa)),
+     &            'wrt. previous level'
+       write(*,*) '    ... ', float(ix) / (float(nx)**3. * 8.**irpa),
+     &            'wrt. the whole domain'
+
+
+
+      end do
+
+      ir = irpa + 1
+      if (npatch(ir).eq.0) ir = ir - 1 !The last non-empty level, in any case
+
+      low1 = sum(npatch(0:ir-1)) + 1
+      low2 = sum(npatch(0:ir))
+!$omp parallel do shared(low1,low2,patchnx,patchny,patchnz,cr0amr1),
+!$omp+            private(ipatch,n1,n2,n3,ix,jy,kz)
+!$omp+            default(none)
+      do ipatch = low1, low2
+       n1 = patchnx(ipatch)
+       n2 = patchny(ipatch)
+       n3 = patchnz(ipatch)
+       do kz=1,n3
+       do jy=1,n2
+       do ix=1,n1
+        cr0amr1(ix,jy,kz,ipatch) = 1
+       end do
+       end do
+       end do
+      end do
+
+      return 
+      end 
+
+************************************************************************
       SUBROUTINE PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
      &            NPART,LADO0)

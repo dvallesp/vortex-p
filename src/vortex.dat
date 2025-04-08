@@ -29,7 +29,7 @@ Number of levels ----------------------------------------------------->
 9
 Number of particles for a cell to be refinable ----------------------->
 8
-Minimum size of a refinement patch to be accepted -------------------->
+Minimum size of a refinement patch to be accepted (<0: octree-like)--->
 6
 Cells not to be refined from the border (base grid) ------------------>
 2
