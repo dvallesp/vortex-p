@@ -1188,10 +1188,10 @@ c     &                       ERR_THR)
 #include "overlaps.f"
 
 *     Handle the boundaries of AMR patches
-#include "boundaries.f"
+!#include "boundaries.f"
 
 *     Detect cells with large errors and interpolate from coarser levels
-#include "outliers.f"
+!#include "outliers.f"
 
 *     Multiscale filter as in (Vazza, 2012) to extract turbulent field
 #ifdef use_filter 
