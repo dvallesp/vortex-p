@@ -121,11 +121,9 @@
       INTEGER CR3AMR1Z(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
       COMMON /CR0CELL/ CR3AMR1,CR3AMR1X,CR3AMR1Y,CR3AMR1Z
 
-      INTEGER I,J,K,IX,JY,KZ,I1,J1,K1,IR,IPALE,BOR
-      INTEGER NEF,NCELL,PAX1,PAX2,PAY1,PAY2,PAZ1,PAZ2
-      INTEGER IPATCH,II,JJ,KK,N1,N2,N3
+      INTEGER I,J,K,IX,JY,KZ,IR
+      INTEGER N1,N2,N3,IPA
       INTEGER INMAX(3)
-      INTEGER NBAS,IPA2,NPX,NPY,NPZ
       real DXPA,DYPA,DZPA
 
       real RX(-2:NAMRX+3,NPALEV)
@@ -136,96 +134,112 @@
       real RMZ(-2:NAMRX+3,NPALEV)
       COMMON /MINIGRIDS/ RX,RY,RZ,RMX,RMY,RMZ
 
-      real XX,YY,ZZ,XX1,YY1,ZZ1,XX2,YY2,ZZ2,BAS1,BAS2,BAS3
+      real xl,xr,xc,yl,yr,yc,zl,zr,zc,dxpa_i
 
-      INTEGER CONTROL,IP,P1,P2,P3,NP1,NP2,NP3
-      INTEGER L1,L2,L3,LL1,LL2,LL3,CR1,CR2,CR3,CR4,CR5,CR6
-      INTEGER LN1,LN2,LN3,LNN1,LNN2,LNN3
+      INTEGER NP1,NP2,NP3,ir2
+      INTEGER L1,L2,L3,CR1,CR2,CR3
       INTEGER LOW1,LOW2,LOW3,LOW4
-      INTEGER KR1,KR2,KR3,ABUELO,MARCA
+      INTEGER KR1,KR2,KR3,MARCA
 
 *      ---PARALLEL---
-      INTEGER NUM,OMP_GET_NUM_THREADS,NUMOR, FLAG_PARALLEL
+      INTEGER NUM
       COMMON /PROCESADORES/ NUM
 
+      do ir=nl,2,-1 
+        low1=sum(npatch(0:ir-1))+1
+        low2=sum(npatch(0:ir))
 
-      DO IR=NL,2,-1
-      LOW1=SUM(NPATCH(0:IR-1))+1
-      LOW2=SUM(NPATCH(0:IR))
-!$OMP PARALLEL DO SHARED(IR,NL,LOW1,LOW2,PATCHX,PATCHY,PATCHZ,PATCHNX,
-!$OMP+                   PATCHNY,PATCHNZ,CR3AMR1,NX,NY,NZ,CR3AMR1X,
-!$OMP+                   CR3AMR1Y,CR3AMR1Z,PARE),
-!$OMP+            PRIVATE(I,L1,L2,L3,IX,JY,KZ,KR1,KR2,KR3,MARCA,
-!$OMP+                    CR1,CR2,CR3,ABUELO),
-!$OMP+            DEFAULT(NONE)
-      DO I=LOW1,LOW2
-       L1=PATCHX(I)
-       L2=PATCHY(I)
-       L3=PATCHZ(I)
-       DO KZ=-2,PATCHNZ(I)+3
-       DO JY=-2,PATCHNY(I)+3
-       DO IX=-2,PATCHNX(I)+3
+        dxpa_i = dx / (2.0**ir)
 
-       MARCA=0
+!$omp parallel do shared(low1,low2,patchx,patchy,patchz,patchnx,patchny,
+!$omp+                   patchnz,pare,cr3amr1,cr3amr1x,cr3amr1y,
+!$omp+                   cr3amr1z,dx,dy,dz,rx,ry,rz,nx,ny,nz,patchrx,
+!$omp+                   patchry,patchrz,npatch,ir,dxpa_i),
+!$omp+            private(i,l1,l2,l3,n1,n2,n3,ipa,np1,np2,np3,ix,jy,kz,
+!$omp+                    cr1,cr2,cr3,marca,ir2,dxpa,low3,low4,xc,yc,zc,
+!$omp+                    j,xl,yl,zl,xr,yr,zr),
+!$omp+            default(none)
+        do i=low1,low2 
+          l1 = patchx(i)
+          l2 = patchy(i)
+          l3 = patchz(i)
+          n1 = patchnx(i)
+          n2 = patchny(i)
+          n3 = patchnz(i)
 
-       CR1=L1-1+INT((IX+1)/2)
-       CR2=L2-1+INT((JY+1)/2)
-       CR3=L3-1+INT((KZ+1)/2)
+          ipa = pare(i)
+          np1 = patchnx(ipa)
+          np2 = patchny(ipa)
+          np3 = patchnz(ipa)
 
-       IF (IX.LT.-1) CR1=INT((IX+1)/2)+L1-2
-       IF (JY.LT.-1) CR2=INT((JY+1)/2)+L2-2
-       IF (KZ.LT.-1) CR3=INT((KZ+1)/2)+L3-2
+          do kz = -2, n3+3
+          do jy = -2, n2+3
+          do ix = -2, n1+3
+            cr1 = l1-1+int((ix+1)/2)
+            cr2 = l2-1+int((jy+1)/2)
+            cr3 = l3-1+int((kz+1)/2)
 
-       KR1=CR1
-       KR2=CR2
-       KR3=CR3
+            if (cr1.ge.1.and.cr1.le.np1.and.
+     &          cr2.ge.1.and.cr2.le.np2.and.
+     &          cr3.ge.1.and.cr3.le.np3) then 
+              cr3amr1(ix,jy,kz,i) = ipa
+              cr3amr1x(ix,jy,kz,i) = cr1
+              cr3amr1y(ix,jy,kz,i) = cr2
+              cr3amr1z(ix,jy,kz,i) = cr3
+            else ! search among uncles, or below
+              marca = 0
+              xc = patchrx(i) + (ix-1.5)*dxpa_i!rx(ix,i)
+              yc = patchry(i) + (jy-1.5)*dxpa_i!ry(jy,i)
+              zc = patchrz(i) + (kz-1.5)*dxpa_i!rz(kz,i)
+              do ir2 = ir-1,1,-1
+                dxpa = dx / (2.0**ir2)
+                low3 = sum(npatch(0:ir2-1))+1
+                low4 = sum(npatch(0:ir2)) 
+                do j = low3, low4 
+                  np1 = patchnx(j)
+                  np2 = patchny(j)
+                  np3 = patchnz(j)
+                  xl = patchrx(j) - dxpa
+                  xr = xl + np1*dxpa
+                  if (xc.lt.xl.or.xc.gt.xr) cycle
+                  yl = patchry(j) - dxpa
+                  yr = yl + np2*dxpa
+                  if (yc.lt.yl.or.yc.gt.yr) cycle
+                  zl = patchrz(j) - dxpa
+                  zr = zl + np3*dxpa
+                  if (zc.lt.zl.or.zc.gt.zr) cycle
+                  ! If it has not cycled, it is inside!
+                  marca = 1
+                  cr1 = int((xc-xl)/dxpa) + 1
+                  cr2 = int((yc-yl)/dxpa) + 1
+                  cr3 = int((zc-zl)/dxpa) + 1
+                  cr3amr1(ix,jy,kz,i) = j
+                  cr3amr1x(ix,jy,kz,i) = cr1
+                  cr3amr1y(ix,jy,kz,i) = cr2
+                  cr3amr1z(ix,jy,kz,i) = cr3
+                  exit
+                end do 
+                if (marca.eq.1) exit
+              end do
+              if (marca.eq.0) then 
+                xl = -(nx/2)*dx
+                yl = -(ny/2)*dy
+                zl = -(nz/2)*dz
+                cr1 = int((xc-xl)/dx) + 1
+                cr2 = int((yc-yl)/dy) + 1
+                cr3 = int((zc-zl)/dz) + 1
+                cr3amr1(ix,jy,kz,i) = 0
+                cr3amr1x(ix,jy,kz,i) = cr1
+                cr3amr1y(ix,jy,kz,i) = cr2
+                cr3amr1z(ix,jy,kz,i) = cr3
+              end if
+            end if
+          end do 
+          end do 
+          end do
+        end do
 
-       ABUELO=PARE(I)
-
-       DO WHILE (MARCA.EQ.0)  !...................
-        IF (CR1.LT.2.OR.CR1.GT.PATCHNX(ABUELO)-1.OR.   !----------------
-     &      CR2.LT.2.OR.CR2.GT.PATCHNY(ABUELO)-1.OR.
-     &      CR3.LT.2.OR.CR3.GT.PATCHNZ(ABUELO)-1) THEN
-*        the progenitor cell of the cell ix,jy,kz
-*        is in the boundary of its patch. we need to recursively look
-*        for a cell not in the boundary
-
-         CR1=PATCHX(ABUELO)-1+INT((KR1+1)/2)
-         CR2=PATCHY(ABUELO)-1+INT((KR2+1)/2)
-         CR3=PATCHZ(ABUELO)-1+INT((KR3+1)/2)
-
-         IF (KR1.LT.-1) CR1=PATCHX(ABUELO)-2+INT((KR1+1)/2)
-         IF (KR2.LT.-1) CR2=PATCHY(ABUELO)-2+INT((KR2+1)/2)
-         IF (KR3.LT.-1) CR3=PATCHZ(ABUELO)-2+INT((KR3+1)/2)
-
-         KR1=CR1
-         KR2=CR2
-         KR3=CR3
-
-         ABUELO=PARE(ABUELO)
-
-         IF (ABUELO.EQ.0) THEN
-          MARCA=1
-          CR3AMR1(IX,JY,KZ,I)=0
-          CR3AMR1X(IX,JY,KZ,I)=KR1
-          CR3AMR1Y(IX,JY,KZ,I)=KR2
-          CR3AMR1Z(IX,JY,KZ,I)=KR3
-         END IF
-        ELSE                                           !----------------
-         CR3AMR1(IX,JY,KZ,I)=ABUELO
-         CR3AMR1X(IX,JY,KZ,I)=KR1
-         CR3AMR1Y(IX,JY,KZ,I)=KR2
-         CR3AMR1Z(IX,JY,KZ,I)=KR3
-*        this cell is well inside its parent patch!!
-         MARCA=1                                       !----------------
-        END IF
-       END DO                 !...................
-
-       END DO
-       END DO
-       END DO
-      END DO
-      END DO
+      end do
 
 
       IR=1
@@ -436,160 +450,163 @@
        INTEGER NUM,OMP_GET_NUM_THREADS,NUMOR, FLAG_PARALLEL
        COMMON /PROCESADORES/ NUM
 
+c     The code below is useless for the particle version.
+c     It is necessary, however, for the grid-based input.
+c     I keep it here for the future unification of the code.
 
-*      EXPANSION OF THE PATCHES BY INTERPOLATION
-
-      IR=1
-      DXPA=DX/(2.0**IR)
-      DYPA=DY/(2.0**IR)
-      DZPA=DZ/(2.0**IR)
-
-!$OMP PARALLEL DO SHARED(NPATCH,IR,PATCHNX,PATCHNY,PATCHNZ,CR3AMR1X,
-!$OMP+                   CR3AMR1Y,CR3AMR1Z,U2,U3,U4,U12,U13,U14),
-!$OMP+            PRIVATE(I,N1,N2,N3,IX,JY,KZ,KR1,KR2,KR3,UBAS,FUIN),
-!$OMP+            DEFAULT(NONE)
-      DO I=1,NPATCH(IR)
-
-       N1=PATCHNX(I)
-       N2=PATCHNY(I)
-       N3=PATCHNZ(I)
-
-       DO KZ=0,N3+1
-       DO JY=0,N2+1
-       DO IX=0,N1+1
-
-*      #######################################################
-       IF (IX.LT.1.OR.IX.GT.N1.OR.JY.LT.1.OR.JY.GT.N2.OR.
-     &     KZ.LT.1.OR.KZ.GT.N3) THEN
-*      #######################################################
-
-        KR1=CR3AMR1X(IX,JY,KZ,I)
-        KR2=CR3AMR1Y(IX,JY,KZ,I)
-        KR3=CR3AMR1Z(IX,JY,KZ,I)
-
-        !VX
-        UBAS(1:3,1:3,1:3)=U2(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
-        CALL LININT52D_NEW(IX,JY,KZ,UBAS,FUIN)
-        U12(IX,JY,KZ,I)=FUIN
-
-        !VY
-        UBAS(1:3,1:3,1:3)=U3(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
-        CALL LININT52D_NEW(IX,JY,KZ,UBAS,FUIN)
-        U13(IX,JY,KZ,I)=FUIN
-
-        !VZ
-        UBAS(1:3,1:3,1:3)=U4(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
-        CALL LININT52D_NEW(IX,JY,KZ,UBAS,FUIN)
-        U14(IX,JY,KZ,I)=FUIN
-
-*      #######################################################
-        END IF
-*      #######################################################
-
-        END DO
-        END DO
-        END DO
-       END DO
-
-
-       DO IR=2,NL
-        DXPA=DX/(2.0**IR)
-        DYPA=DY/(2.0**IR)
-        DZPA=DZ/(2.0**IR)
-
-        LOW1=SUM(NPATCH(0:IR-1))+1
-        LOW2=SUM(NPATCH(0:IR))
-!$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR3AMR1,
-!$OMP+                   CR3AMR1X,CR3AMR1Y,CR3AMR1Z,RX,RY,RZ,U2,U3,U4,
-!$OMP+                   U12,U13,U14,RADX,RADY,RADZ),
-!$OMP+            PRIVATE(I,N1,N2,N3,IX,JY,KZ,KARE,KR1,KR2,KR3,AAA,BBB,
-!$OMP+                    CCC,RXBAS,RYBAS,RZBAS,UBAS,FUIN),
-!$OMP+            DEFAULT(NONE)
-        DO I=LOW1,LOW2
-
-        N1=PATCHNX(I)
-        N2=PATCHNY(I)
-        N3=PATCHNZ(I)
-
-         DO KZ=0,N3+1
-         DO JY=0,N2+1
-         DO IX=0,N1+1
-
-         IF (IX.LT.1.OR.IX.GT.N1.OR.
-     &       JY.LT.1.OR.JY.GT.N2.OR.
-     &       KZ.LT.1.OR.KZ.GT.N3) THEN
-
-             KARE=CR3AMR1(IX,JY,KZ,I)
-             KR1=CR3AMR1X(IX,JY,KZ,I)
-             KR2=CR3AMR1Y(IX,JY,KZ,I)
-             KR3=CR3AMR1Z(IX,JY,KZ,I)
-
-             AAA=RX(IX,I)
-             BBB=RY(JY,I)
-             CCC=RZ(KZ,I)
-
-             IF (KARE.GT.0) THEN
-
-             RXBAS(1:3)=RX(KR1-1:KR1+1,KARE)
-             RYBAS(1:3)=RY(KR2-1:KR2+1,KARE)
-             RZBAS(1:3)=RZ(KR3-1:KR3+1,KARE)
-
-             !Vx:
-              UBAS(1:3,1:3,1:3)=
-     &             U12(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1,KARE)
-              CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
-     &                             RXBAS,RYBAS,RZBAS,UBAS,FUIN)
-              U12(IX,JY,KZ,I)=FUIN
-
-              !Vy:
-              UBAS(1:3,1:3,1:3)=
-     &             U13(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1,KARE)
-              CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
-     &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
-              U13(IX,JY,KZ,I)=FUIN
-
-              !Vz:
-              UBAS(1:3,1:3,1:3)=
-     &             U14(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1,KARE)
-              CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
-     &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
-              U14(IX,JY,KZ,I)=FUIN
-
-
-             ELSE
-              RXBAS(1:3)=RADX(KR1-1:KR1+1)
-              RYBAS(1:3)=RADY(KR2-1:KR2+1)
-              RZBAS(1:3)=RADZ(KR3-1:KR3+1)
-
-              !Vx
-              UBAS(1:3,1:3,1:3)=
-     &             U2(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
-              CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
-     &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
-              U12(IX,JY,KZ,I)=FUIN
-
-              !Vy
-              UBAS(1:3,1:3,1:3)=
-     &             U3(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
-              CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
-     &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
-              U13(IX,JY,KZ,I)=FUIN
-
-              !Vz
-              UBAS(1:3,1:3,1:3)=
-     &            U4(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
-              CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
-     &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
-              U14(IX,JY,KZ,I)=FUIN
-
-             ENDIF
-          ENDIF
-         END DO
-         END DO
-         END DO
-
-        END DO
-       END DO
+cc *      EXPANSION OF THE PATCHES BY INTERPOLATION
+cc 
+cc       IR=1
+cc       DXPA=DX/(2.0**IR)
+cc       DYPA=DY/(2.0**IR)
+cc       DZPA=DZ/(2.0**IR)
+cc 
+cc !$OMP PARALLEL DO SHARED(NPATCH,IR,PATCHNX,PATCHNY,PATCHNZ,CR3AMR1X,
+cc !$OMP+                   CR3AMR1Y,CR3AMR1Z,U2,U3,U4,U12,U13,U14),
+cc !$OMP+            PRIVATE(I,N1,N2,N3,IX,JY,KZ,KR1,KR2,KR3,UBAS,FUIN),
+cc !$OMP+            DEFAULT(NONE)
+cc       DO I=1,NPATCH(IR)
+cc 
+cc        N1=PATCHNX(I)
+cc        N2=PATCHNY(I)
+cc        N3=PATCHNZ(I)
+cc 
+cc        DO KZ=0,N3+1
+cc        DO JY=0,N2+1
+cc        DO IX=0,N1+1
+cc 
+cc *      #######################################################
+cc        IF (IX.LT.1.OR.IX.GT.N1.OR.JY.LT.1.OR.JY.GT.N2.OR.
+cc      &     KZ.LT.1.OR.KZ.GT.N3) THEN
+cc *      #######################################################
+cc 
+cc         KR1=CR3AMR1X(IX,JY,KZ,I)
+cc         KR2=CR3AMR1Y(IX,JY,KZ,I)
+cc         KR3=CR3AMR1Z(IX,JY,KZ,I)
+cc 
+cc         !VX
+cc         UBAS(1:3,1:3,1:3)=U2(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
+cc         CALL LININT52D_NEW(IX,JY,KZ,UBAS,FUIN)
+cc         U12(IX,JY,KZ,I)=FUIN
+cc 
+cc         !VY
+cc         UBAS(1:3,1:3,1:3)=U3(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
+cc         CALL LININT52D_NEW(IX,JY,KZ,UBAS,FUIN)
+cc         U13(IX,JY,KZ,I)=FUIN
+cc 
+cc         !VZ
+cc         UBAS(1:3,1:3,1:3)=U4(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
+cc         CALL LININT52D_NEW(IX,JY,KZ,UBAS,FUIN)
+cc         U14(IX,JY,KZ,I)=FUIN
+cc 
+cc *      #######################################################
+cc         END IF
+cc *      #######################################################
+cc 
+cc         END DO
+cc         END DO
+cc         END DO
+cc        END DO
+cc 
+cc 
+cc        DO IR=2,NL
+cc         DXPA=DX/(2.0**IR)
+cc         DYPA=DY/(2.0**IR)
+cc         DZPA=DZ/(2.0**IR)
+cc 
+cc         LOW1=SUM(NPATCH(0:IR-1))+1
+cc         LOW2=SUM(NPATCH(0:IR))
+cc !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR3AMR1,
+cc !$OMP+                   CR3AMR1X,CR3AMR1Y,CR3AMR1Z,RX,RY,RZ,U2,U3,U4,
+cc !$OMP+                   U12,U13,U14,RADX,RADY,RADZ),
+cc !$OMP+            PRIVATE(I,N1,N2,N3,IX,JY,KZ,KARE,KR1,KR2,KR3,AAA,BBB,
+cc !$OMP+                    CCC,RXBAS,RYBAS,RZBAS,UBAS,FUIN),
+cc !$OMP+            DEFAULT(NONE)
+cc         DO I=LOW1,LOW2
+cc 
+cc         N1=PATCHNX(I)
+cc         N2=PATCHNY(I)
+cc         N3=PATCHNZ(I)
+cc 
+cc          DO KZ=0,N3+1
+cc          DO JY=0,N2+1
+cc          DO IX=0,N1+1
+cc 
+cc          IF (IX.LT.1.OR.IX.GT.N1.OR.
+cc      &       JY.LT.1.OR.JY.GT.N2.OR.
+cc      &       KZ.LT.1.OR.KZ.GT.N3) THEN
+cc 
+cc              KARE=CR3AMR1(IX,JY,KZ,I)
+cc              KR1=CR3AMR1X(IX,JY,KZ,I)
+cc              KR2=CR3AMR1Y(IX,JY,KZ,I)
+cc              KR3=CR3AMR1Z(IX,JY,KZ,I)
+cc 
+cc              AAA=RX(IX,I)
+cc              BBB=RY(JY,I)
+cc              CCC=RZ(KZ,I)
+cc 
+cc              IF (KARE.GT.0) THEN
+cc 
+cc              RXBAS(1:3)=RX(KR1-1:KR1+1,KARE)
+cc              RYBAS(1:3)=RY(KR2-1:KR2+1,KARE)
+cc              RZBAS(1:3)=RZ(KR3-1:KR3+1,KARE)
+cc 
+cc              !Vx:
+cc               UBAS(1:3,1:3,1:3)=
+cc      &             U12(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1,KARE)
+cc               CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
+cc      &                             RXBAS,RYBAS,RZBAS,UBAS,FUIN)
+cc               U12(IX,JY,KZ,I)=FUIN
+cc 
+cc               !Vy:
+cc               UBAS(1:3,1:3,1:3)=
+cc      &             U13(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1,KARE)
+cc               CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
+cc      &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
+cc               U13(IX,JY,KZ,I)=FUIN
+cc 
+cc               !Vz:
+cc               UBAS(1:3,1:3,1:3)=
+cc      &             U14(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1,KARE)
+cc               CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
+cc      &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
+cc               U14(IX,JY,KZ,I)=FUIN
+cc 
+cc 
+cc              ELSE
+cc               RXBAS(1:3)=RADX(KR1-1:KR1+1)
+cc               RYBAS(1:3)=RADY(KR2-1:KR2+1)
+cc               RZBAS(1:3)=RADZ(KR3-1:KR3+1)
+cc 
+cc               !Vx
+cc               UBAS(1:3,1:3,1:3)=
+cc      &             U2(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
+cc               CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
+cc      &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
+cc               U12(IX,JY,KZ,I)=FUIN
+cc 
+cc               !Vy
+cc               UBAS(1:3,1:3,1:3)=
+cc      &             U3(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
+cc               CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
+cc      &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
+cc               U13(IX,JY,KZ,I)=FUIN
+cc 
+cc               !Vz
+cc               UBAS(1:3,1:3,1:3)=
+cc      &            U4(KR1-1:KR1+1,KR2-1:KR2+1,KR3-1:KR3+1)
+cc               CALL LININT52D_NEW_REAL(AAA,BBB,CCC,
+cc      &                                RXBAS,RYBAS,RZBAS,UBAS,FUIN)
+cc               U14(IX,JY,KZ,I)=FUIN
+cc 
+cc              ENDIF
+cc           ENDIF
+cc          END DO
+cc          END DO
+cc          END DO
+cc 
+cc         END DO
+cc        END DO
 
 * IR=0 (periodic boundary)
        DO K=0,NZ+1
