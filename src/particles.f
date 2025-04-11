@@ -2321,6 +2321,7 @@ C     &                         refine_thr*cellsbox
       REAL,ALLOCATABLE::DIST(:)
       INTEGER,ALLOCATABLE::NEIGH(:),LB(:)
       REAL FUIN,U(2,2,2),UW(2,2,2)
+      logical do_cell
 
       !INTEGER,ALLOCATABLE::SCRINT(:,:,:)
       integer*4 t1,t2,trate,tmax
@@ -2912,7 +2913,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,DIST,NEIGH,DA,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I,
-!$OMP+                    BASMASS,SEARCH),
+!$OMP+                    BASMASS,SEARCH,DO_CELL),
 !$OMP+            SCHEDULE(DYNAMIC,1)!, DEFAULT(NONE)
        DO IPATCH=LOW1,LOW2 
             !write(*,*) ir,ipatch
@@ -2920,11 +2921,21 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         N2=PATCHNY(IPATCH)
         N3=PATCHNZ(IPATCH)
 
-        DO KZ=1,N3 
-        DO JY=1,N2 
-        DO IX=1,N1
-         IF (CR0AMR1(IX,JY,KZ,IPATCH).EQ.1.AND.
-     &       SOLAP(IX,JY,KZ,IPATCH).EQ.1) THEN
+        DO KZ=0,N3+1 
+        DO JY=0,N2+1 
+        DO IX=0,N1+1
+         do_cell = .false.
+         if (ix.eq.0.or.ix.eq.n1+1.or.
+     &       jy.eq.0.or.jy.eq.n2+1.or.
+     &       kz.eq.0.or.kz.eq.n3+1) then
+          do_cell = .true.
+         else
+           if (cr0amr1(ix,jy,kz,ipatch).eq.1.and.
+     &         solap(ix,jy,kz,ipatch).eq.1) then
+            do_cell = .true.
+           end if
+         end if
+         IF (do_cell) THEN
           !Q(1)=RX(IX,IPATCH)
           !Q(2)=RY(JY,IPATCH)
           !Q(3)=RZ(KZ,IPATCH)
@@ -2950,7 +2961,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           END IF
           !WRITE(*,*) IX,JY,KZ,CONTA,DIST(CONTA)
           H_KERN=DIST(CONTA)
-          L1(IX,JY,KZ,IPATCH)=H_KERN
           !  if (isnan(h_kern).or.conta.lt.kneighbours) then 
           !   write(*,*) ipatch,ix,jy,kz,conta,h_kern,dxpa
           !  end if
@@ -2986,10 +2996,19 @@ c      WRITE(*,*) K1,KK1,KK2,K2
            !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
            BASMASS=BASMASS+MASAP(NEIGH(I))
           END DO
+
+          DEALLOCATE(DIST, NEIGH)
         
           U12(IX,JY,KZ,IPATCH)=BAS8X/BAS8
           U13(IX,JY,KZ,IPATCH)=BAS8Y/BAS8
           U14(IX,JY,KZ,IPATCH)=BAS8Z/BAS8
+
+          if (ix.eq.0.or.ix.eq.n1+1.or.
+     &        jy.eq.0.or.jy.eq.n2+1.or.
+     &        kz.eq.0.or.kz.eq.n3+1) cycle ! these values are not saved,
+      !   we actually only want u12,u13,u14 in ghost zones for taking 
+      !   derivatives
+
 #ifdef use_filter
 #if use_filter == 1
           VISC1(IX,JY,KZ,IPATCH)=BAS8M/BAS8
@@ -2997,10 +3016,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
           !VISC1(IX,JY,KZ,IPATCH)=BAS8M
 
-          IF (FLAG_MASS.EQ.1) 
-     &                  L1(IX,JY,KZ,IPATCH)=BASMASS/(4*PI/3)/H_KERN**3
-  
-          DEALLOCATE(DIST, NEIGH)
+          if (flag_mass.eq.0) then
+            L1(IX,JY,KZ,IPATCH)=H_KERN
+          else 
+            L1(IX,JY,KZ,IPATCH)=BASMASS/(4*PI/3)/H_KERN**3
+          end if
 
          END IF
         END DO 
