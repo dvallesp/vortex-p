@@ -175,9 +175,21 @@
           do kz = -2, n3+3
           do jy = -2, n2+3
           do ix = -2, n1+3
-            cr1 = l1-1+int((ix+1)/2)
-            cr2 = l2-1+int((jy+1)/2)
-            cr3 = l3-1+int((kz+1)/2)
+            if (ix.gt.0) then
+              cr1 = l1-1+int((ix+1)/2)
+            else 
+              cr1 = l1-1+int(ix/2)
+            end if
+            if (jy.gt.0) then
+              cr2 = l2-1+int((jy+1)/2)
+            else 
+              cr2 = l2-1+int(jy/2)
+            end if
+            if (kz.gt.0) then
+              cr3 = l3-1+int((kz+1)/2)
+            else 
+              cr3 = l3-1+int(kz/2)
+            end if
 
             if (cr1.ge.1.and.cr1.le.np1.and.
      &          cr2.ge.1.and.cr2.le.np2.and.
