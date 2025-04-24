@@ -295,7 +295,7 @@
        READ(1,*) DIV_THR
        READ(1,*) ! Threshold on artificial bulk viscosity constant --------------------->
        READ(1,*) ABVC_THR
-       READ(1,*) ! Use particle's MACH field (0=no, 1=yes), Mach threshold ------------->
+       READ(1,*) ! Use particles MACH field (0=no, 1=yes), Mach threshold -------------->
        READ(1,*) FLAG_MACHFIELD, MACH_THR
 
        CLOSE(1)
@@ -731,7 +731,8 @@
        END DO
 
        CALL POTAMR(NL,NX,NY,NZ,DX,NPATCH,PARE,
-     &             PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,BOR)
+     &             PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &             PATCHRX,PATCHRY,PATCHRZ,BOR)
 
        DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
@@ -796,7 +797,8 @@
        END DO
 
        CALL POTAMR(NL,NX,NY,NZ,DX,NPATCH,PARE,
-     &             PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,BOR)
+     &             PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &             PATCHRX,PATCHRY,PATCHRZ,BOR)
 
        DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
@@ -861,7 +863,8 @@
        END DO
 
        CALL POTAMR(NL,NX,NY,NZ,DX,NPATCH,PARE,
-     &             PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,BOR)
+     &             PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &             PATCHRX,PATCHRY,PATCHRZ,BOR)
 
 
        DO IR=1,NL
@@ -926,7 +929,8 @@
        END DO
 
        CALL POTAMR(NL,NX,NY,NZ,DX,NPATCH,PARE,
-     &             PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,BOR)
+     &             PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,PATCHZ,
+     &             PATCHRX,PATCHRY,PATCHRZ,BOR)
 
       DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
