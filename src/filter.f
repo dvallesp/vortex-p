@@ -366,7 +366,8 @@
 
 ************************************************************************ 
       subroutine smooth_l(nx,ny,nz,nl,npatch,patchnx,patchny,
-     &                     patchnz,patchrx,patchry,patchrz,l0,l1,solap)
+     &                     patchnz,patchrx,patchry,patchrz,l0,l1,solap,
+     &                     fl_smooth_filtlen)
 ************************************************************************
       implicit none 
       include 'vortex_parameters.dat'
@@ -378,6 +379,7 @@
       real l0(1:nmax,1:nmay,1:nmaz)
       real l1(1:namrx,1:namry,1:namrz,npalev)
       integer solap(1:namrx,1:namry,1:namrz,npalev)
+      real fl_smooth_filtlen
 
 
       real rx(-2:namrx+3,npalev)
@@ -410,7 +412,7 @@
       integer irr,mini,maxi,minj,maxj,mink,maxk,low3,low4
       real dxpa,dypa,dzpa,val,basevol,vol,l,l2,xl,yl,zl,xr,yr,zr
       real dista,kval,x1,y1,z1,x2,y2,z2,xxl,xxr,yyl,yyr,zzl,zzr
-      real xldom,yldom,zldom
+      real xldom,yldom,zldom,bas1,bas2,exp1,exp2,bas
 
       basevol = dx*dy*dz
 
@@ -698,7 +700,7 @@
       end do
 
       ! Now we normalize the values
-!$omp parallel do shared(nx,ny,nz,l0,w0,l0new),
+!$omp parallel do shared(nx,ny,nz,w0,l0new),
 !$omp+            private(i,j,k),
 !$omp+            default(none)
       do k=1,nz
@@ -707,12 +709,12 @@
         if (.not.(mod(j,3).eq.1.or.j.eq.ny)) cycle
       do i=1,nx
         if (.not.(mod(i,3).eq.1.or.i.eq.nx)) cycle
-        l0(i,j,k) = l0new(i,j,k) / w0(i,j,k)
+        l0new(i,j,k) = l0new(i,j,k) / w0(i,j,k)
       end do 
       end do 
       end do
 
-!$omp parallel do shared(npatch,patchnx,patchny,patchnz,l1,w1,l1new),
+!$omp parallel do shared(npatch,patchnx,patchny,patchnz,w1,l1new),
 !$omp+            private(i,j,k,n1,n2,n3,ip),
 !$omp+            default(none)
       do ip=1,sum(npatch)
@@ -725,7 +727,7 @@
           if (.not.(mod(j,3).eq.1.or.j.eq.n2)) cycle
         do i=1,n1 
           if (.not.(mod(i,3).eq.1.or.i.eq.n1)) cycle
-          l1(i,j,k,ip) = l1new(i,j,k,ip) / w1(i,j,k,ip)
+          l1new(i,j,k,ip) = l1new(i,j,k,ip) / w1(i,j,k,ip)
         end do 
         end do 
         end do
@@ -734,15 +736,24 @@
       bor0=0
       borl=0
       call fill_gaps(nx,ny,nz,bor0,borl,npatch,patchnx,patchny,
-     &               patchnz,l0,l1)
+     &               patchnz,l0new,l1new)
 
-!$omp parallel do shared(nx,ny,nz,l0,dx),
-!$omp+            private(i,j,k),
+      ! Now we average geometrically, if necessary, with the previous value
+      exp1 = fl_smooth_filtlen
+      if (exp1.lt.0.0) exp1 = 0.0
+      if (exp1.gt.1.0) exp1 = 1.0
+      exp2 = 1 - exp1 
+
+!$omp parallel do shared(nx,ny,nz,l0,l0new,dx,exp1,exp2),
+!$omp+            private(i,j,k,bas1,bas2,bas),
 !$omp+            default(none)
       do k=1,nz
       do j=1,ny
       do i=1,nx
-        l0(i,j,k) = max(exp(l0(i,j,k)), 4.*dx)
+        bas1 = exp(l0new(i,j,k))
+        bas2 = l0(i,j,k) ! this was not log 
+        bas = (bas1**exp1) * (bas2**exp2)
+        l0(i,j,k) = max(bas, 4.*dx)
       end do 
       end do 
       end do
@@ -751,8 +762,9 @@
         low1 = sum(npatch(0:ir-1)) + 1
         low2 = sum(npatch(0:ir))
         dxpa = dx / (2.0**ir)
-!$omp parallel do shared(low1,low2,patchnx,patchny,patchnz,l1,dxpa),
-!$omp+            private(i,j,k,n1,n2,n3,ip),
+!$omp parallel do shared(low1,low2,patchnx,patchny,patchnz,l1,dxpa,
+!$omp+                   l1new,exp1,exp2),
+!$omp+            private(i,j,k,n1,n2,n3,ip,bas,bas1,bas2),
 !$omp+            default(none)
         do ip=low1,low2
           n1 = patchnx(ip)
@@ -761,7 +773,10 @@
           do k=1,n3
           do j=1,n2 
           do i=1,n1 
-            l1(i,j,k,ip) = max(exp(l1(i,j,k,ip)), 4.*dxpa)
+            bas1 = exp(l1new(i,j,k,ip))
+            bas2 = l1(i,j,k,ip) ! this was not log
+            bas = (bas1**exp1) * (bas2**exp2)
+            l1(i,j,k,ip) = max(bas, 4.*dxpa)
           end do 
           end do 
           end do
@@ -913,7 +928,8 @@
       subroutine multiscale_filter(nx,ny,nz,nl,npatch,pare,
      &            patchnx,patchny,patchnz,patchx,patchy,patchz,
      &            patchrx,patchry,patchrz,dx,output_iter,
-     &            tol,step,maxit,maxlength,flag_filter)
+     &            tol,step,maxit,maxlength,flag_filter,
+     &            fl_smooth_filtlen)
 ************************************************************************
 *     Implements the multiscale filtering technique described in
 *     Vazza et al. 2012 to an AMR grid (instead of a fixed grid).
@@ -933,6 +949,7 @@
       integer output_iter, maxit
       real tol, step, maxlength
       integer flag_filter
+      real fl_smooth_filtlen
 
 *     global variables
 *     original velocity: at the end, the filtered velocity will be
@@ -1002,6 +1019,7 @@
       integer i3, j3, k3, i1, i2, j1, j2, k1, k2, ip, ii, jj, kk
       integer marca, iter, basint, basintprev, marca_shock
       integer jpatch, nn1, nn2, nn3, cr1, cr2, cr3, bor0, borl
+      integer do_smooth
       real bas1, bas2, bas3, bas4, dxpa, l, err
       real thisx, thisy, thisz, dv2, dv3, dv4, dv2prev, dv3prev, dv4prev
       real lado0,w111,w112,w121,w122,w211,w212,w221,w222
@@ -1012,6 +1030,9 @@
       real basx,basy
 
       integer exectime, time
+
+      do_smooth = 0
+      if (fl_smooth_filtlen.gt.0.001) do_smooth = 1
 
       lado0 = nx * dx
 
@@ -1304,8 +1325,11 @@
 ************
 * Sect. 3. Here we smooth the coherence length
 ************
+      if (do_smooth.eq.1) then !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       call smooth_l(nx,ny,nz,nl,npatch,patchnx,patchny,
-     &              patchnz,patchrx,patchry,patchrz,l0,l1,solap)
+     &              patchnz,patchrx,patchry,patchrz,l0,l1,solap,
+     &              fl_smooth_filtlen)
+      end if
 
       else if (flag_filter.eq.2) then !~ fix filtering length ~~~~~~~~~~~~~
 ************
@@ -1603,6 +1627,7 @@
       integer patchx(NPALEV), patchy(NPALEV), patchz(NPALEV)
       real patchrx(NPALEV), patchry(NPALEV), patchrz(NPALEV)
       integer nl
+      real fl_smooth_filtlen
 
       INTEGER CR3AMR1(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)
       INTEGER CR3AMR1X(-2:NAMRX+3,-2:NAMRY+3,-2:NAMRZ+3,NPALEV)

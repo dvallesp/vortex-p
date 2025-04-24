@@ -127,10 +127,12 @@
      &         FL_GR_DIV,FL_GR_CURL
        INTEGER FL_P_ERR,FL_P_RES
        INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+       REAL FL_SMOOTH_FILTLEN
        COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
      &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
      &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
-     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB,
+     &        FL_SMOOTH_FILTLEN
 
 
        ! AMR grid parent cells
@@ -288,6 +290,8 @@
        READ(1,*) FILT_TOL, FILT_STEP, FILT_MAXIT
        READ(1,*) !Maximum (for multiscale) or fix filt. length (input length units) ---->
        READ(1,*) FILT_MAXLENGTH
+       READ(1,*) !Smooth filtering length before applying the filter (0=no, 1=yes) ----->
+       READ(1,*) FL_SMOOTH_FILTLEN
        READ(1,*) !***********************************************************************
        READ(1,*) !*       On-the-fly shock detection                                    *
        READ(1,*) !***********************************************************************
@@ -478,7 +482,7 @@
      &            PATCHNX,PATCHNY,PATCHNZ,patchx,patchy,patchz,
      &            patchrx,patchry,patchrz,DX,ITER,
      &            FILT_TOL,FILT_STEP,FILT_MAXIT,FILT_MAXLENGTH,
-     &            FLAG_FILTER)
+     &            FLAG_FILTER,FL_SMOOTH_FILTLEN)
         IF (FLAG_VERBOSE.EQ.1) THEN
          write(*,*) 'Computation ended!'
          write(*,*) 'filtered velocity: min and max values'

@@ -515,10 +515,12 @@
      &         FL_GR_DIV,FL_GR_CURL
        INTEGER FL_P_ERR,FL_P_RES
        INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+       real fl_smooth_filtlen
        COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
      &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
      &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
-     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB,
+     &        fl_smooth_filtlen
 
        CHARACTER*3 ITER_STRING
        CHARACTER*1 IFILE_STRING
@@ -949,10 +951,12 @@
      &         FL_GR_DIV,FL_GR_CURL
       INTEGER FL_P_ERR,FL_P_RES
       INTEGER FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+      real fl_smooth_filtlen
       COMMON /FLAGS/ FLAG_VERBOSE,FL_GR_KERNL,FL_GR_DEN,FL_GR_VEL,
      &        FL_GR_VCOMP,FL_GR_VSOL,FL_GR_SPOT,FL_GR_VPOT,
      &        FL_GR_DIV,FL_GR_CURL,FL_P_ERR,FL_P_RES,
-     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB
+     &        FL_FILT_MACH,FL_FILT_SHOCK,FL_FILT_LEN,FL_FILT_VTURB,
+     &        fl_smooth_filtlen
 
       character*5 iter_string 
       write(iter_string, '(I5.5)') iter
