@@ -53,7 +53,7 @@ Filtering parameters: tolerance, growing step, max. num. of its. ----->
 Maximum (for multiscale) or fix filt. length (input length units) ---->
 1000.0
 Smooth filtering length before applying the filter (0=no, 1=yes) ----->
-1.0
+1
 ***********************************************************************
 *       On-the-fly shock detection (for multifiltering)               *
 ***********************************************************************
