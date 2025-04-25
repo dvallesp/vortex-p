@@ -1072,7 +1072,7 @@ C     &                         refine_thr*cellsbox
 ************************************************************************
       SUBROUTINE PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0)
+     &            NPART,LADO0,parchlim)
 ************************************************************************
 
       use particle_data
@@ -1086,6 +1086,7 @@ C     &                         refine_thr*cellsbox
       INTEGER PATCHNX(NPALEV),PATCHNY(NPALEV),PATCHNZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV)
       REAL LADO0
+      integer parchlim
 
 *     Local variables
       INTEGER IPATCH,IX,JY,KZ,BORAMR,IP,IR,LOW1,LOW2,N1,N2,N3,MARCA
@@ -1102,6 +1103,7 @@ C     &                         refine_thr*cellsbox
      &         LIHAL_KZ(PARTI))
 
       BORAMR=1
+      if (parchlim.lt.0) boramr=0
 
       DO IR=1,NL
        LOW1=SUM(NPATCH(0:IR-1))+1
@@ -1371,7 +1373,7 @@ C     &                         refine_thr*cellsbox
       REAL VARPART(PARTI)
 
 *     Local variables
-      INTEGER IPATCH,IX,JY,KZ,LOW1,LOW2,IR,IP,II
+      INTEGER IPATCH,IX,JY,KZ,LOW1,LOW2,IR,IP,II,n1,n2,n3
       REAL FUIN,DXPA,DYPA,DZPA
       REAL UBAS(3,3,3),RXBAS(3),RYBAS(3),RZBAS(3),AAA,BBB,CCC
       REAL PATCHLEV(NPALEV)
@@ -1396,9 +1398,10 @@ C     &                         refine_thr*cellsbox
       LOW1=SUM(NPART(0:NL))
 !$OMP PARALLEL DO SHARED(NL,NPART,LIHAL,LIHAL_IX,LIHAL_JY,LIHAL_KZ,RX,
 !$OMP+                   RY,RZ,NX,NY,NZ,RADX,RADY,RADZ,VAR0,VAR1,RXPA,
-!$OMP+                   RYPA,RZPA,VARPART,LOW1),
+!$OMP+                   RYPA,RZPA,VARPART,LOW1,patchnx,patchny,
+!$omp+                   patchnz),
 !$OMP+            PRIVATE(IP,IPATCH,IX,JY,KZ,AAA,BBB,CCC,RXBAS,RYBAS,
-!$OMP+                    RZBAS,UBAS,FUIN),
+!$OMP+                    RZBAS,UBAS,FUIN,n1,n2,n3),
 !$OMP+            DEFAULT(NONE)
       DO IP=1,LOW1
        IPATCH=LIHAL(IP)
@@ -1410,13 +1413,23 @@ C     &                         refine_thr*cellsbox
        CCC=RZPA(IP)
 
        IF (IPATCH.GT.0) THEN
-        RXBAS=RX(IX-1:IX+1,IPATCH)
-        RYBAS=RY(JY-1:JY+1,IPATCH)
-        RZBAS=RZ(KZ-1:KZ+1,IPATCH)
+        n1 = patchnx(ipatch)
+        n2 = patchny(ipatch)
+        n3 = patchnz(ipatch)
 
-        UBAS(1:3,1:3,1:3)=VAR1(IX-1:IX+1,JY-1:JY+1,KZ-1:KZ+1,IPATCH)
-        CALL LININT52D_NEW_REAL(AAA,BBB,CCC,RXBAS,RYBAS,RZBAS,UBAS,
-     &                          FUIN)
+        if (ix.gt.1.and.ix.lt.n1.and.
+     &      jy.gt.1.and.jy.lt.n2.and.
+     &      kz.gt.1.and.kz.lt.n3) then
+          RXBAS=RX(IX-1:IX+1,IPATCH)
+          RYBAS=RY(JY-1:JY+1,IPATCH)
+          RZBAS=RZ(KZ-1:KZ+1,IPATCH)
+  
+          UBAS(1:3,1:3,1:3)=VAR1(IX-1:IX+1,JY-1:JY+1,KZ-1:KZ+1,IPATCH)
+          CALL LININT52D_NEW_REAL(AAA,BBB,CCC,RXBAS,RYBAS,RZBAS,UBAS,
+     &                            FUIN)
+        else
+          fuin = var1(ix,jy,kz,ipatch)
+        end if
        ELSE
         IF (IX.GT.1.AND.IX.LT.NX.AND.
      &      JY.GT.1.AND.JY.LT.NY.AND.

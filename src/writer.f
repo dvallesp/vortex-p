@@ -459,7 +459,8 @@
 *********************************************************************
       SUBROUTINE WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                           PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
-     &                           PATCHRY,PATCHRZ,PARE,NPART,LADO0)
+     &                           PATCHRY,PATCHRZ,PARE,NPART,LADO0,
+     &                           parchlim)
 ***********************************************************************
 *     Writes the GRIDS and CR0AMR/SOLAP variables for the created AMR
 *     structure
@@ -474,6 +475,7 @@
       INTEGER PATCHX(NPALEV),PATCHY(NPALEV),PATCHZ(NPALEV)
       REAL PATCHRX(NPALEV),PATCHRY(NPALEV),PATCHRZ(NPALEV),LADO0
       INTEGER PARE(NPALEV)
+      integer parchlim
 
       REAL SCRPART(PARTI)
       REAL SCR0(NMAX,NMAY,NMAZ)
@@ -532,7 +534,7 @@
 
       CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &            PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &            NPART,LADO0)
+     &            NPART,LADO0,parchlim)
 
 
       SCR0(1:NX,1:NY,1:NZ)=U2(1:NX,1:NY,1:NZ)

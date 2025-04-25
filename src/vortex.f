@@ -1143,7 +1143,7 @@ c     &                       ERR_THR)
            CALL WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,
-     &                          NPART,LADO0)
+     &                          NPART,LADO0,parchlim)
           END IF
 #endif
 #endif

@@ -856,7 +856,7 @@
         WRITE(*,*) 'Locating particles onto the grid'
         CALL PLACE_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &             PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
-     &             NPART,LADO0)
+     &             NPART,LADO0,parchlim)
 
         CALL ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
      &             PATCHNZ,PATCHRX,PATCHRY,PATCHRZ,PARE,
