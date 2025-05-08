@@ -430,7 +430,6 @@
 #endif
 
 
-
 ***********************************************************************
        SUBROUTINE READ_PARTICLES(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,
      &            NL_PARTICLE_GRID,REFINE_THR,PARCHLIM,BORGRID,
@@ -493,9 +492,13 @@
        real U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
        COMMON /VELOC/ U2,U3,U4,U12,U13,U14
 
+#ifdef use_filter
+#if use_filter == 1
        INTEGER*1 SHOCK0(1:NMAX,1:NMAY,1:NMAZ)
        INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
        COMMON /SHOCKED/ SHOCK0,SHOCK1
+#endif 
+#endif
 
        integer cr0amr(1:NMAX,1:NMAY,1:NMAZ)
        integer cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
@@ -1059,5 +1062,643 @@ C       close(55)
 
       RETURN 
       END 
+#endif 
+#endif
+
+
+#ifdef input_is_grid 
+#if input_is_grid == 1
+***********************************************************************
+       subroutine read_grid(iter,files_per_snap,nx,ny,nz,t,zeta,
+     &            nl_particle_grid,refine_thr,parchlim,borgrid,
+     &            npatch,pare,patchnx,patchny,patchnz,
+     &            patchx,patchy,patchz,patchrx,patchry,patchrz,lado0,
+     &            npart,
+     &            flag_filter,kneighbours,div_thr,abvc_thr,
+     &            flag_machfield,mach_thr,flag_mass)
+***********************************************************************
+*     reads the gas particles of the simulation, builds a set of amr
+*     grids and interpolates a continuous velocity field.
+*     this subroutine may be changed for different simulation codes.
+*     in particular, after mesh-building and interpolation, in any
+*     case we'll need to feed the main code with:
+****  grids info:
+*     npatch: number of patches per refinement level
+*     patchnx, patchny, patchnz: cell extensions of each refinement patch
+*     patchx, patchy, patchz: grid coordinates of the leftmost cell of each patch
+*     patchrx, patchry, patchrz: origin position of each patch (position of the leftmost "mother" cell)
+*     pare: coarser patch a given patch is embedded in
+****  clus info:
+*     u2, u3, u4: initial velocity field (base level, i.e coarse grid)
+*     u12, u13, u14: initial velocity field (refinement patches)
+*     cr0amr: whether a cell is refined (=0) or it isn't (=1)
+***********************************************************************
+
+       use particle_data
+       implicit none
+
+       include 'vortex_parameters.dat'
+
+       integer nx,ny,nz,iter,ndxyz,low1,low2,files_per_snap
+       real t,aaa,bbb,ccc,map,zeta,lado0
+       integer i,j,k,ix,nl,ir,irr,n1,n2,n3,nl_particle_grid
+       integer refine_thr,parchlim,borgrid,kneighbours
+       real div_thr,abvc_thr
+       integer flag_machfield,flag_mass
+       real mach_thr
+
+       integer flag_filter
+
+       integer npatch(0:nlevels),pare(npalev)
+       integer npart(0:nlevels)
+       integer patchnx(npalev),patchny(npalev),patchnz(npalev)
+       integer patchx(npalev),patchy(npalev),patchz(npalev)
+       real patchrx(npalev),patchry(npalev),patchrz(npalev)
+
+       character*200 fil1,fil2
+
+       real u2(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real u3(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real u4(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real u12(0:namrx+1,0:namry+1,0:namrz+1,npalev)
+       real u13(0:namrx+1,0:namry+1,0:namrz+1,npalev)
+       real u14(0:namrx+1,0:namry+1,0:namrz+1,npalev)
+       common /veloc/ u2,u3,u4,u12,u13,u14
+
+#ifdef use_filter
+#if use_filter == 1
+       integer*1 shock0(1:nmax,1:nmay,1:nmaz)
+       integer*1 shock1(1:namrx,1:namry,1:namrz,npalev)
+       common /shocked/ shock0,shock1
+#endif 
+#endif
+
+       integer cr0amr(1:nmax,1:nmay,1:nmaz)
+       integer cr0amr1(1:namrx,1:namry,1:namrz,npalev)
+       common /cr0/ cr0amr, cr0amr1
+
+*      ---parallel---
+       integer num,omp_get_num_threads,numor, flag_parallel
+       common /procesadores/ num
+
+       integer flag_verbose
+       integer fl_gr_kernl,fl_gr_den,fl_gr_vel
+       integer fl_gr_vcomp,fl_gr_vsol,fl_gr_spot,fl_gr_vpot,
+     &         fl_gr_div,fl_gr_curl
+       integer fl_p_err,fl_p_res
+       integer fl_filt_mach,fl_filt_shock,fl_filt_len,fl_filt_vturb
+       real fl_smooth_filtlen
+       common /flags/ flag_verbose,fl_gr_kernl,fl_gr_den,fl_gr_vel,
+     &        fl_gr_vcomp,fl_gr_vsol,fl_gr_spot,fl_gr_vpot,
+     &        fl_gr_div,fl_gr_curl,fl_p_err,fl_p_res,
+     &        fl_filt_mach,fl_filt_shock,fl_filt_len,fl_filt_vturb,
+     &        fl_smooth_filtlen
+
+       character*3 iter_string
+       character*1 ifile_string
+       integer ifile
+
+       ! first, get the number of particles to be read in the snapshot 
+       parti = 0
+       npart(:)=0
+
+************************************************************************
+**************** change for other simulation codes *********************
+************************************************************************
+       ! first, get the number of particles to be read in the snapshot 
+#ifdef reader
+#if reader == 2 
+        call read_masclet_grid(iter, flag_filter, nx, ny, nz, 
+     &         nl, npatch, patchnx, patchny, patchnz, 
+     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare)
+        call read_masclet_fields(iter, flag_filter, nx, ny, nz, 
+     &         nl, npatch, patchnx, patchny, patchnz, 
+     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
+     &         mach_thr)
+#endif
+#endif
+************************************************************************
+************************************************************************
+************************************************************************
+
+      stop
+       
+
+       write(*,*) 'routine create mesh ------------------------------'
+       npatch(0:ir)=0
+       if (parchlim.gt.0) then
+        call create_mesh(nx,ny,nz,nl_particle_grid,npatch,
+     &            pare,patchnx,patchny,patchnz,patchx,patchy,patchz,
+     &            patchrx,patchry,patchrz,
+     &            npart,lado0,refine_thr,parchlim,borgrid)
+       else
+        call create_mesh_octree(nx,ny,nz,nl_particle_grid,npatch,
+     &            pare,patchnx,patchny,patchnz,patchx,patchy,patchz,
+     &            patchrx,patchry,patchrz,
+     &            npart,lado0,refine_thr,parchlim,borgrid)
+       end if
+       
+       nl=nl_particle_grid
+       do ir=1,nl_particle_grid
+        if (npatch(ir).eq.0) then 
+          nl=ir-1
+          exit
+        end if
+       end do
+
+       call gridamr(nx,ny,nz,nl,npatch,
+     &                   patchnx,patchny,patchnz,
+     &                   patchx,patchy,patchz,
+     &                   patchrx,patchry,patchrz,pare)
+       write(*,*) 'end mesh creation --------------------------------'
+
+       write(*,*) 'routine interpolate velocity ---------------------'
+C       call interpolate_velocities(nx,ny,nz,nl,npatch,pare,
+C     &            patchnx,patchny,patchnz,patchx,patchy,patchz,
+C     &            patchrx,patchry,patchrz,
+C     &            npart,lado0,flag_filter,kneighbours,
+C     &            visc0,visc1,flag_machfield,flag_mass)
+
+#ifdef output_particles
+#if output_particles == 1
+       if (fl_p_err.eq.1) then
+        write(*,*) 'locating particles onto the grid'
+        call place_particles(nx,ny,nz,nl,npatch,patchnx,patchny,
+     &             patchnz,patchrx,patchry,patchrz,pare,
+     &             npart,lado0,parchlim)
+
+        call error_particles(nx,ny,nz,nl,npatch,patchnx,patchny,
+     &             patchnz,patchrx,patchry,patchrz,pare,
+     &             npart,lado0)
+        deallocate(lihal, lihal_ix, lihal_jy, lihal_kz)
+       end if
+#endif
+#endif
+       write(*,*) 'end velocity interpolation -----------------------'
+
+#ifdef use_filter
+#if use_filter == 1
+       if (flag_filter.eq.1) then 
+*     all patches are extended with one extra cell per direction
+        call extend_var(nx,ny,nz,nl,npatch,pare,patchnx,patchny,patchnz,
+     &                  patchx,patchy,patchz,patchrx,patchry,patchrz)
+
+C        call identify_shocks(iter,nx,ny,nz,nl,npatch,pare,patchnx,
+C     &                       patchny,patchnz,patchrx,patchry,patchrz,
+C     &                       patchx,patchy,patchz,lado0,visc0,visc1,
+C     &                       div_thr,abvc_thr,flag_machfield,mach_thr)
+       end if
+#endif
+#endif
+
+!      if we do not want to output the particles, we deallocate them
+!      here
+#ifdef output_particles
+#if output_particles == 0
+        deallocate(rxpa,rypa,rzpa,u2dm,u3dm,u4dm,masap,kernel)
+#ifdef use_filter
+#if use_filter == 1
+        deallocate(abvc)
+#endif
+#endif
+#endif
+#endif
+
+       return
+       end
+#endif
+#endif 
+
+#ifdef reader 
+#if reader == 2 
+***********************************************************************
+       subroutine read_masclet_grid(iter, flag_filter, nx, ny, nz, 
+     &         nl, npatch, patchnx, patchny, patchnz, 
+     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare)
+***********************************************************************
+*     reads the grid information from the simulation
+***********************************************************************
+
+       use particle_data
+       implicit none
+
+       include 'vortex_parameters.dat'
+
+       integer iter, flag_filter, nx, ny, nz, nl
+       integer npatch(0:nlevels)
+       integer patchnx(npalev),patchny(npalev),patchnz(npalev)
+       integer patchx(npalev),patchy(npalev),patchz(npalev)
+       real patchrx(npalev),patchry(npalev),patchrz(npalev)
+       integer pare(npalev)
+
+       character*200 fil1
+       character*5 iter_string
+
+       integer ir,low1,low2,i,j,k,ix,jy,kz,n1,n2,n3,ip,irr
+       real t,map,zeta,bas1,bas2,bas3,bas4
+
+       npatch(:)=0 
+       patchnx(:)=0
+       patchny(:)=0
+       patchnz(:)=0
+       patchx(:)=0
+       patchy(:)=0
+       patchz(:)=0
+       patchrx(:)=0.0
+       patchry(:)=0.0
+       patchrz(:)=0.0
+       pare(:)=0
+
+       write(iter_string, '(I5.5)') iter
+       fil1 = 'simulation/grids'//iter_string
+
+       write(*,*) 'reading grid from file:',fil1
+       open(33, file=fil1, status='unknown', action='read') 
+
+        read(33,*) ir, t, nl, map 
+        read(33,*) zeta 
+        read(33,*) n1,n2 ! garbage 
+ 
+        if (ir.ne.iter) then
+         stop 'error: iteration number in file and in code do not match'
+        end if
+
+        do ir=1,nl 
+          read(33,*) irr, npatch(ir)
+          read(33,*)
+          write(*,*) 'level',ir,'number of patches:',npatch(ir)
+          low1 = sum(npatch(0:ir-1))+1
+          low2 = sum(npatch(0:ir))
+          
+          do ip=low1,low2 
+            read(33,*) patchnx(ip), patchny(ip), patchnz(ip)
+            read(33,*) patchx(ip), patchy(ip), patchz(ip)
+            read(33,*) patchrx(ip), patchry(ip), patchrz(ip)
+            read(33,*) pare(ip)
+          end do
+
+          write(*,*) 'ir, patchx', ir, minval(patchx(low1:low2)),
+     &                                 maxval(patchx(low1:low2))
+          write(*,*) 'ir, patchy', ir, minval(patchy(low1:low2)),
+     &                                 maxval(patchy(low1:low2))
+          write(*,*) 'ir, patchz', ir, minval(patchz(low1:low2)),
+     &                                 maxval(patchz(low1:low2))
+          write(*,*) 'ir, patchnx', ir, minval(patchnx(low1:low2)),
+     &                                  maxval(patchnx(low1:low2))
+          write(*,*) 'ir, patchny', ir, minval(patchny(low1:low2)),
+     &                                  maxval(patchny(low1:low2))
+          write(*,*) 'ir, patchnz', ir, minval(patchnz(low1:low2)),
+     &                                  maxval(patchnz(low1:low2))
+          write(*,*) 'ir, patchrx', ir, minval(patchrx(low1:low2)),
+     &                                  maxval(patchrx(low1:low2))
+          write(*,*) 'ir, patchry', ir, minval(patchry(low1:low2)),
+     &                                  maxval(patchry(low1:low2))
+          write(*,*) 'ir, patchrz', ir, minval(patchrz(low1:low2)),
+     &                                  maxval(patchrz(low1:low2))
+          write(*,*)
+
+        end do
+       close(33)
+
+       return 
+      end
+
+***********************************************************************
+       subroutine read_masclet_fields(iter, flag_filter, nx, ny, nz, 
+     &         nl, npatch, patchnx, patchny, patchnz, 
+     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
+     &         mach_thr)
+***********************************************************************
+*     reads the grid information from the simulation
+***********************************************************************
+
+       use particle_data
+       implicit none
+
+       include 'vortex_parameters.dat'
+
+       integer iter, flag_filter, nx, ny, nz, nl
+       integer npatch(0:nlevels)
+       integer patchnx(npalev),patchny(npalev),patchnz(npalev)
+       integer patchx(npalev),patchy(npalev),patchz(npalev)
+       real patchrx(npalev),patchry(npalev),patchrz(npalev)
+       integer pare(npalev)
+       real mach_thr
+
+       character*200 fil1
+       character*5 iter_string
+
+       integer ir,low1,low2,i,j,k,ix,jy,kz,n1,n2,n3,ip,irr
+       real t,map,zeta,bas1,bas2,bas3,bas4,basx,basy
+       real*4, allocatable :: scr4 (:,:,:)
+       !integer, allocatable :: scr4int(:,:,:)
+
+       ! Read data 
+       real u2(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real u3(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real u4(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real u12(0:namrx+1,0:namry+1,0:namrz+1,npalev)
+       real u13(0:namrx+1,0:namry+1,0:namrz+1,npalev)
+       real u14(0:namrx+1,0:namry+1,0:namrz+1,npalev)
+       common /veloc/ u2,u3,u4,u12,u13,u14
+
+#ifdef use_filter
+#if use_filter == 1
+       real*4 mach0(1:nmax,1:nmay,1:nmaz)
+       real*4 mach1(1:namrx,1:namry,1:namrz,npalev)
+       integer*1 shock0(1:nmax,1:nmay,1:nmaz)
+       integer*1 shock1(1:namrx,1:namry,1:namrz,npalev)
+       common /shocked/ shock0,shock1
+#endif
+#endif
+
+#ifdef weight_filter
+#if weight_filter == 1
+       real dens0(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real dens1(namrx,namry,namrz,npalev)
+       common /densi/ dens0,dens1
+#endif 
+#endif
+
+       integer is_mascletB 
+       is_mascletB = 0
+
+!      Initialize the arrays before reading 
+
+!$omp parallel do shared(u2,u3,u4,nx,ny,nz), 
+!$omp+ private(ix,jy,kz), default(none)
+       do kz=0,nz+1 
+       do jy=0,ny+1
+       do ix=0,nx+1
+        u2(ix,jy,kz) = 0.0 
+        u3(ix,jy,kz) = 0.0
+        u4(ix,jy,kz) = 0.0
+       end do
+       end do
+       end do
+
+#ifdef use_filter
+#if use_filter == 1
+!$omp parallel do shared(shock0,nx,ny,nz), 
+!$omp+ private(ix,jy,kz), default(none)
+       do kz=1,nz 
+       do jy=1,ny
+       do ix=1,nx
+        shock0(ix,jy,kz) = 0
+       end do
+       end do
+       end do
+
+#ifdef weight_filter
+#if weight_filter == 1
+!$omp parallel do shared(dens0,nx,ny,nz), 
+!$omp+ private(ix,jy,kz), default(none)
+       do kz=0,nz+1 
+       do jy=0,ny+1
+       do ix=0,nx+1
+        dens0(ix,jy,kz) = 0.0 
+       end do
+       end do
+       end do
+#endif
+#endif
+
+#endif
+#endif
+
+       low1 = 1 
+       low2 = sum(npatch)
+
+!$omp parallel do shared(u12,u13,u14,low1,low2)
+!$omp+ private(ip), default(none)
+       do ip = low1,low2 
+        u12(:,:,:,ip) = 0.0 
+        u13(:,:,:,ip) = 0.0
+        u14(:,:,:,ip) = 0.0
+       end do
+
+#ifdef use_filter
+#if use_filter == 1
+!$omp parallel do shared(shock1,low1,low2)
+!$omp+ private(ip), default(none)
+       do ip = low1,low2 
+        shock1(:,:,:,ip) = 0.0 
+       end do
+
+#ifdef weight_filter
+#if weight_filter == 1
+!$omp parallel do shared(dens1,low1,low2)
+!$omp+ private(ip), default(none)
+       do ip = low1,low2 
+        dens1(:,:,:,ip) = 0.0 
+       end do
+#endif
+#endif
+#endif
+#endif
+
+       write(iter_string, '(I5.5)') iter
+       fil1 = 'simulation/clus'//iter_string
+
+       write(*,*) 'reading data from file:',fil1
+       open(31, file=fil1, status='unknown', action='read', 
+     &      form='unformatted') 
+        read(31) ! ignore heading
+
+        allocate(scr4(nx,ny,nz))
+
+#ifdef weight_filter
+#if weight_filter == 1
+        read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        dens0(1:nx,1:ny,1:nz) = 1.0 + scr4(1:nx,1:ny,1:nz)
+#elif weight_filter == 0 
+        read(31)
+#endif 
+#endif
+
+        read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        u2(1:nx,1:ny,1:nz) = scr4(1:nx,1:ny,1:nz)
+        read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        u3(1:nx,1:ny,1:nz) = scr4(1:nx,1:ny,1:nz)
+        read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        u4(1:nx,1:ny,1:nz) = scr4(1:nx,1:ny,1:nz)
+        
+        read(31) ! pressure
+        read(31) ! pot 
+        read(31) ! opot 
+        read(31) ! temp 
+        read(31) ! metal 
+        read(31) ! cr0 
+        if (is_mascletB.eq.1) then
+         read(31) ! Bx 
+         read(31) ! By
+         read(31) ! Bz
+        end if
+
+        deallocate(scr4)
+
+        low1 = 1 
+        low2 = sum(npatch)
+        do ip = low1, low2 
+          n1 = patchnx(ip)
+          n2 = patchny(ip)
+          n3 = patchnz(ip)
+          allocate(scr4(n1,n2,n3))
+
+#ifdef weight_filter
+#if weight_filter == 1
+          read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
+          dens1(1:n1,1:n2,1:n3,ip) = 1.0 + scr4(1:n1,1:n2,1:n3)
+#elif weight_filter == 0
+          read(31)
+#endif
+#endif
+          read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
+          u12(1:n1,1:n2,1:n3,ip) = scr4(1:n1,1:n2,1:n3)
+          read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
+          u13(1:n1,1:n2,1:n3,ip) = scr4(1:n1,1:n2,1:n3)
+          read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
+          u14(1:n1,1:n2,1:n3,ip) = scr4(1:n1,1:n2,1:n3)
+
+          read(31) ! pressure
+          read(31) ! pot
+          read(31) ! opot
+          read(31) ! temp
+          read(31) ! metal
+          read(31) ! cr0
+          read(31) ! solap 
+
+          if (is_mascletB.eq.1) then
+           read(31) ! Bx 
+           read(31) ! By
+           read(31) ! Bz
+          end if
+
+          deallocate(scr4)
+
+        end do
+       close(31)
+
+! if necessary, read machnum to tag shocked cells
+#ifdef use_filter
+#if use_filter == 1
+       if (flag_filter.eq.1) then 
+        fil1 = 'shocks/MachNum_'//iter_string
+        write(*,*) 'reading Mach number from file:',fil1
+        open(35, file=fil1, status='unknown', action='read',
+     &       form='unformatted')
+
+        allocate(scr4(nx,ny,nz))
+        read(35) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        mach0(1:nx,1:ny,1:nz) = scr4(1:nx,1:ny,1:nz)
+        deallocate(scr4)
+
+        low1 = 1 
+        low2 = sum(npatch)
+        do ip = low1, low2 
+          n1 = patchnx(ip)
+          n2 = patchny(ip)
+          n3 = patchnz(ip)
+          allocate(scr4(n1,n2,n3))
+          read(35) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
+          mach1(1:n1,1:n2,1:n3,ip) = scr4(1:n1,1:n2,1:n3)
+          deallocate(scr4)
+        end do
+        close(35)
+
+        shock0(1:nx,1:ny,1:nz) = 0
+        where (mach0(1:nx,1:ny,1:nz).gt.mach_thr) 
+         shock0(1:nx,1:ny,1:nz) = 1
+        end where
+
+        do ip = low1, low2 
+          n1 = patchnx(ip)
+          n2 = patchny(ip)
+          n3 = patchnz(ip)
+          shock1(1:n1,1:n2,1:n3,ip) = 0
+          where (mach1(1:n1,1:n2,1:n3,ip).gt.mach_thr) 
+           shock1(1:n1,1:n2,1:n3,ip) = 1
+          end where
+        end do
+       end if
+#endif
+#endif
+
+      write(*,*) 'At level', 0
+#ifdef weight_filter
+#if weight_filter == 1
+      call p_minmax_ir(dens0,dens1,1,0,nx,ny,nz,nl,patchnx,patchny,
+     &                 patchnz,npatch,0,basx,basy)
+      write(*,*) 'dens min,max',basx,basy
+#endif
+#endif
+      call p_minmax_ir(u2,u12,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
+     &                 npatch,0,basx,basy)
+      write(*,*) 'vx min,max',basx,basy
+      call p_minmax_ir(u3,u13,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
+     &                 npatch,0,basx,basy)
+      write(*,*) 'vy min,max',basx,basy
+       call p_minmax_ir(u4,u14,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
+     &                  npatch,0,basx,basy)
+      write(*,*) 'vz min,max',basx,basy
+#ifdef use_filter
+#if use_filter == 1
+      if (flag_filter.eq.1) then
+        call p_minmax_ir(mach0,mach1,0,0,nx,ny,nz,nl,patchnx,patchny,
+     &                   patchnz,npatch,0,basx,basy)
+        write(*,*) 'mach min,max',basx,basy
+        k = sum(int(shock0(1:nx,1:ny,1:nz), kind=4))
+        write(*,*) 'number of shocked cells:', k
+        write(*,*)
+      end if
+#endif
+#endif
+
+
+      do ir=1,nl
+        write(*,*) 'At level', ir
+#ifdef weight_filter
+#if weight_filter == 1
+       call p_minmax_ir(dens0,dens1,1,0,nx,ny,nz,nl,patchnx,patchny,
+     &                  patchnz,npatch,ir,basx,basy)
+       write(*,*) 'dens min,max',basx,basy
+#endif
+#endif
+       call p_minmax_ir(u2,u12,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
+     &                  npatch,ir,basx,basy)
+       write(*,*) 'vx min,max',basx,basy
+       call p_minmax_ir(u3,u13,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
+     &                  npatch,ir,basx,basy)
+       write(*,*) 'vy min,max',basx,basy
+       call p_minmax_ir(u4,u14,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
+     &                  npatch,ir,basx,basy)
+       write(*,*) 'vz min,max',basx,basy
+#ifdef use_filter
+#if use_filter == 1
+       if (flag_filter.eq.1) then
+        call p_minmax_ir(mach0,mach1,0,0,nx,ny,nz,nl,patchnx,patchny,
+     &                   patchnz,npatch,ir,basx,basy)
+        write(*,*) 'mach min,max',basx,basy
+        k = 0 
+        low1 = sum(npatch(0:ir-1))+1
+        low2 = sum(npatch(0:ir))
+        do ip=low1,low2
+         n1 = patchnx(ip)
+         n2 = patchny(ip)
+         n3 = patchnz(ip)
+         k = k + sum(int(shock1(1:n1,1:n2,1:n3,ip), kind=4))
+C         write(*,*) ip,k,minval(shock1(1:n1,1:n2,1:n3,ip)),
+C     &              maxval(shock1(1:n1,1:n2,1:n3,ip))
+        end do
+        write(*,*) 'number of shocked cells:', k
+        write(*,*)
+       end if
+#endif
+#endif
+      end do ! ir=1,nl
+
+       return 
+      end
+
 #endif 
 #endif

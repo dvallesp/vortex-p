@@ -43,10 +43,16 @@ ifeq ($(READER),1)
 endif
 $(info HDF5=$(HDF5))
 
+INPUT_IS_GRID:=0 
+ifeq ($(READER),2)
+  INPUT_IS_GRID=1
+endif
+$(info INPUT_IS_GRID=$(INPUT_IS_GRID))
+
 #### This is an example for a local machine ####
 ifeq ($(COMP),1)          
  FC=gfortran 
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER) -Dinput_is_grid=$(INPUT_IS_GRID)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -61,7 +67,7 @@ endif
 #### This is for the LluisVives cluster at Universitat de València, where I locally installed coretran ####
 ifeq ($(COMP),2)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER) -Dinput_is_grid=$(INPUT_IS_GRID)
  LIBS=-Wl,-rpath,$(HOME)/coretran_shared_gnu/coretran/lib $(HOME)/coretran_shared_gnu/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran_shared_gnu/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
@@ -77,7 +83,7 @@ endif
 #### This is for the installation of coretran suggested in the documentation ####
 ifeq ($(COMP),3)
  FC=gfortran
- FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER)
+ FFLAGS=-O3 -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER) -Dinput_is_grid=$(INPUT_IS_GRID)
  LIBS=-Wl,-rpath,$(HOME)/coretran/lib $(HOME)/coretran/lib/libcoretran.so
  INC=-I$(HOME)/coretran/library/include/coretran/
  ifeq ($(FFTW),1)
@@ -93,7 +99,7 @@ endif
 #### Debugging option in my local machine ####
 ifeq ($(COMP),999)
  FC=gfortran
- FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER)
+ FFLAGS= -Og -fbounds-check -fbacktrace -fopenmp -mcmodel=medium -cpp -Duse_fftw=$(FFTW) -Duse_filter=$(FILTER) -Dweight_scheme=$(WEIGHT) -Doutput_grid=$(OUTPUT_GRID) -Doutput_particles=$(OUTPUT_PARTICLES) -Doutput_filter=$(OUTPUT_FILTER) -Dikernel=$(KERNEL) -Dweight_filter=$(WEIGHT_FILTER) -Dreader=$(READER) -Dinput_is_grid=$(INPUT_IS_GRID)
  LIBS=/usr/local/lib/libcoretran.a -lcoretran
  INC=-I/usr/local/include/coretran/
  ifeq ($(FFTW),1)
@@ -104,8 +110,6 @@ ifeq ($(COMP),999)
   LIBS += -L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_serial_fortran -lhdf5hl_fortran
  endif
 endif
-
-
 ##########################################################################
 
 EXEC=$(NAME)
@@ -142,6 +146,7 @@ info:
 	@echo "                    outputs from. Options:"
 	@echo "                                  0: Gadget unformatted"
 	@echo "                                  1: AREPO HDF5"
+	@echo "                                  2: MASCLET AMR grid"
 	@echo ""
 	@echo "- FFTW (optional, default: 1): set to 0 if you do not have "
 	@echo "                    FFTW"

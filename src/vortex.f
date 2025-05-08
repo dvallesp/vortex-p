@@ -372,6 +372,8 @@
 
 * ===========  READ DATA FROM THE SIMULATION ============================
 
+#ifdef input_is_grid 
+#if input_is_grid == 0
        CALL READ_PARTICLES(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,
      &            NL,REFINE_THR,PARCHLIM,BORGRID,
      &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
@@ -379,6 +381,16 @@
      &            NPART,
      &            FLAG_FILTER,KNEIGHBOURS,DIV_THR,ABVC_THR,
      &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
+#elif input_is_grid == 1
+       CALL READ_GRID(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,
+     &            NL,REFINE_THR,PARCHLIM,BORGRID,
+     &            NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,PATCHX,PATCHY,
+     &            PATCHZ,PATCHRX,PATCHRY,PATCHRZ,LADO0,
+     &            NPART,
+     &            FLAG_FILTER,KNEIGHBOURS,DIV_THR,ABVC_THR,
+     &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
+#endif
+#endif 
 
 
 *      INITIALIZE VARIABLES TO ZERO
