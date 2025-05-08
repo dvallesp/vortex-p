@@ -651,3 +651,143 @@ cc        END DO
 
        RETURN
        END
+
+#ifdef input_is_grid
+#if input_is_grid == 1
+***********************************************************************
+      subroutine compute_cr0amr(nx,ny,nz,nl,npatch,patchnx,patchny,
+     &                          patchnz,patchx,patchy,patchz,patchrx,
+     &                          patchry,patchrz,pare)
+*********************************************************************** 
+*     This subroutine just computes an integer variable over the grid,
+*      which is 1 for unrefined cells, 0 for refined cells.
+***********************************************************************
+      implicit none
+      include 'vortex_parameters.dat'
+      
+      integer nx,ny,nz,nl 
+      integer npatch(0:nlevels)
+      integer patchnx(npalev), patchny(npalev), patchnz(npalev)
+      integer patchx(npalev), patchy(npalev), patchz(npalev)
+      real patchrx(npalev), patchry(npalev), patchrz(npalev)
+      integer pare(npalev)
+
+
+      integer cr0amr(1:nmax,1:nmay,1:nmaz)
+      integer cr0amr1(1:namrx,1:namry,1:namrz,npalev)
+      common /cr0/ cr0amr, cr0amr1
+
+      real dx,dy,dz
+      common /espaciado/ dx,dy,dz
+
+      integer low1,low2,ir,irpa,i1,j1,k1,i2,j2,k2,n1,n2,n3,ip,ipa,i,j,k
+      integer low1pa,low2pa
+
+*     Base level 
+!$omp parallel do shared(nx,ny,nz,cr0amr), private(i,j,k), default(none)
+      do k=1,nz 
+      do j=1,ny
+      do i=1,nx 
+        cr0amr(i,j,k) = 1
+      end do
+      end do
+      end do
+
+
+      irpa = 0 
+      ir = 1 
+      low1 = sum(npatch(0:ir-1))+1
+      low2 = sum(npatch(0:ir))
+!$omp parallel do shared(low1,low2,patchx,patchy,patchz,patchnx,
+!$omp+                   patchny,patchnz,cr0amr),
+!$omp+            private(ip,i1,j1,k1,i2,j2,k2,n1,n2,n3),
+!$omp+            default(none)
+      do ip = low1, low2 
+        i1 = patchx(ip)
+        j1 = patchy(ip)
+        k1 = patchz(ip)
+
+        n1 = patchnx(ip)
+        n2 = patchny(ip)
+        n3 = patchnz(ip)
+
+        i2 = i1 + n1/2 - 1
+        j2 = j1 + n2/2 - 1
+        k2 = k1 + n3/2 - 1
+
+        do k = k1, k2 
+        do j = j1, j2
+        do i = i1, i2 
+          cr0amr(i,j,k) = 0
+        end do
+        end do
+        end do
+
+      end do
+
+*     Refinement levels
+      do ir = 2, nl 
+        irpa = ir - 1
+
+        low1pa = sum(npatch(0:irpa-1))+1
+        low2pa = sum(npatch(0:irpa))
+
+!$omp parallel do shared(low1pa,low2pa,cr0amr1), private(ipa),
+!$omp+            default(none)
+        do ipa = low1pa, low2pa 
+          cr0amr1(:,:,:,ipa) = 1
+        end do
+
+        low1 = sum(npatch(0:ir-1))+1
+        low2 = sum(npatch(0:ir))
+
+!$omp parallel do shared(low1,low2,patchx,patchy,patchz,patchnx,
+!$omp+                   patchny,patchnz,pare,cr0amr1), 
+!$omp+            private(ip,i1,j1,k1,n1,n2,n3,i2,j2,k2,ipa,i,j,k),
+!$omp+            default(none)
+        do ip = low1, low2 
+          i1 = patchx(ip)
+          j1 = patchy(ip)
+          k1 = patchz(ip)
+
+          n1 = patchnx(ip)
+          n2 = patchny(ip)
+          n3 = patchnz(ip)
+
+          i2 = i1 + n1/2 - 1
+          j2 = j1 + n2/2 - 1
+          k2 = k1 + n3/2 - 1
+
+          ipa = pare(ip)
+
+          do k = k1, k2 
+          do j = j1, j2
+          do i = i1, i2 
+            cr0amr1(i,j,k,ipa) = 0
+          end do
+          end do
+          end do
+
+        end do
+
+        call veinsgrid_cr0amr(irpa,npatch,pare,patchnx,patchny,patchnz,
+     &                       patchx,patchy,patchz,patchrx,patchry,
+     &                       patchrz)
+
+      end do ! ir = 2, nl
+
+*     The last level 
+      irpa = nl 
+      low1pa = sum(npatch(0:irpa-1))+1
+      low2pa = sum(npatch(0:irpa))
+!$omp parallel do shared(low1pa,low2pa,cr0amr1), private(ipa),
+!$omp+            default(none)
+      do ipa = low1pa, low2pa 
+        cr0amr1(:,:,:,ipa) = 1
+      end do
+
+      return
+      end
+
+#endif 
+#endif

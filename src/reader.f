@@ -1070,7 +1070,7 @@ C       close(55)
 #if input_is_grid == 1
 ***********************************************************************
        subroutine read_grid(iter,files_per_snap,nx,ny,nz,t,zeta,
-     &            nl_particle_grid,refine_thr,parchlim,borgrid,
+     &            nl_vortex,refine_thr,parchlim,borgrid,
      &            npatch,pare,patchnx,patchny,patchnz,
      &            patchx,patchy,patchz,patchrx,patchry,patchrz,lado0,
      &            npart,
@@ -1101,7 +1101,7 @@ C       close(55)
 
        integer nx,ny,nz,iter,ndxyz,low1,low2,files_per_snap
        real t,aaa,bbb,ccc,map,zeta,lado0
-       integer i,j,k,ix,nl,ir,irr,n1,n2,n3,nl_particle_grid
+       integer i,j,k,ix,nl,ir,irr,n1,n2,n3,nl_vortex
        integer refine_thr,parchlim,borgrid,kneighbours
        real div_thr,abvc_thr
        integer flag_machfield,flag_mass
@@ -1171,6 +1171,9 @@ C       close(55)
         call read_masclet_grid(iter, flag_filter, nx, ny, nz, 
      &         nl, npatch, patchnx, patchny, patchnz, 
      &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare)
+        call read_masclet_fix_grid_level(nl, nl_vortex, npatch, 
+     &            patchnx, patchny, patchnz, patchx, patchy, patchz,
+     &            patchrx, patchry, patchrz, pare)
         call read_masclet_fields(iter, flag_filter, nx, ny, nz, 
      &         nl, npatch, patchnx, patchny, patchnz, 
      &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
@@ -1181,36 +1184,23 @@ C       close(55)
 ************************************************************************
 ************************************************************************
 
-      stop
-       
-
-       write(*,*) 'routine create mesh ------------------------------'
-       npatch(0:ir)=0
-       if (parchlim.gt.0) then
-        call create_mesh(nx,ny,nz,nl_particle_grid,npatch,
-     &            pare,patchnx,patchny,patchnz,patchx,patchy,patchz,
-     &            patchrx,patchry,patchrz,
-     &            npart,lado0,refine_thr,parchlim,borgrid)
-       else
-        call create_mesh_octree(nx,ny,nz,nl_particle_grid,npatch,
-     &            pare,patchnx,patchny,patchnz,patchx,patchy,patchz,
-     &            patchrx,patchry,patchrz,
-     &            npart,lado0,refine_thr,parchlim,borgrid)
-       end if
-       
-       nl=nl_particle_grid
-       do ir=1,nl_particle_grid
+       nl=nl_vortex
+       do ir=1,nl_vortex
         if (npatch(ir).eq.0) then 
           nl=ir-1
           exit
         end if
        end do
 
+       call compute_cr0amr(nx,ny,nz,nl,npatch,patchnx,patchny,patchnz,
+     &                     patchx,patchy,patchz,patchrx,patchry,patchrz,
+     &                     pare)
+        stop
+
        call gridamr(nx,ny,nz,nl,npatch,
      &                   patchnx,patchny,patchnz,
      &                   patchx,patchy,patchz,
      &                   patchrx,patchry,patchrz,pare)
-       write(*,*) 'end mesh creation --------------------------------'
 
        write(*,*) 'routine interpolate velocity ---------------------'
 C       call interpolate_velocities(nx,ny,nz,nl,npatch,pare,
@@ -1699,6 +1689,52 @@ C     &              maxval(shock1(1:n1,1:n2,1:n3,ip))
 
        return 
       end
+
+************************************************************************
+      subroutine read_masclet_fix_grid_level(nl, nl_vortex, npatch, 
+     &            patchnx, patchny, patchnz, patchx, patchy, patchz,
+     &            patchrx, patchry, patchrz, pare)
+************************************************************************
+*     Allows to use a coarser peak resolution for the calculations
+************************************************************************
+       implicit none
+
+       include 'vortex_parameters.dat'
+
+       integer nl, nl_vortex
+
+       integer npatch(0:nlevels)
+       integer patchnx(npalev),patchny(npalev),patchnz(npalev)
+       integer patchx(npalev),patchy(npalev),patchz(npalev)
+       real patchrx(npalev),patchry(npalev),patchrz(npalev)
+       integer pare(npalev)
+
+       integer low1
+
+       if (nl.gt.nl_vortex) then 
+        write(*,*) 'Warning! The calculations will be brought up to' 
+        write(*,*) ' level: ', nl
+        nl = nl_vortex
+
+        low1 = sum(npatch(0:nl))+1
+
+        npatch(nl+1:) = 0
+
+        patchnx(low1:) = 0
+        patchny(low1:) = 0
+        patchnz(low1:) = 0
+        patchx(low1:) = 0
+        patchy(low1:) = 0
+        patchz(low1:) = 0
+        patchrx(low1:) = 0.0
+        patchry(low1:) = 0.0
+        patchrz(low1:) = 0.0
+        pare(low1:) = 0
+       end if
+
+       return 
+      end
+     
 
 #endif 
 #endif
