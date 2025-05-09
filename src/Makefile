@@ -49,6 +49,11 @@ ifeq ($(READER),2)
 endif
 $(info INPUT_IS_GRID=$(INPUT_IS_GRID))
 
+ifeq ($(INPUT_IS_GRID),1)
+  OUTPUT_PARTICLES=0
+endif
+$(info OUTPUT_PARTICLES=$(OUTPUT_PARTICLES))
+
 #### This is an example for a local machine ####
 ifeq ($(COMP),1)          
  FC=gfortran 
