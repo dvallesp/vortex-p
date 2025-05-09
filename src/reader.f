@@ -1195,64 +1195,20 @@ C       close(55)
        call compute_cr0amr(nx,ny,nz,nl,npatch,patchnx,patchny,patchnz,
      &                     patchx,patchy,patchz,patchrx,patchry,patchrz,
      &                     pare)
-        stop
 
-       call gridamr(nx,ny,nz,nl,npatch,
-     &                   patchnx,patchny,patchnz,
-     &                   patchx,patchy,patchz,
-     &                   patchrx,patchry,patchrz,pare)
+       call gridamr(nx,ny,nz,nl,npatch,patchnx,patchny,patchnz,
+     &              patchx,patchy,patchz,patchrx,patchry,patchrz,
+     &              pare)
 
-       write(*,*) 'routine interpolate velocity ---------------------'
-C       call interpolate_velocities(nx,ny,nz,nl,npatch,pare,
-C     &            patchnx,patchny,patchnz,patchx,patchy,patchz,
-C     &            patchrx,patchry,patchrz,
-C     &            npart,lado0,flag_filter,kneighbours,
-C     &            visc0,visc1,flag_machfield,flag_mass)
-
-#ifdef output_particles
-#if output_particles == 1
-       if (fl_p_err.eq.1) then
-        write(*,*) 'locating particles onto the grid'
-        call place_particles(nx,ny,nz,nl,npatch,patchnx,patchny,
-     &             patchnz,patchrx,patchry,patchrz,pare,
-     &             npart,lado0,parchlim)
-
-        call error_particles(nx,ny,nz,nl,npatch,patchnx,patchny,
-     &             patchnz,patchrx,patchry,patchrz,pare,
-     &             npart,lado0)
-        deallocate(lihal, lihal_ix, lihal_jy, lihal_kz)
-       end if
-#endif
-#endif
-       write(*,*) 'end velocity interpolation -----------------------'
-
-#ifdef use_filter
-#if use_filter == 1
-       if (flag_filter.eq.1) then 
+!#ifdef use_filter
+!#if use_filter == 1
+!       if (flag_filter.eq.1) then 
 *     all patches are extended with one extra cell per direction
         call extend_var(nx,ny,nz,nl,npatch,pare,patchnx,patchny,patchnz,
      &                  patchx,patchy,patchz,patchrx,patchry,patchrz)
-
-C        call identify_shocks(iter,nx,ny,nz,nl,npatch,pare,patchnx,
-C     &                       patchny,patchnz,patchrx,patchry,patchrz,
-C     &                       patchx,patchy,patchz,lado0,visc0,visc1,
-C     &                       div_thr,abvc_thr,flag_machfield,mach_thr)
-       end if
-#endif
-#endif
-
-!      if we do not want to output the particles, we deallocate them
-!      here
-#ifdef output_particles
-#if output_particles == 0
-        deallocate(rxpa,rypa,rzpa,u2dm,u3dm,u4dm,masap,kernel)
-#ifdef use_filter
-#if use_filter == 1
-        deallocate(abvc)
-#endif
-#endif
-#endif
-#endif
+!       end if
+!#endif
+!#endif
 
        return
        end
