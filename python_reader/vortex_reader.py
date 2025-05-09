@@ -8,7 +8,8 @@ import parameters
 ###########################################################
 
 def read_grids(it, path='', parameters_path=None, filename='grids', 
-                digits=5, nparray=True, output_dictionary=True):
+                digits=5, nparray=True, output_dictionary=True,
+                max_refined_level=None):
     """
     Reads the gridsXXXXX file, containing the description of the AMR 
      grid structure.
@@ -24,6 +25,9 @@ def read_grids(it, path='', parameters_path=None, filename='grids',
         nparray: whether the output should be numpy arrays (bool)
         output_dictionary: whether the output should be a dictionary
             (bool)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
         
     Returns:
         A dictionary with the grid information, if output_dictionary is True.
@@ -47,6 +51,10 @@ def read_grids(it, path='', parameters_path=None, filename='grids',
         # l=0
         _, ndxyz, _ = tuple(float(i) for i in grids.readline().split())[0:3]
         ndxyz = int(ndxyz)
+
+        if max_refined_level is not None:
+            if max_refined_level < nl:
+                nl = max_refined_level
 
         # vectors where the data will be stored
         npatch = [0]  # number of patches per level, starting with l=0
@@ -114,7 +122,8 @@ def read_grids(it, path='', parameters_path=None, filename='grids',
 
 
 def read_grid_overlaps(it, path='', parameters_path=None, filename='grid_overlaps',
-                       digits=5, grids_path=None, grids_filename='grids'):
+                       digits=5, grids_path=None, grids_filename='grids',
+                       max_refined_level=None):
     """
     Reads the grid_overlapsXXXXX file, containing the information of 
      the overlaps between patches at different and at the same level.
@@ -130,6 +139,9 @@ def read_grid_overlaps(it, path='', parameters_path=None, filename='grid_overlap
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -151,7 +163,7 @@ def read_grid_overlaps(it, path='', parameters_path=None, filename='grid_overlap
                                                         load_size=True, path=parameters_path)
 
     grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
-                       filename=grids_filename)
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -170,7 +182,8 @@ def read_grid_overlaps(it, path='', parameters_path=None, filename='grid_overlap
 
 
 def read_gridded_density(it, path='', parameters_path=None, filename='gridded_density',
-                       digits=5, grids_path=None, grids_filename='grids'):
+                       digits=5, grids_path=None, grids_filename='grids',
+                       max_refined_level=None):
     """
     Reads the gridded_densityXXXXX file, containing the (unnormalised)
      density field according to the same grid assignment procedure in
@@ -187,6 +200,9 @@ def read_gridded_density(it, path='', parameters_path=None, filename='gridded_de
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -196,12 +212,14 @@ def read_gridded_density(it, path='', parameters_path=None, filename='gridded_de
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -219,7 +237,8 @@ def read_gridded_density(it, path='', parameters_path=None, filename='gridded_de
 
 def read_gridded_kernel_length(it, path='', parameters_path=None, 
                                filename='gridded_kernel_length',
-                               digits=5, grids_path=None, grids_filename='grids'):
+                               digits=5, grids_path=None, grids_filename='grids',
+                               max_refined_level=None):
     """
     Reads the gridded_kernel_lengthXXXXX file, which contains, in each 
      location, the kernel length used to assign the velocity field.
@@ -235,6 +254,9 @@ def read_gridded_kernel_length(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -244,12 +266,14 @@ def read_gridded_kernel_length(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -267,7 +291,8 @@ def read_gridded_kernel_length(it, path='', parameters_path=None,
 
 def read_gridded_velocity(it, path='', parameters_path=None, 
                           filename='gridded_velocity',
-                          digits=5, grids_path=None, grids_filename='grids'):
+                          digits=5, grids_path=None, grids_filename='grids',
+                          max_refined_level=None):
     """
     Reads the gridded_velocityXXXXX file, which contains, the gridded 
      version of the input velocity field
@@ -283,6 +308,9 @@ def read_gridded_velocity(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -291,12 +319,14 @@ def read_gridded_velocity(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -318,7 +348,8 @@ def read_gridded_velocity(it, path='', parameters_path=None,
 
 def read_gridded_mach(it, path='', parameters_path=None, 
                           filename='gridded_mach',
-                          digits=5, grids_path=None, grids_filename='grids'):
+                          digits=5, grids_path=None, grids_filename='grids',
+                          max_refined_level=None):
     """
     Reads the gridded_machXXXXX file, which contains, the gridded 
      version of the input Mach field (only used for the multiscale filter)
@@ -334,7 +365,9 @@ def read_gridded_mach(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
-
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
     Returns:
         mach: gridded input Mach number field
@@ -342,12 +375,14 @@ def read_gridded_mach(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -370,7 +405,8 @@ def read_gridded_mach(it, path='', parameters_path=None,
 
 def read_vcomp(it, path='', parameters_path=None, 
                filename='vcomp',
-               digits=5, grids_path=None, grids_filename='grids'):
+               digits=5, grids_path=None, grids_filename='grids',
+               max_refined_level=None):
     """
     Reads the vcompXXXXX file, which contains the compressive part of 
      the velocity field.
@@ -386,6 +422,9 @@ def read_vcomp(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -394,12 +433,14 @@ def read_vcomp(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -421,7 +462,8 @@ def read_vcomp(it, path='', parameters_path=None,
 
 def read_vsol(it, path='', parameters_path=None, 
                filename='vsol',
-               digits=5, grids_path=None, grids_filename='grids'):
+               digits=5, grids_path=None, grids_filename='grids',
+               max_refined_level=None):
     """
     Reads the vsolXXXXX file, which contains the solenoidal part of 
      the velocity field.
@@ -437,6 +479,9 @@ def read_vsol(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -445,12 +490,14 @@ def read_vsol(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -472,7 +519,8 @@ def read_vsol(it, path='', parameters_path=None,
 
 def read_spot(it, path='', parameters_path=None, 
               filename='spot',
-              digits=5, grids_path=None, grids_filename='grids'):
+              digits=5, grids_path=None, grids_filename='grids',
+              max_refined_level=None):
     """
     Reads the spotXXXXX file, which contains the scalar potential of 
      the Helmholtz-Hodge decomposition, whose gradient yields the
@@ -489,6 +537,9 @@ def read_spot(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -497,12 +548,14 @@ def read_spot(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -520,7 +573,8 @@ def read_spot(it, path='', parameters_path=None,
 
 def read_vpot(it, path='', parameters_path=None, 
             filename='vpot',
-            digits=5, grids_path=None, grids_filename='grids'):
+            digits=5, grids_path=None, grids_filename='grids',
+            max_refined_level=None):
     """
     Reads the vpotXXXXX file, which contains the vector potential of 
      the Helmholtz-Hodge decomposition, whose curl yields the
@@ -537,6 +591,9 @@ def read_vpot(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -545,12 +602,14 @@ def read_vpot(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -572,7 +631,8 @@ def read_vpot(it, path='', parameters_path=None,
 
 def read_divv(it, path='', parameters_path=None, 
               filename='divv',
-              digits=5, grids_path=None, grids_filename='grids'):
+              digits=5, grids_path=None, grids_filename='grids',
+              max_refined_level=None):
     """
     Reads the divvXXXXX file, which contains the divergence of the
      velocity field.
@@ -588,6 +648,9 @@ def read_divv(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -596,12 +659,14 @@ def read_divv(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -619,7 +684,8 @@ def read_divv(it, path='', parameters_path=None,
 
 def read_curlv(it, path='', parameters_path=None, 
             filename='curlv',
-            digits=5, grids_path=None, grids_filename='grids'):
+            digits=5, grids_path=None, grids_filename='grids',
+            max_refined_level=None):
     """
     Reads the curlvXXXXX file, which contains the curl of the velocity 
      field.
@@ -635,6 +701,9 @@ def read_curlv(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -643,12 +712,14 @@ def read_curlv(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -674,7 +745,8 @@ def read_curlv(it, path='', parameters_path=None,
 
 def read_gridded_filtlen(it, path='', parameters_path=None, 
                          filename='gridded_filtlen',
-                         digits=5, grids_path=None, grids_filename='grids'):
+                         digits=5, grids_path=None, grids_filename='grids',
+                         max_refined_level=None):
     """
     Reads the gridded_filtlenXXXXX file, which contains the filter  
      length used in the multiscale filter.
@@ -690,6 +762,9 @@ def read_gridded_filtlen(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -698,12 +773,14 @@ def read_gridded_filtlen(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -721,7 +798,8 @@ def read_gridded_filtlen(it, path='', parameters_path=None,
 
 def read_gridded_vturb(it, path='', parameters_path=None, 
                        filename='gridded_vturb',
-                       digits=5, grids_path=None, grids_filename='grids'):
+                       digits=5, grids_path=None, grids_filename='grids',
+                       max_refined_level=None):
     """
     Reads the gridded_vturbXXXXX file, which contains the turbulent  
      velocity field, as computed by the multiscale filter.
@@ -737,6 +815,9 @@ def read_gridded_vturb(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -745,12 +826,14 @@ def read_gridded_vturb(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
@@ -772,7 +855,8 @@ def read_gridded_vturb(it, path='', parameters_path=None,
 
 def read_shocked(it, path='', parameters_path=None, 
                  filename='shocked',
-                 digits=5, grids_path=None, grids_filename='grids'):
+                 digits=5, grids_path=None, grids_filename='grids',
+                 max_refined_level=None):
     """
     Reads the shockedXXXXX file, which marks the shocked regions 
      used by the multiscale filter as an stopping criterion.
@@ -788,6 +872,9 @@ def read_shocked(it, path='', parameters_path=None,
         grids_path: path to the grids file (str). If None, the grids file
          is assumed to be in the same directory as the grid_overlaps file.
         grids_filename: name of the grids file (str)
+        max_refined_level: maximum level to be read (int). If None, all
+            levels are read. If set, all levels above max_refined_level
+            are ignored, even if present in the file.
 
 
     Returns:
@@ -796,12 +883,14 @@ def read_shocked(it, path='', parameters_path=None,
 
     if parameters_path is None:
         parameters_path = path
+    if grids_path is None:
+        grids_path = path
     
     nmax, nmay, nmaz, size = parameters.read_parameters(load_nma=True, load_nlevels=False,
                                                         load_size=True, path=parameters_path)
 
-    grids = read_grids(it, path=path, parameters_path=parameters_path,
-                       filename=grids_filename)
+    grids = read_grids(it, path=grids_path, parameters_path=parameters_path,
+                       filename=grids_filename, max_refined_level=max_refined_level)
     npatch = grids['npatch']
     patchnx = grids['patchnx']
     patchny = grids['patchny']
