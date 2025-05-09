@@ -1149,6 +1149,10 @@ c     &                       ERR_THR)
 #endif
 #endif
 
+#ifdef input_is_grid
+#if input_is_grid==0
+
+
 #ifdef output_particles 
 #if output_particles==1
           IF (FL_P_RES.EQ.1) THEN
@@ -1168,8 +1172,14 @@ c     &                       ERR_THR)
         DEALLOCATE(ABVC)
 #endif
 #endif
+! ^ use_filter == 1
 #endif
 #endif
+! ^ output_particles == 0
+
+#endif 
+#endif
+! ^ input_is_grid == 0
 
 *//////////////////////////////////// ! DO IFI=1,NFILE
        END DO
