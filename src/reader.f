@@ -1170,7 +1170,8 @@ C       close(55)
 #if reader == 2 
         call read_masclet_grid(iter, flag_filter, nx, ny, nz, 
      &         nl, npatch, patchnx, patchny, patchnz, 
-     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare)
+     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
+     &         nl_vortex)
         call read_masclet_fix_grid_level(nl, nl_vortex, npatch, 
      &            patchnx, patchny, patchnz, patchx, patchy, patchz,
      &            patchrx, patchry, patchrz, pare)
@@ -1220,7 +1221,8 @@ C       close(55)
 ***********************************************************************
        subroutine read_masclet_grid(iter, flag_filter, nx, ny, nz, 
      &         nl, npatch, patchnx, patchny, patchnz, 
-     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare)
+     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
+     &         nl_vortex)
 ***********************************************************************
 *     reads the grid information from the simulation
 ***********************************************************************
@@ -1235,7 +1237,7 @@ C       close(55)
        integer patchnx(npalev),patchny(npalev),patchnz(npalev)
        integer patchx(npalev),patchy(npalev),patchz(npalev)
        real patchrx(npalev),patchry(npalev),patchrz(npalev)
-       integer pare(npalev)
+       integer pare(npalev), nl_vortex
 
        character*200 fil1
        character*5 iter_string
@@ -1268,6 +1270,12 @@ C       close(55)
         if (ir.ne.iter) then
          stop 'error: iteration number in file and in code do not match'
         end if
+
+        if (nl.gt.nl_vortex) then 
+          write(*,*) 'Warning! The calculations will be brought up to' 
+          write(*,*) ' level: ', nl_vortex
+          nl = nl_vortex  
+        endif
 
         do ir=1,nl 
           read(33,*) irr, npatch(ir)
@@ -1669,7 +1677,7 @@ C     &              maxval(shock1(1:n1,1:n2,1:n3,ip))
 
        if (nl.gt.nl_vortex) then 
         write(*,*) 'Warning! The calculations will be brought up to' 
-        write(*,*) ' level: ', nl
+        write(*,*) ' level: ', nl_vortex
         nl = nl_vortex
 
         low1 = sum(npatch(0:nl))+1
