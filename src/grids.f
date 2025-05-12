@@ -439,6 +439,8 @@
        real dxpa,dypa,dzpa,xxx1,yyy1,zzz1
        integer cr1,cr2,cr3
        integer mark, abuelo, kr1, kr2, kr3, kare,ir_abue
+       real xc,yc,zc,xl,yl,zl,xr,yr,zr 
+       integer marca,ip,nn1,nn2,nn3
 
        real ubas(1:3,1:3,1:3),fuin,rxbas(3),rybas(3),rzbas(3)
        real aaa,bbb,ccc
@@ -474,12 +476,18 @@ c     it is necessary, however, for the grid-based input.
       dxpa=dx/(2.0**ir)
       dypa=dy/(2.0**ir)
       dzpa=dz/(2.0**ir)
+      low1=1
+      low2=npatch(ir)
 
 !$omp parallel do shared(npatch,ir,patchnx,patchny,patchnz,cr3amr1x,
-!$omp+                   cr3amr1y,cr3amr1z,u2,u3,u4,u12,u13,u14),
-!$omp+            private(i,n1,n2,n3,ix,jy,kz,kr1,kr2,kr3,ubas,fuin),
+!$omp+                   cr3amr1y,cr3amr1z,u2,u3,u4,u12,u13,u14,
+!$omp+                   patchrx,patchry,patchrz,dxpa,dypa,dzpa,rx,ry,
+!$omp+                   rz,low1,low2),
+!$omp+            private(i,n1,n2,n3,ix,jy,kz,kr1,kr2,kr3,ubas,fuin,
+!$omp+                    xl,yl,zl,xr,yr,zr,xc,yc,zc,marca,ip,nn1,nn2,
+!$omp+                    nn3),
 !$omp+            default(none)
-      do i=1,npatch(ir)
+      do i=low1,low2
 
        n1=patchnx(i)
        n2=patchny(i)
@@ -488,6 +496,41 @@ c     it is necessary, however, for the grid-based input.
        do kz=0,n3+1
        do jy=0,n2+1
        do ix=0,n1+1
+        ! We first look if we can copy the value from a sibling patch
+        marca=0
+        xc = rx(ix,i)
+        yc = ry(jy,i)
+        zc = rz(kz,i)
+        do ip=low1,low2
+          nn1 = patchnx(ip)
+          xl = patchrx(ip) - dxpa 
+          xr = xl + nn1*dxpa
+          if (xc.lt.xl.or.xc.gt.xr) cycle
+          nn2 = patchny(ip)
+          yl = patchry(ip) - dxpa
+          yr = yl + nn2*dxpa
+          if (yc.lt.yl.or.yc.gt.yr) cycle
+          nn3 = patchnz(ip)
+          zl = patchrz(ip) - dxpa
+          zr = zl + nn3*dxpa
+          if (zc.lt.zl.or.zc.gt.zr) cycle
+          ! else it is here 
+          
+          kr1 = int((xc-xl)/dxpa) + 1
+          kr2 = int((yc-yl)/dxpa) + 1
+          kr3 = int((zc-zl)/dxpa) + 1    
+          if (kr1.lt.1.or.kr1.gt.nn1) cycle
+          if (kr2.lt.1.or.kr2.gt.nn2) cycle
+          if (kr3.lt.1.or.kr3.gt.nn3) cycle    
+          u12(ix,jy,kz,i) = u12(kr1,kr2,kr3,ip)
+          u13(ix,jy,kz,i) = u13(kr1,kr2,kr3,ip)
+          u14(ix,jy,kz,i) = u14(kr1,kr2,kr3,ip)
+          
+          marca=1
+          exit
+        end do ! ip   
+        if (marca.ne.0) cycle
+        ! We have not found a sibling patch, so we have to interpolate
 
 *      #######################################################
        if (ix.lt.1.or.ix.gt.n1.or.jy.lt.1.or.jy.gt.n2.or.
@@ -532,9 +575,11 @@ c     it is necessary, however, for the grid-based input.
         low2=sum(npatch(0:ir))
 !$omp parallel do shared(low1,low2,patchnx,patchny,patchnz,cr3amr1,
 !$omp+                   cr3amr1x,cr3amr1y,cr3amr1z,rx,ry,rz,u2,u3,u4,
-!$omp+                   u12,u13,u14,radx,rady,radz),
+!$omp+                   u12,u13,u14,radx,rady,radz,patchrx,patchry,
+!$omp+                   patchrz,dxpa,dypa,dzpa),
 !$omp+            private(i,n1,n2,n3,ix,jy,kz,kare,kr1,kr2,kr3,aaa,bbb,
-!$omp+                    ccc,rxbas,rybas,rzbas,ubas,fuin),
+!$omp+                    ccc,rxbas,rybas,rzbas,ubas,fuin,xl,xr,yl,yr,
+!$omp+                    zl,zr,xc,yc,zc,nn1,nn2,nn3,marca,ip),
 !$omp+            default(none)
         do i=low1,low2
 
@@ -549,6 +594,41 @@ c     it is necessary, however, for the grid-based input.
          if (ix.lt.1.or.ix.gt.n1.or.
      &       jy.lt.1.or.jy.gt.n2.or.
      &       kz.lt.1.or.kz.gt.n3) then
+             ! We first look if we can copy the value from a sibling patch
+             marca=0
+             xc = rx(ix,i)
+             yc = ry(jy,i)
+             zc = rz(kz,i)
+             do ip=low1,low2
+               nn1 = patchnx(ip)
+               xl = patchrx(ip) - dxpa 
+               xr = xl + nn1*dxpa
+               if (xc.lt.xl.or.xc.gt.xr) cycle
+               nn2 = patchny(ip)
+               yl = patchry(ip) - dxpa
+               yr = yl + nn2*dxpa
+               if (yc.lt.yl.or.yc.gt.yr) cycle
+               nn3 = patchnz(ip)
+               zl = patchrz(ip) - dxpa
+               zr = zl + nn3*dxpa
+               if (zc.lt.zl.or.zc.gt.zr) cycle
+               ! else it is here 
+               
+               kr1 = int((xc-xl)/dxpa) + 1
+               kr2 = int((yc-yl)/dxpa) + 1
+               kr3 = int((zc-zl)/dxpa) + 1    
+               if (kr1.lt.1.or.kr1.gt.nn1) cycle
+               if (kr2.lt.1.or.kr2.gt.nn2) cycle
+               if (kr3.lt.1.or.kr3.gt.nn3) cycle    
+               u12(ix,jy,kz,i) = u12(kr1,kr2,kr3,ip)
+               u13(ix,jy,kz,i) = u13(kr1,kr2,kr3,ip)
+               u14(ix,jy,kz,i) = u14(kr1,kr2,kr3,ip)
+               
+               marca=1
+               exit
+             end do ! ip   
+             if (marca.ne.0) cycle
+             ! We have not found a sibling patch, so we have to interpolate
 
              kare=cr3amr1(ix,jy,kz,i)
              kr1=cr3amr1x(ix,jy,kz,i)
