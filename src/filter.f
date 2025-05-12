@@ -416,6 +416,8 @@
 
       basevol = dx*dy*dz
 
+!$omp parallel do shared(nx,ny,nz,l0new,w0),
+!$omp+            private(i,j,k), default(none)
       do k=1,nz 
       do j=1,ny 
       do i=1,nx 
@@ -425,6 +427,9 @@
       end do 
       end do
 
+!$omp parallel do shared(npatch,patchnx,patchny,patchnz,l1new,w1),
+!$omp+            private(ip,n1,n2,n3,i,j,k),
+!$omp+            default(none)
       do ip=1,sum(npatch)
         n1 = patchnx(ip)
         n2 = patchny(ip)
@@ -442,20 +447,18 @@
       xldom = -(nx/2)*dx
       yldom = -(ny/2)*dy
       zldom = -(nz/2)*dz
-      !write(*,*) 'xldom,yldom,zldom',xldom,yldom,zldom
 
 !$omp parallel do shared(nx,ny,nz,cr0amr,l0,basevol,radx,rady,radz,dx,
 !$omp+                   dy,dz,nl,npatch,patchnx,patchny,patchnz,
 !$omp+                   patchrx,patchry,patchrz,rx,ry,rz,xldom,yldom,
-!$omp+                   zldom),
+!$omp+                   zldom,l0new,w0,l1new,w1),
 !$omp+            private(i,j,k,l,l2,val,vol,x1,y1,z1,xl,xr,yl,yr,zl,zr,
 !$omp+                    mini,maxi,minj,maxj,mink,maxk,ii,jj,kk,x2,y2,
 !$omp+                    z2,dista,kval,irr,low1,low2,dxpa,jp,nn1,nn2,
 !$omp+                    nn3,xxl,xxr,yyl,yyr,zzl,zzr),
-!$omp+            reduction(+:l0new,w0,l1new,w1),
+CX !$omp+            reduction(+:l0new,w0,l1new,w1),
 !$omp+            default(none)
       do k=1,nz 
-        !write(*,*) 'smooth k=',k
       do j=1,ny 
       do i=1,nx 
         if (cr0amr(i,j,k).eq.0) cycle
@@ -501,7 +504,9 @@
           dista = sqrt(dista)
           call kern_smooth(dista,l,kval)
 
+!$omp atomic
           l0new(ii,jj,kk) = l0new(ii,jj,kk) + kval*vol*val 
+!$omp atomic
           w0(ii,jj,kk) = w0(ii,jj,kk) + kval*vol
         end do 
         end do 
@@ -554,7 +559,9 @@
               dista = sqrt(dista)
               call kern_smooth(dista,l,kval)
 
+!$omp atomic
               l1new(ii,jj,kk,jp) = l1new(ii,jj,kk,jp) + kval*vol*val 
+!$omp atomic
               w1(ii,jj,kk,jp) = w1(ii,jj,kk,jp) + kval*vol
             end do 
             end do
@@ -574,12 +581,12 @@
 !$omp parallel do shared(low3,low4,patchnx,patchny,patchnz,cr0amr1,
 !$omp+                   solap,l1,rx,ry,rz,dx,dy,dz,radx,rady,radz,vol,
 !$omp+                   nl,npatch,patchrx,patchry,patchrz,xldom,yldom,
-!$omp+                   zldom,nx,ny,nz),
+!$omp+                   zldom,nx,ny,nz,l0new,w0,l1new,w1),
 !$omp+            private(ip,n1,n2,n3,i,j,k,l,l2,val,x1,y1,z1,xl,xr,yl,
 !$omp+                    yr,zl,zr,mini,maxi,minj,maxj,mink,maxk,ii,jj,
 !$omp+                    kk,x2,y2,z2,dista,kval,irr,low1,low2,dxpa,
 !$omp+                    jp,nn1,nn2,nn3,xxl,xxr,yyl,yyr,zzl,zzr),
-!$omp+            reduction(+:l0new,w0,l1new,w1),
+CX !$omp+            reduction(+:l0new,w0,l1new,w1),
 !$omp+            default(none)
         do ip = low3, low4 
           !write(*,*) 'smooth ip=',ip
@@ -632,7 +639,9 @@
               dista = sqrt(dista)
               call kern_smooth(dista,l,kval)
     
+!$omp atomic
               l0new(ii,jj,kk) = l0new(ii,jj,kk) + kval*vol*val 
+!$omp atomic
               w0(ii,jj,kk) = w0(ii,jj,kk) + kval*vol
             end do 
             end do 
@@ -685,7 +694,9 @@
                   dista = sqrt(dista)
                   call kern_smooth(dista,l,kval)
     
+!$omp atomic
                   l1new(ii,jj,kk,jp) = l1new(ii,jj,kk,jp) + kval*vol*val 
+!$omp atomic
                   w1(ii,jj,kk,jp) = w1(ii,jj,kk,jp) + kval*vol
                 end do 
                 end do
