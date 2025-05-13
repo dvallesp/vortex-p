@@ -190,7 +190,6 @@
        INTEGER NUM,OMP_GET_NUM_THREADS,NUMOR, FLAG_PARALLEL
        COMMON /PROCESADORES/ NUM
 
-#ifdef use_fftw
 #if use_fftw==1
        COMPLEX,ALLOCATABLE::DATA1(:,:,:)
        INTEGER IRET
@@ -220,7 +219,6 @@
      &                        FFTW_BACKWARD,FFTW_MEASURE)
        DEALLOCATE(DATA1)
        WRITE(*,*) 'FFTW initialized!'
-#endif
 #endif
 
 
@@ -377,7 +375,6 @@
 
 * ===========  READ DATA FROM THE SIMULATION ============================
 
-#ifdef input_is_grid 
 #if input_is_grid == 0
        CALL READ_PARTICLES(ITER,FILES_PER_SNAP,NX,NY,NZ,T,ZETA,
      &            NL,REFINE_THR,PARCHLIM,BORGRID,
@@ -395,7 +392,6 @@
      &            FLAG_FILTER,KNEIGHBOURS,DIV_THR,ABVC_THR,
      &            FLAG_MACHFIELD,MACH_THR,FLAG_MASS)
 #endif
-#endif 
 
 
 *      INITIALIZE VARIABLES TO ZERO
@@ -490,7 +486,6 @@
      &                npatch)
       END IF
 
-#ifdef use_filter 
 #if use_filter==1
 *     Filter velocities (if specified to do so in vortex.dat)
       IF (FLAG_FILTER.GE.1) THEN
@@ -511,7 +506,6 @@
      &                npatch)
         END IF
       END IF
-#endif
 #endif
 
 *     All patches are extended with one extra cell per direction
@@ -569,11 +563,9 @@
         END DO
         END DO
 
-#ifdef output_grid 
 #if output_grid==1
         CALL WRITE_DIVROT(NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
      &                    PATCHNX,PATCHNY,PATCHNZ)
-#endif
 #endif
 
 
@@ -978,11 +970,9 @@
        WRITE(*,*) 'Computation ended!'
 
 **** WARNING: NOW DIVER AND (ROTAX,ROTAY,ROTAZ) ARE SOLUTIONS OF POISSON EQ.
-#ifdef output_grid
 #if output_grid==1
          CALL WRITE_POTENTIALS(NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
      &                         PATCHNX,PATCHNY,PATCHNZ)
-#endif
 #endif
 
 **** ---> WE NEED TO COMPUTE: -GRAD(DIVER) AND ROT(ROTAX,ROTAY,ROTAZ)
@@ -1147,18 +1137,14 @@ c     &                       ERR_THR)
         WRITE(*,*) 'Computation ended!'
 
         
-#ifdef output_grid
 #if output_grid==1
         CALL WRITE_VELOCITIES(NX,NY,NZ,ITER,T,ZETA,NL,
      &                          NPATCH, PATCHNX,PATCHNY,PATCHNZ)
 #endif
-#endif
 
-#ifdef input_is_grid
 #if input_is_grid==0
 
 
-#ifdef output_particles 
 #if output_particles==1
           IF (FL_P_RES.EQ.1) THEN
            CALL WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
@@ -1167,23 +1153,16 @@ c     &                       ERR_THR)
      &                          NPART,LADO0,parchlim)
           END IF
 #endif
-#endif
 
-#ifdef output_particles
 #if output_particles == 0
         DEALLOCATE(RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,KERNEL)
-#ifdef use_filter
 #if use_filter == 1
         DEALLOCATE(ABVC)
 #endif
-#endif
 ! ^ use_filter == 1
 #endif
-#endif
 ! ^ output_particles == 0
-
 #endif 
-#endif
 ! ^ input_is_grid == 0
 
 *//////////////////////////////////// ! DO IFI=1,NFILE
@@ -1229,10 +1208,8 @@ c     &                       ERR_THR)
 !#include "outliers.f"
 
 *     Multiscale filter as in (Vazza, 2012) to extract turbulent field
-#ifdef use_filter 
 #if use_filter==1
 #include "filter.f"
-#endif
 #endif
 
 *     Routines for working with particles

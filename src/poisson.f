@@ -8,12 +8,10 @@
       INTEGER NX,NY,NZ 
       REAL KKK(NMAX,NMAY,NMAZ)
 
-#ifdef use_fftw
 #if use_fftw==0
       CALL POFFT3D(NX,NY,NZ,KKK)
 #else 
       CALL POFFT3D_FFTW(NX,NY,NZ,KKK)
-#endif
 #endif
 
       END
@@ -114,7 +112,6 @@
       RETURN
       END
 
-#ifdef use_fftw
 #if use_fftw==1
 ************************************************************************
       SUBROUTINE POFFT3D_FFTW(NX,NY,NZ,KKK)
@@ -224,7 +221,6 @@
 
       RETURN
       END
-#endif
 #endif
 
 ************************************************************************

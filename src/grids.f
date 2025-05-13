@@ -467,7 +467,6 @@
 c     the code below is useless for the particle version.
 c     it is necessary, however, for the grid-based input.
 
-#ifdef input_is_grid
 #if input_is_grid == 1
 *      expansion of the patches by interpolation from coarser level or, 
 *       if possible, by copying the values from a sibling patch (not yet implemented)
@@ -702,7 +701,6 @@ c     it is necessary, however, for the grid-based input.
         end do
        end do
 #endif 
-#endif
 
 * ir=0 (periodic boundary)
        do k=0,nz+1
@@ -736,7 +734,6 @@ c     it is necessary, however, for the grid-based input.
        return
        end
 
-#ifdef input_is_grid
 #if input_is_grid == 1
 ***********************************************************************
       subroutine compute_cr0amr(nx,ny,nz,nl,npatch,patchnx,patchny,
@@ -874,4 +871,3 @@ c     it is necessary, however, for the grid-based input.
       end
 
 #endif 
-#endif

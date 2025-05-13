@@ -8,23 +8,19 @@
         REAL,ALLOCATABLE::U2DM(:),U3DM(:),U4DM(:)
         REAL,ALLOCATABLE::MASAP(:),KERNEL(:)
 
-#ifdef use_filter
 #if use_filter == 1
         REAL,ALLOCATABLE::ABVC(:)
 #else 
         ! Dummy variable 
         REAL ABVC
 #endif
-#endif
 
-#ifdef weight_scheme 
 #if weight_scheme == 2
         REAL,ALLOCATABLE::VOL(:)
 #else
         ! Dummy variable 
         REAL VOL
 #endif 
-#endif
 
         INTEGER,ALLOCATABLE::LIHAL(:)
         INTEGER,ALLOCATABLE::LIHAL_IX(:),LIHAL_JY(:),LIHAL_KZ(:)

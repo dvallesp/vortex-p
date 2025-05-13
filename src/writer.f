@@ -1,4 +1,3 @@
-#ifdef output_grid
 #if output_grid == 1
 ***********************************************************************
        SUBROUTINE WRITE_DIVROT(NX,NY,NZ,ITER,T,ZETA,NL,NPATCH,
@@ -283,9 +282,7 @@
       RETURN
       END
 #endif
-#endif
 
-#ifdef output_grid 
 #if output_grid == 1
 **********************************************************************
       SUBROUTINE WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,
@@ -314,13 +311,11 @@
       REAL L0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL L1(NAMRX,NAMRY,NAMRZ,NPALEV)
 
-#ifdef use_filter 
 #if use_filter == 1
       REAL MACH0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL MACH1(NAMRX,NAMRY,NAMRZ,NPALEV)
 #else 
       REAL MACH0, MACH1 
-#endif
 #endif
 
       real U2(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
@@ -427,7 +422,6 @@
       END IF
 
 !     Write mach number field
-#ifdef use_filter
 #if use_filter == 1
       IF (FL_FILT_MACH.EQ.1) THEN 
        IF (FLAG_MACHFIELD.EQ.1) THEN 
@@ -447,14 +441,11 @@
        CLOSE(99)
       END IF
 #endif 
-#endif
 
       RETURN
       END
 #endif 
-#endif
 
-#ifdef output_particles 
 #if output_particles == 1
 *********************************************************************
       SUBROUTINE WRITE_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
@@ -607,9 +598,7 @@
       RETURN
       END
 #endif
-#endif
-
-#ifdef output_filter 
+ 
 #if output_filter == 1
 **********************************************************************
        SUBROUTINE WRITE_FILTLEN(NX,NY,NZ,NL,NPATCH,
@@ -741,5 +730,4 @@
       CLOSE(25)
 
       END
-#endif
 #endif

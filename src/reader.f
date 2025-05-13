@@ -1,4 +1,3 @@
-#ifdef reader 
 #if reader==0
 ***********************************************************************
       SUBROUTINE READ_GADGET_UNFORMATTED_NPART(ITER, FILES_PER_SNAP,
@@ -121,7 +120,6 @@
       KERNEL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1)) 
       DEALLOCATE(SCR4)       
 
-#ifdef use_filter
 #if use_filter == 1
       IF (FLAG_FILTER.EQ.1) THEN
         ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
@@ -139,9 +137,7 @@
         DEALLOCATE(SCR4)      
       END IF
 #endif
-#endif
 
-#ifdef weight_scheme
 #if weight_scheme == 2
       ALLOCATE(SCR4(SUM(NPART_GADGET(1:6))))
       WRITE(*,*) 'Reading density ...'
@@ -149,7 +145,6 @@
       WRITE(*,*) ' found for ',(blocksize-8)/4,' particles'
       VOL(LOW1:LOW2)=SCR4(1:NPART_GADGET(1))
       DEALLOCATE(SCR4)
-#endif
 #endif
 
       END DO !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -387,7 +382,6 @@
       CALL h5dclose_f(attr_id, status)
       DEALLOCATE(SCR4)
 
-#ifdef use_filter
 #if use_filter == 1
       IF (FLAG_FILTER.EQ.1) THEN
         ALLOCATE(SCR4(NumPart_ThisFile(1)))
@@ -403,9 +397,7 @@
         DEALLOCATE(SCR4)      
       END IF
 #endif
-#endif
 
-#ifdef weight_scheme
 #if weight_scheme == 2
       ALLOCATE(SCR4(NumPart_ThisFile(1)))
       WRITE(*,*) 'Reading density ...'
@@ -416,7 +408,6 @@
       CALL h5dclose_f(attr_id, status)
       DEALLOCATE(SCR4)
 #endif
-#endif
         
       CALL h5gclose_f(group_id, status)
       CALL h5fclose_f(file_id, status)
@@ -426,7 +417,6 @@
       return 
       end 
 ***********************************************************************
-#endif
 #endif
 
 
@@ -492,13 +482,11 @@
        real U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
        COMMON /VELOC/ U2,U3,U4,U12,U13,U14
 
-#ifdef use_filter
 #if use_filter == 1
        INTEGER*1 SHOCK0(1:NMAX,1:NMAY,1:NMAZ)
        INTEGER*1 SHOCK1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
        COMMON /SHOCKED/ SHOCK0,SHOCK1
 #endif 
-#endif
 
        integer cr0amr(1:NMAX,1:NMAY,1:NMAZ)
        integer cr0amr1(1:NAMRX,1:NAMRY,1:NAMRZ,NPALEV)
@@ -534,14 +522,12 @@
        INTEGER,ALLOCATABLE::ELIM(:)
        ! End scratch variables for restricting the domain
 
-#ifdef use_filter
 #if use_filter == 1
        REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
        REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
 #else 
        ! Dummy variables
        REAL VISC0, VISC1 
-#endif
 #endif
 
 
@@ -551,7 +537,6 @@
 **************** CHANGE FOR OTHER SIMULATION CODES *********************
 ************************************************************************
        ! First, get the number of particles to be read in the snapshot 
-#ifdef reader
 #if reader == 0
        CALL READ_GADGET_UNFORMATTED_NPART(ITER, FILES_PER_SNAP,
      &                                    FLAG_FILTER, FLAG_MACHFIELD)
@@ -559,7 +544,6 @@
 #if reader == 1
        CALL READ_AREPO_HDF5_NPART(ITER, FILES_PER_SNAP,
      &                                    FLAG_FILTER, FLAG_MACHFIELD)
-#endif
 #endif
 ************************************************************************
 ************************************************************************
@@ -570,16 +554,12 @@
           deallocate(rxpa,rypa,rzpa)
           deallocate(u2dm,u3dm,u4dm)
           deallocate(masap,kernel)
-#ifdef use_filter
 #if use_filter == 1
           deallocate(abvc)
 #endif
-#endif
 
-#ifdef weight_scheme
 #if weight_scheme == 2
           deallocate(vol)
-#endif
 #endif
         end if
 
@@ -587,16 +567,12 @@
        allocate(rxpa(parti),rypa(parti),rzpa(parti))
        allocate(u2dm(parti),u3dm(parti),u4dm(parti))
        allocate(masap(parti),kernel(parti))
-#ifdef use_filter 
 #if use_filter == 1
        allocate(abvc(parti))
 #endif
-#endif
 
-#ifdef weight_scheme
 #if weight_scheme == 2
         allocate(vol(parti))
-#endif
 #endif
 
        NPART(:)=0
@@ -605,7 +581,6 @@
 **************** CHANGE FOR OTHER SIMULATION CODES *********************
 ************************************************************************
        ! First, get the number of particles to be read in the snapshot 
-#ifdef reader
 #if reader == 0
        CALL READ_GADGET_UNFORMATTED(ITER, FILES_PER_SNAP,
      &                        FLAG_FILTER, FLAG_MACHFIELD, LOW2)
@@ -614,19 +589,16 @@
        CALL READ_AREPO_HDF5(ITER, FILES_PER_SNAP,
      &                        FLAG_FILTER, FLAG_MACHFIELD, LOW2)
 #endif
-#endif
 ************************************************************************
 ************************************************************************
 ************************************************************************
 
-#ifdef weight_scheme
 #if weight_scheme == 2
 !$OMP PARALLEL DO SHARED(VOL, MASAP, PARTI), PRIVATE(I), DEFAULT(NONE)
        DO I=1,PARTI
          VOL(I)=MASAP(I)/VOL(I)
        END DO
 #endif 
-#endif
        
        NPART(0)=LOW2 !Retrocompatibility with general reader
 
@@ -655,7 +627,6 @@
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
       
-#ifdef use_filter
 #if use_filter == 1
       IF (FLAG_FILTER.EQ.1) THEN
         IF (FLAG_MACHFIELD.EQ.0) THEN
@@ -666,7 +637,6 @@
      &                      MAXVAL(ABVC(LOW1:LOW2))
         END IF
        END IF
-#endif
 #endif
 
        IF (XMIN.LT.DDXL.OR.XMAX.GT.DDXR.OR.
@@ -711,29 +681,23 @@
             SCR42(6,J)=U4DM(I)
             SCR42(7,J)=MASAP(I)
             SCR42(8,J)=KERNEL(I)
-#ifdef use_filter
 #if use_filter == 1
             IF (FLAG_FILTER.EQ.1) SCR42(9,J)=ABVC(I)
-#endif
 #endif
           END IF
         END DO
         DEALLOCATE(ELIM)
 
         DEALLOCATE(RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,KERNEL)
-#ifdef use_filter
 #if use_filter == 1
         DEALLOCATE(ABVC)
-#endif
 #endif
 
         ALLOCATE(RXPA(PARTI),RYPA(PARTI),RZPA(PARTI))
         ALLOCATE(U2DM(PARTI),U3DM(PARTI),U4DM(PARTI))
         ALLOCATE(MASAP(PARTI),KERNEL(PARTI))
-#ifdef use_filter
 #if use_filter == 1
         ALLOCATE(ABVC(PARTI))
-#endif
 #endif
 
 !$OMP PARALLEL DO SHARED(SCR42,RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,
@@ -749,10 +713,8 @@
           U4DM(I)=SCR42(6,I)
           MASAP(I)=SCR42(7,I)
           KERNEL(I)=SCR42(8,I)
-#ifdef use_filter
 #if use_filter == 1
           IF (FLAG_FILTER.EQ.1) ABVC(I)=SCR42(9,I)
-#endif
 #endif
         END DO
 
@@ -803,7 +765,6 @@
        WRITE(*,*) 'KERNEL LENGTH=',MINVAL(KERNEL(LOW1:LOW2)),
      &                             MAXVAL(KERNEL(LOW1:LOW2))
        
-#ifdef use_filter
 #if use_filter == 1
        IF (FLAG_FILTER.EQ.1) THEN
         IF (FLAG_MACHFIELD.EQ.0) THEN
@@ -814,7 +775,6 @@
      &                      MAXVAL(ABVC(LOW1:LOW2))
         END IF
        END IF
-#endif
 #endif
        
 
@@ -853,7 +813,6 @@
      &            NPART,LADO0,FLAG_FILTER,KNEIGHBOURS,
      &            VISC0,VISC1,FLAG_MACHFIELD,FLAG_MASS)
 
-#ifdef output_particles
 #if output_particles == 1
        IF (FL_P_ERR.EQ.1) THEN
         WRITE(*,*) 'Locating particles onto the grid'
@@ -867,10 +826,8 @@
         DEALLOCATE(LIHAL, LIHAL_IX, LIHAL_JY, LIHAL_KZ)
        END IF
 #endif
-#endif
        WRITE(*,*) 'End velocity interpolation -----------------------'
 
-#ifdef use_filter
 #if use_filter == 1
        IF (FLAG_FILTER.EQ.1) THEN 
 *     All patches are extended with one extra cell per direction
@@ -883,25 +840,20 @@
      &                       DIV_THR,ABVC_THR,FLAG_MACHFIELD,MACH_THR)
        END IF
 #endif
-#endif
 
 !      If we do not want to output the particles, we deallocate them
 !      here
-#ifdef output_particles
 #if output_particles == 0
         DEALLOCATE(RXPA,RYPA,RZPA,U2DM,U3DM,U4DM,MASAP,KERNEL)
-#ifdef use_filter
 #if use_filter == 1
         DEALLOCATE(ABVC)
 #endif
 #endif
-#endif
-#endif
+
 
        RETURN
        END
 
-#ifdef use_filter 
 #if use_filter == 1
 ***********************************************************************
        SUBROUTINE IDENTIFY_SHOCKS(ITER,NX,NY,NZ,NL,NPATCH,PARE,PATCHNX,
@@ -1051,22 +1003,18 @@ C       close(55)
       
       END IF
 
-#ifdef output_filter 
 #if output_filter == 1
       IF (FL_FILT_SHOCK.EQ.1) THEN
        CALL WRITE_SHOCKED(NX,NY,NZ,ITER,NL,NPATCH,PATCHNX,PATCHNY,
      &                    PATCHNZ,SHOCK0,SHOCK1)
       END IF
 #endif
-#endif
 
       RETURN 
       END 
 #endif 
-#endif
 
 
-#ifdef input_is_grid 
 #if input_is_grid == 1
 ***********************************************************************
        subroutine read_grid(iter,files_per_snap,nx,ny,nz,t,zeta,
@@ -1125,13 +1073,11 @@ C       close(55)
        real u14(0:namrx+1,0:namry+1,0:namrz+1,npalev)
        common /veloc/ u2,u3,u4,u12,u13,u14
 
-#ifdef use_filter
 #if use_filter == 1
        integer*1 shock0(1:nmax,1:nmay,1:nmaz)
        integer*1 shock1(1:namrx,1:namry,1:namrz,npalev)
        common /shocked/ shock0,shock1
 #endif 
-#endif
 
        integer cr0amr(1:nmax,1:nmay,1:nmaz)
        integer cr0amr1(1:namrx,1:namry,1:namrz,npalev)
@@ -1166,7 +1112,6 @@ C       close(55)
 **************** change for other simulation codes *********************
 ************************************************************************
        ! first, get the number of particles to be read in the snapshot 
-#ifdef reader
 #if reader == 2 
         call read_masclet_grid(iter, flag_filter, nx, ny, nz, 
      &         nl, npatch, patchnx, patchny, patchnz, 
@@ -1179,7 +1124,6 @@ C       close(55)
      &         nl, npatch, patchnx, patchny, patchnz, 
      &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
      &         mach_thr)
-#endif
 #endif
 ************************************************************************
 ************************************************************************
@@ -1201,7 +1145,6 @@ C       close(55)
      &              patchx,patchy,patchz,patchrx,patchry,patchrz,
      &              pare)
 
-!#ifdef use_filter
 !#if use_filter == 1
 !       if (flag_filter.eq.1) then 
 *     all patches are extended with one extra cell per direction
@@ -1209,14 +1152,11 @@ C       close(55)
      &                  patchx,patchy,patchz,patchrx,patchry,patchrz)
 !       end if
 !#endif
-!#endif
 
        return
        end
 #endif
-#endif 
 
-#ifdef reader 
 #if reader == 2 
 ***********************************************************************
        subroutine read_masclet_grid(iter, flag_filter, nx, ny, nz, 
@@ -1356,7 +1296,6 @@ C       close(55)
        real u14(0:namrx+1,0:namry+1,0:namrz+1,npalev)
        common /veloc/ u2,u3,u4,u12,u13,u14
 
-#ifdef use_filter
 #if use_filter == 1
        real*4 mach0(1:nmax,1:nmay,1:nmaz)
        real*4 mach1(1:namrx,1:namry,1:namrz,npalev)
@@ -1364,15 +1303,12 @@ C       close(55)
        integer*1 shock1(1:namrx,1:namry,1:namrz,npalev)
        common /shocked/ shock0,shock1
 #endif
-#endif
 
-#ifdef weight_filter
 #if weight_filter == 1
        real dens0(0:nmax+1,0:nmay+1,0:nmaz+1)
        real dens1(namrx,namry,namrz,npalev)
        common /densi/ dens0,dens1
 #endif 
-#endif
 
        integer is_mascletB 
        is_mascletB = 0
@@ -1391,7 +1327,6 @@ C       close(55)
        end do
        end do
 
-#ifdef use_filter
 #if use_filter == 1
 !$omp parallel do shared(shock0,nx,ny,nz), 
 !$omp+ private(ix,jy,kz), default(none)
@@ -1403,7 +1338,6 @@ C       close(55)
        end do
        end do
 
-#ifdef weight_filter
 #if weight_filter == 1
 !$omp parallel do shared(dens0,nx,ny,nz), 
 !$omp+ private(ix,jy,kz), default(none)
@@ -1414,9 +1348,6 @@ C       close(55)
        end do
        end do
        end do
-#endif
-#endif
-
 #endif
 #endif
 
@@ -1431,7 +1362,6 @@ C       close(55)
         u14(:,:,:,ip) = 0.0
        end do
 
-#ifdef use_filter
 #if use_filter == 1
 !$omp parallel do shared(shock1,low1,low2)
 !$omp+ private(ip), default(none)
@@ -1439,15 +1369,12 @@ C       close(55)
         shock1(:,:,:,ip) = 0.0 
        end do
 
-#ifdef weight_filter
 #if weight_filter == 1
 !$omp parallel do shared(dens1,low1,low2)
 !$omp+ private(ip), default(none)
        do ip = low1,low2 
         dens1(:,:,:,ip) = 0.0 
        end do
-#endif
-#endif
 #endif
 #endif
 
@@ -1461,14 +1388,12 @@ C       close(55)
 
         allocate(scr4(nx,ny,nz))
 
-#ifdef weight_filter
 #if weight_filter == 1
         read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
         dens0(1:nx,1:ny,1:nz) = 1.0 + scr4(1:nx,1:ny,1:nz)
 #elif weight_filter == 0 
         read(31)
 #endif 
-#endif
 
         read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
         u2(1:nx,1:ny,1:nz) = scr4(1:nx,1:ny,1:nz)
@@ -1499,13 +1424,11 @@ C       close(55)
           n3 = patchnz(ip)
           allocate(scr4(n1,n2,n3))
 
-#ifdef weight_filter
 #if weight_filter == 1
           read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
           dens1(1:n1,1:n2,1:n3,ip) = 1.0 + scr4(1:n1,1:n2,1:n3)
 #elif weight_filter == 0
           read(31)
-#endif
 #endif
           read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
           u12(1:n1,1:n2,1:n3,ip) = scr4(1:n1,1:n2,1:n3)
@@ -1534,7 +1457,6 @@ C       close(55)
        close(31)
 
 ! if necessary, read machnum to tag shocked cells
-#ifdef use_filter
 #if use_filter == 1
        if (flag_filter.eq.1) then 
         fil1 = 'shocks/MachNum_'//iter_string
@@ -1576,15 +1498,12 @@ C       close(55)
         end do
        end if
 #endif
-#endif
 
       write(*,*) 'At level', 0
-#ifdef weight_filter
 #if weight_filter == 1
       call p_minmax_ir(dens0,dens1,1,0,nx,ny,nz,nl,patchnx,patchny,
      &                 patchnz,npatch,0,basx,basy)
       write(*,*) 'dens min,max',basx,basy
-#endif
 #endif
       call p_minmax_ir(u2,u12,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
      &                 npatch,0,basx,basy)
@@ -1595,7 +1514,6 @@ C       close(55)
        call p_minmax_ir(u4,u14,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
      &                  npatch,0,basx,basy)
       write(*,*) 'vz min,max',basx,basy
-#ifdef use_filter
 #if use_filter == 1
       if (flag_filter.eq.1) then
         call p_minmax_ir(mach0,mach1,0,0,nx,ny,nz,nl,patchnx,patchny,
@@ -1606,17 +1524,14 @@ C       close(55)
         write(*,*)
       end if
 #endif
-#endif
 
 
       do ir=1,nl
         write(*,*) 'At level', ir
-#ifdef weight_filter
 #if weight_filter == 1
        call p_minmax_ir(dens0,dens1,1,0,nx,ny,nz,nl,patchnx,patchny,
      &                  patchnz,npatch,ir,basx,basy)
        write(*,*) 'dens min,max',basx,basy
-#endif
 #endif
        call p_minmax_ir(u2,u12,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
      &                  npatch,ir,basx,basy)
@@ -1627,7 +1542,6 @@ C       close(55)
        call p_minmax_ir(u4,u14,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
      &                  npatch,ir,basx,basy)
        write(*,*) 'vz min,max',basx,basy
-#ifdef use_filter
 #if use_filter == 1
        if (flag_filter.eq.1) then
         call p_minmax_ir(mach0,mach1,0,0,nx,ny,nz,nl,patchnx,patchny,
@@ -1647,7 +1561,6 @@ C     &              maxval(shock1(1:n1,1:n2,1:n3,ip))
         write(*,*) 'number of shocked cells:', k
         write(*,*)
        end if
-#endif
 #endif
       end do ! ir=1,nl
 
@@ -1701,4 +1614,3 @@ C     &              maxval(shock1(1:n1,1:n2,1:n3,ip))
      
 
 #endif 
-#endif

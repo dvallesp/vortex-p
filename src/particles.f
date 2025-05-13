@@ -1201,7 +1201,6 @@ C     &                         refine_thr*cellsbox
       RETURN
       END
 
-#ifdef output_particles 
 #if output_particles == 1
 ************************************************************************
       SUBROUTINE ERROR_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
@@ -1344,9 +1343,7 @@ C     &                         refine_thr*cellsbox
       RETURN
       END
 #endif 
-#endif
 
-#ifdef output_particles
 #if output_particles == 1
 ************************************************************************
       SUBROUTINE GRID_TO_PARTICLES(NX,NY,NZ,NL,NPATCH,PATCHNX,PATCHNY,
@@ -1453,7 +1450,6 @@ C     &                         refine_thr*cellsbox
       RETURN
       END
 #endif
-#endif
 
 ************************************************************************
       SUBROUTINE KERNEL_FUNC(N,N2,W,DIST)
@@ -1469,7 +1465,6 @@ C     &                         refine_thr*cellsbox
       REAL DISTS
       INTEGER I
 
-#ifdef ikernel 
 #if ikernel == 0 
 !     Cubic spline kernel (M4)
       H=W/2.0
@@ -1532,7 +1527,6 @@ C     &                         refine_thr*cellsbox
         IF (DISTS.LT.1.0) DIST(I)=DIST(I)+15.0*(1.0-DISTS)**5 
        END IF 
       END DO
-#endif
 #endif
 
       RETURN
@@ -2300,14 +2294,12 @@ C     &                         refine_thr*cellsbox
       REAL U14(0:NAMRX+1,0:NAMRY+1,0:NAMRZ+1,NPALEV)
       COMMON /VELOC/ U2,U3,U4,U12,U13,U14
 
-#ifdef use_filter
 #if use_filter == 1
              REAL VISC0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
              REAL VISC1(NAMRX,NAMRY,NAMRZ,NPALEV)
 #else 
              ! Dummy variables
              REAL VISC0, VISC1 
-#endif
 #endif
 
       !real u1(1:NMAX,1:NMAY,1:NMAZ)
@@ -2319,11 +2311,9 @@ C     &                         refine_thr*cellsbox
 
       REAL L0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
       REAL L1(NAMRX,NAMRY,NAMRZ,NPALEV)
-#ifdef weight_filter
 #if weight_filter == 1
       COMMON /DENSI/ L0,L1
 #endif 
-#endif
 
       INTEGER IX,JY,KZ,IR,I,J,K,IPATCH,LOW1,LOW2,CONTA,KNEIGHBOURS
       INTEGER N1,N2,N3,II,JJ,KK,JPATCH,I1,I2,J1,J2,K1,K2,STEP
@@ -2348,7 +2338,6 @@ C     &                         refine_thr*cellsbox
       WRITE(*,*) 'Each cell-center value is computed using at least',
      &            KNEIGHBOURS,'particles'
 
-#ifdef ikernel 
 #if ikernel == 0
        WRITE(*,*) 'Kernel: cubic spline (M4)'
 #elif ikernel == 1
@@ -2359,7 +2348,6 @@ C     &                         refine_thr*cellsbox
        WRITE(*,*) 'Kernel: quartic spline (M5)'
 #elif ikernel == 4
        WRITE(*,*) 'Kernel: quintic spline (M6)'
-#endif
 #endif
 
       MEDIOLADO0=0.5*LADO0
@@ -2521,7 +2509,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        L0(IX,JY,KZ)=H_KERN
 
        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
-#ifdef weight_scheme
 #if weight_scheme == 1
        DO I=1,CONTA
         DIST(I)=DIST(I)*MASAP(NEIGH(I))
@@ -2530,7 +2517,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        DO I=1,CONTA 
         DIST(I)=DIST(I)*VOL(NEIGH(I))
        END DO
-#endif
 #endif
 
        BAS8=0.D0
@@ -2544,10 +2530,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
         BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
         BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
-#ifdef use_filter
 #if use_filter == 1
         BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
-#endif
 #endif
         !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
         BASMASS=BASMASS+MASAP(NEIGH(I))
@@ -2555,10 +2539,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        U2(IX,JY,KZ)=BAS8X/BAS8
        U3(IX,JY,KZ)=BAS8Y/BAS8
        U4(IX,JY,KZ)=BAS8Z/BAS8
-#ifdef use_filter
 #if use_filter == 1
        VISC0(IX,JY,KZ)=BAS8M/BAS8
-#endif
 #endif
        !VISC0(IX,JY,KZ)=BAS8M
 
@@ -2631,7 +2613,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &              L0(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
      &              L0(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ  
      
-#ifdef use_filter
 #if use_filter == 1
        VISC0(IX,JY,KZ)=VISC0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
      &                 VISC0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
@@ -2641,7 +2622,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &                 VISC0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
      &                 VISC0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
      &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
-#endif
 #endif
 
       END DO 
@@ -2696,7 +2676,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        L0(IX,JY,KZ)=H_KERN
 
        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
-#ifdef weight_scheme
 #if weight_scheme == 1
       DO I=1,CONTA
        DIST(I)=DIST(I)*MASAP(NEIGH(I))
@@ -2705,7 +2684,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       DO I=1,CONTA 
        DIST(I)=DIST(I)*VOL(NEIGH(I))
       END DO
-#endif
 #endif
 
        BAS8=0.D0
@@ -2719,10 +2697,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
         BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
         BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
-#ifdef use_filter
 #if use_filter == 1
         BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
-#endif
 #endif
         !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
         BASMASS=BASMASS+MASAP(NEIGH(I))
@@ -2731,10 +2707,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        U2(IX,JY,KZ)=BAS8X/BAS8
        U3(IX,JY,KZ)=BAS8Y/BAS8
        U4(IX,JY,KZ)=BAS8Z/BAS8
-#ifdef use_filter
 #if use_filter == 1
        VISC0(IX,JY,KZ)=BAS8M/BAS8
-#endif
 #endif
        !VISC0(IX,JY,KZ)=BAS8M
 
@@ -2807,7 +2781,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &              L0(II,JJP1,KKP1)  *(1-BASX)*  BASY  *  BASZ   +
      &              L0(IIP1,JJP1,KKP1)*  BASX  *  BASY  *  BASZ  
      
-#ifdef use_filter
 #if use_filter == 1
        VISC0(IX,JY,KZ)=VISC0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
      &                 VISC0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
@@ -2817,7 +2790,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &                 VISC0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
      &                 VISC0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
      &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
-#endif
 #endif
 
       END DO 
@@ -2866,7 +2838,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         L0(IX,JY,KZ)=H_KERN
 
         CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
-#ifdef weight_scheme
 #if weight_scheme == 1
         DO I=1,CONTA
          DIST(I)=DIST(I)*MASAP(NEIGH(I))
@@ -2875,7 +2846,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         DO I=1,CONTA 
          DIST(I)=DIST(I)*VOL(NEIGH(I))
         END DO
-#endif
 #endif
 
         BAS8=0.D0
@@ -2889,10 +2859,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
          BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
          BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
          BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
-#ifdef use_filter
 #if use_filter == 1
          BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
-#endif
 #endif
          !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
          BASMASS=BASMASS+MASAP(NEIGH(I))
@@ -2901,10 +2869,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         U2(IX,JY,KZ)=BAS8X/BAS8
         U3(IX,JY,KZ)=BAS8Y/BAS8
         U4(IX,JY,KZ)=BAS8Z/BAS8
-#ifdef use_filter
 #if use_filter == 1
         VISC0(IX,JY,KZ)=BAS8M/BAS8
-#endif
 #endif
         !VISC0(IX,JY,KZ)=BAS8M
 
@@ -2984,7 +2950,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           !   write(*,*) ipatch,ix,jy,kz,conta,h_kern,dxpa
           !  end if
           CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
-#ifdef weight_scheme
 #if weight_scheme == 1
           DO I=1,CONTA
            DIST(I)=DIST(I)*MASAP(NEIGH(I))
@@ -2993,7 +2958,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           DO I=1,CONTA 
             DIST(I)=DIST(I)*VOL(NEIGH(I))
           END DO
-#endif
 #endif
   
           BAS8=0.D0
@@ -3007,10 +2971,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
            BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
            BAS8Y=BAS8Y+DIST(I)*U3DM(NEIGH(I))
            BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
-#ifdef use_filter
 #if use_filter == 1
            BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
-#endif
 #endif
            !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
            BASMASS=BASMASS+MASAP(NEIGH(I))
@@ -3028,10 +2990,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       !   we actually only want u12,u13,u14 in ghost zones for taking 
       !   derivatives
 
-#ifdef use_filter
 #if use_filter == 1
           VISC1(IX,JY,KZ,IPATCH)=BAS8M/BAS8
-#endif
 #endif
           !VISC1(IX,JY,KZ,IPATCH)=BAS8M
 
@@ -3064,12 +3024,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
      &    U14(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
-#ifdef use_filter
 #if use_filter == 1
         CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
      &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
      &    VISC1(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
-#endif
 #endif
 
         LOW1=SUM(NPATCH(0:IR-1))+1
@@ -3105,12 +3063,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
              call finer_to_coarser(u,uw,fuin)
              u14(II,JJ,KK,JPATCH) = FUIN
 
-#ifdef use_filter
 #if use_filter == 1
              u(1:2,1:2,1:2) = VISC1(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              VISC1(II,JJ,KK,JPATCH) = FUIN
-#endif
 #endif
             else
              uw(1:2,1:2,1:2) = 1.
@@ -3131,12 +3087,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
              call finer_to_coarser(u,uw,fuin)
              u4(II,JJ,KK) = FUIN
 
-#ifdef use_filter
 #if use_filter == 1
              u(1:2,1:2,1:2) = VISC1(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              VISC0(II,JJ,KK) = FUIN
-#endif
 #endif
             end if
           END DO
@@ -3158,7 +3112,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,0,BASX,BASY)
       write(*,*) 'vz min,max',BASX,BASY
-#ifdef use_filter
 #if use_filter == 1
       CALL P_MINMAX_IR(VISC0,VISC1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,0,BASX,BASY)
@@ -3167,7 +3120,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       ELSE 
        WRITE(*,*) 'Mach min,max',BASX,BASY
       END IF
-#endif
 #endif
 
 
@@ -3187,7 +3139,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        CALL P_MINMAX_IR(U4,U14,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,PATCHNZ,
      &                  NPATCH,IR,BASX,BASY)
        write(*,*) 'vz min,max',BASX,BASY
-#ifdef use_filter
 #if use_filter == 1
        CALL P_MINMAX_IR(VISC0,VISC1,1,0,NX,NY,NZ,NL,PATCHNX,PATCHNY,
      &                PATCHNZ,NPATCH,IR,BASX,BASY)
@@ -3197,16 +3148,13 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         WRITE(*,*) 'Mach min,max',BASX,BASY
        END IF
 #endif
-#endif
       END DO
 
-#ifdef output_grid 
 #if output_grid == 1
       CALL WRITE_GRID_PARTICLES(NL,NX,NY,NZ,NPATCH,PATCHNX,PATCHNY,
      &                          PATCHNZ,PATCHX,PATCHY,PATCHZ,PATCHRX,
      &                          PATCHRY,PATCHRZ,PARE,CR0AMR,CR0AMR1,
      &                          SOLAP,L0,L1,VISC0,VISC1,FLAG_MACHFIELD)
-#endif
 #endif
 
       RETURN
