@@ -238,6 +238,11 @@
        READ(1,*) FIRST,LAST,EVERY,FILES_PER_SNAP
        READ(1,*) !Cells per direction (NX,NY,NZ) --------------------------------------->
        READ(1,*) NX,NY,NZ
+       if (nx.gt.nmax.or.ny.gt.nmay.or.nz.gt.nmaz) then
+        write(*,*) 'Fatal ERROR: NMAX too small in parameters file',
+     &             nx,ny,nz,nmax,nmay,nmaz
+        stop 
+       end if
        READ(1,*) !Max box sidelength (in input length units) --------------------------->
        READ(1,*) LADO0
        READ(1,*) !Domain to keep particles (in input length units; x1,x2,y1,y2,z1,z2) -->
