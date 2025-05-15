@@ -2407,10 +2407,14 @@ C     &            RHOB0,CONSTA_DENS
       MAXX=RXPA(NEIGH(NPART_TOT))
       I1=INT((MINX+MEDIOLADO0)/DX)+1
       I2=INT((MAXX+MEDIOLADO0)/DX)+1
+      if (i1.lt.1) i1 = 1
+      if (i2.gt.nx) i2 = nx
       MINX=RXPA(NEIGH(INT(FRAC_INT*NPART_TOT)))
       MAXX=RXPA(NEIGH(INT((1.-FRAC_INT)*NPART_TOT)))
       II1=INT((MINX+MEDIOLADO0)/DX)+1
       II2=INT((MAXX+MEDIOLADO0)/DX)+1
+      if (ii1.lt.1) ii1 = 1
+      if (ii2.gt.nx) ii2 = nx
       if (mod(i1,4).eq.3.and.i1.ge.2) i1 = i1-1
       if (mod(i2,4).eq.3.and.i2.le.nx-1) i2 = i2+1 
 
@@ -2420,10 +2424,14 @@ C     &            RHOB0,CONSTA_DENS
       MAXY=RYPA(NEIGH(NPART_TOT))
       J1=INT((MINY+MEDIOLADO0)/DY)+1
       J2=INT((MAXY+MEDIOLADO0)/DY)+1
+      if (j1.lt.1) j1 = 1
+      if (j2.gt.ny) j2 = ny
       MINY=RYPA(NEIGH(INT(FRAC_INT*NPART_TOT)))
       MAXY=RYPA(NEIGH(INT((1.-FRAC_INT)*NPART_TOT)))
       JJ1=INT((MINY+MEDIOLADO0)/DY)+1
       JJ2=INT((MAXY+MEDIOLADO0)/DY)+1
+      if (jj1.lt.1) jj1 = 1
+      if (jj2.gt.ny) jj2 = ny
       if (mod(j1,4).eq.3.and.j1.ge.2) j1 = j1-1
       if (mod(j2,4).eq.3.and.j2.le.ny-1) j2 = j2+1
 
@@ -2433,10 +2441,14 @@ C     &            RHOB0,CONSTA_DENS
       MAXZ=RZPA(NEIGH(NPART_TOT))
       K1=INT((MINZ+MEDIOLADO0)/DZ)+1
       K2=INT((MAXZ+MEDIOLADO0)/DZ)+1
+      if (k1.lt.1) k1 = 1
+      if (k2.gt.nz) k2 = nz
       MINZ=RZPA(NEIGH(INT(FRAC_INT*NPART_TOT)))
       MAXZ=RZPA(NEIGH(INT((1.-FRAC_INT)*NPART_TOT)))
       KK1=INT((MINZ+MEDIOLADO0)/DZ)+1
       KK2=INT((MAXZ+MEDIOLADO0)/DZ)+1
+      if (kk1.lt.1) kk1 = 1
+      if (kk2.gt.nz) kk2 = nz
       if (mod(k1,4).eq.3.and.k1.ge.2) k1 = k1-1
       if (mod(k2,4).eq.3.and.k2.le.nz-1) k2 = k2+1
 
