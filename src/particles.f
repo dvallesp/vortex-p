@@ -831,9 +831,9 @@ C      write(*,*) 'sum conta1', sum(conta1)
 
       ipatch = 0
 
-      do ix = 1, n1 
-      do jy = 1, n2
-      do kz = 1, n3
+      do ix = 2, n1-1 
+      do jy = 2, n2-1
+      do kz = 2, n3-1
        if (conta1(ix,jy,kz).ge.refine_thr*cellsbox) then
         ! Accept the patch 
         ipatch = ipatch + 1
