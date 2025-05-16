@@ -1009,13 +1009,11 @@ CX !$omp+            reduction(+:l0new,w0,l1new,w1),
       integer cr3amr1z(-2:namrx+3,-2:namry+3,-2:namrz+3,npalev)
       common /cr0cell/ cr3amr1,cr3amr1x,cr3amr1y,cr3amr1z
 
-#ifdef weight_filter
 #if weight_filter == 1
       REAL DENSI_IN0(0:nmax+1,0:nmay+1,0:nmaz+1)
       REAL DENSI_IN1(NAMRX,NAMRY,NAMRZ,NPALEV)
       COMMON /DENSI/ DENSI_IN0,DENSI_IN1
 #endif 
-#endif
 
 *     Auxiliary variables
       real u2bulk(0:nmax+1,0:nmay+1,0:nmaz+1)
@@ -1059,7 +1057,6 @@ CX !$omp+            reduction(+:l0new,w0,l1new,w1),
        end do
       end do
 
-#ifdef weight_filter
 #if weight_filter == 1
 !$omp parallel do shared(nx,ny,nz,densi_in0,dens0),
 !$omp+            private(i,j,k), 
@@ -1082,7 +1079,6 @@ CX !$omp+            reduction(+:l0new,w0,l1new,w1),
         end do
       end do
 #endif 
-#endif
 
       write(*,*) 'in filter'
       call p_minmax(dens0,dens1,0,0,nx,ny,nz,nl,
@@ -1604,11 +1600,9 @@ CX !$omp+            reduction(+:l0new,w0,l1new,w1),
         end do
       end do
 
-#ifdef output_filter 
 #if output_filter==1
       call write_filtlen(nx,ny,nz,nl,npatch,
      &                   patchnx,patchny,patchnz,l0,l1)
-#endif
 #endif
 
       RETURN

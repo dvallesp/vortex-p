@@ -314,7 +314,6 @@
        FLAG_MASS=0
        IF (FL_GR_DEN.EQ.1) FLAG_MASS=1
 
-#if defined(use_filter) && defined(weight_filter) 
 #if use_filter==1 && weight_filter==1
        IF (FLAG_MASS.EQ.0) THEN 
         WRITE(*,*) 'Warning! If using the filter and mass-weighting,'
@@ -326,7 +325,6 @@
          STOP 
         END IF
        END IF 
-#endif
 #endif
 
        ! center of the domain (in input length units)
