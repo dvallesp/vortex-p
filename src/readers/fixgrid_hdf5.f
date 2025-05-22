@@ -4,7 +4,8 @@
      &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
      &         nl_vortex)
 ***********************************************************************
-*     reads the grid information from the simulation
+*      Reads the grid structure information from the simulation.
+*       For the case of a fix-grid, it is just a trivial initialization.
 ***********************************************************************
 
        use particle_data
@@ -54,7 +55,7 @@
      &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
      &         mach_thr)
 ***********************************************************************
-*     reads the grid information from the simulation
+*      Reads the grid fields from the simulation
 ***********************************************************************
        use hdf5
        use particle_data
