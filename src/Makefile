@@ -158,6 +158,7 @@ info:
 	@echo "                                  0: Gadget unformatted"
 	@echo "                                  1: AREPO HDF5"
 	@echo "                                  2: MASCLET AMR grid"
+	@echo "                                  3: Fix-grid HDF5"
 	@echo ""
 	@echo "- FFTW (optional, default: 1): set to 0 if you do not have "
 	@echo "                    FFTW"
