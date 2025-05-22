@@ -10,6 +10,10 @@
 #include "readers/masclet.f"
 #endif 
 
+#if reader == 3 
+#include "readers/fixgrid_hdf5.f"
+#endif
+
 #if input_is_grid == 0
 ***********************************************************************
        subroutine read_particles(iter,files_per_snap,nx,ny,nz,t,zeta,
@@ -713,6 +717,15 @@ c       close(55)
      &            patchnx, patchny, patchnz, patchx, patchy, patchz,
      &            patchrx, patchry, patchrz, pare)
         call read_masclet_fields(iter, flag_filter, nx, ny, nz, 
+     &         nl, npatch, patchnx, patchny, patchnz, 
+     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
+     &         mach_thr)
+#elif reader == 3 
+        call read_fixgrid_hdf5_grid(iter, flag_filter, nx, ny, nz, 
+     &         nl, npatch, patchnx, patchny, patchnz, 
+     &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
+     &         nl_vortex)
+        call read_fixgrid_hdf5_fields(iter, flag_filter, nx, ny, nz,
      &         nl, npatch, patchnx, patchny, patchnz, 
      &         patchx, patchy, patchz,patchrx, patchry, patchrz, pare,
      &         mach_thr)

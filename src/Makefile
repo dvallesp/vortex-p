@@ -41,10 +41,16 @@ HDF5:=0
 ifeq ($(READER),1)
   HDF5=1
 endif
+ifeq ($(READER),3)
+  HDF5=1
+endif
 $(info HDF5=$(HDF5))
 
 INPUT_IS_GRID:=0 
 ifeq ($(READER),2)
+  INPUT_IS_GRID=1
+endif
+ifeq ($(READER),3)
   INPUT_IS_GRID=1
 endif
 $(info INPUT_IS_GRID=$(INPUT_IS_GRID))
