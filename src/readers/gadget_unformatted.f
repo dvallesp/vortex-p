@@ -21,11 +21,11 @@
       real*8 bas81,bas82,bas83,bas84,bas85,bas86
 
       parti=0
-      do ifile=0,files_per_snap-1 
+      do ifile=0,files_per_snap-1
         write(iter_string,'(i3.3)') iter
         fil1='./simulation/'
         if (files_per_snap.eq.1) then
-          fil2=fil1//'/snap_'//iter_string
+          fil2=trim(adjustl(fil1))//'snap_'//iter_string
         else
           fil1=trim(adjustl(fil1))//'snapdir_'//iter_string//
      &                            '/snap_'//iter_string
@@ -74,10 +74,12 @@
 
 *     reading data
       write(iter_string,'(i3.3)') iter
-      fil1='./simulation/snapdir_'//iter_string//'/snap_'//iter_string
+      fil1='./simulation/'
       if (files_per_snap.eq.1) then
-        fil2=fil1
+        fil2=trim(adjustl(fil1))//'snap_'//iter_string
       else
+        fil1=trim(adjustl(fil1))//'snapdir_'//iter_string//
+     &                           '/snap_'//iter_string
         write(ifile_string,'(i7.1)') ifile
         fil2=trim(adjustl(fil1))//'.'//trim(adjustl(ifile_string))
       end if
