@@ -96,14 +96,14 @@
       
       allocate(scr42(3,sum(npart_gadget(1:6))))
       write(*,*) 'reading positions ...'
-      call read_float3(fil2,'pos ',scr42,blocksize)
+      call read_float3(fil2,'POS ',scr42,blocksize)
       write(*,*) ' found for ',(blocksize-8)/12,' particles'
       rxpa(low1:low2)=scr42(1,1:npart_gadget(1))
       rypa(low1:low2)=scr42(2,1:npart_gadget(1))
       rzpa(low1:low2)=scr42(3,1:npart_gadget(1))
 
       write(*,*) 'reading velocities ...'
-      call read_float3(fil2,'vel ',scr42,blocksize)
+      call read_float3(fil2,'VEL ',scr42,blocksize)
       write(*,*) ' found for ',(blocksize-8)/12,' particles'
       u2dm(low1:low2)=scr42(1,1:npart_gadget(1))
       u3dm(low1:low2)=scr42(2,1:npart_gadget(1))
@@ -113,12 +113,12 @@
 
       allocate(scr4(sum(npart_gadget(1:6))))
       write(*,*) 'reading masses ...'
-      call read_float(fil2,'mass',scr4,blocksize)
+      call read_float(fil2,'MASS',scr4,blocksize)
       write(*,*) ' found for ',(blocksize-8)/4,' particles'
       masap(low1:low2)=scr4(1:npart_gadget(1))
 
       write(*,*) 'reading kernel length ...'
-      call read_float(fil2,'hsml',scr4,blocksize)
+      call read_float(fil2,'HSML',scr4,blocksize)
       write(*,*) ' found for ',(blocksize-8)/4,' particles'
       kernel(low1:low2)=scr4(1:npart_gadget(1)) 
       deallocate(scr4)       
@@ -128,12 +128,12 @@
         allocate(scr4(sum(npart_gadget(1:6))))
         if (flag_machfield.eq.0) then
           write(*,*) 'reading abvc ...'
-          call read_float(fil2,'abvc',scr4,blocksize)
+          call read_float(fil2,'ABVC',scr4,blocksize)
           write(*,*) ' found for ',(blocksize-8)/4,' particles'
           abvc(low1:low2)=scr4(1:npart_gadget(1))  
         else 
           write(*,*) 'reading mach ...'
-          call read_float(fil2,'mach',scr4,blocksize)
+          call read_float(fil2,'MACH',scr4,blocksize)
           write(*,*) ' found for ',(blocksize-8)/4,' particles'
           abvc(low1:low2)=scr4(1:npart_gadget(1)) 
         end if            
@@ -144,7 +144,7 @@
 #if weight_scheme == 2
       allocate(scr4(sum(npart_gadget(1:6))))
       write(*,*) 'reading density ...'
-      call read_float(fil2,'rho ',scr4,blocksize)
+      call read_float(fil2,'RHO ',scr4,blocksize)
       write(*,*) ' found for ',(blocksize-8)/4,' particles'
       vol(low1:low2)=scr4(1:npart_gadget(1))
       deallocate(scr4)
