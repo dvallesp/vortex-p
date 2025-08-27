@@ -157,6 +157,8 @@
       write(*,*) 'reading internal energy ...'
       call read_float(fil2,'U   ',scr4,blocksize)
       write(*,*) ' found for ',(blocksize-8)/4,' particles'
+!$omp parallel do shared(npart_gadget, scr4, emissivity, low1), 
+!$omp+            private(i), default(none)
       do i=1,sum(npart_gadget(1:6))
          ! calculate the weight as rho^2*sqrt(T)
          ! as this is only used as weight, we don't convert values to actual temperatures!
