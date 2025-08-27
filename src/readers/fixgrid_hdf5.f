@@ -109,6 +109,10 @@
        real dens0(0:nmax+1,0:nmay+1,0:nmaz+1)
        real dens1(namrx,namry,namrz,npalev)
        common /densi/ dens0,dens1
+#elif weight_filter == 2
+       real emis0(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real emis1(namrx,namry,namrz,npalev)
+       common /emiss/ emis0,emis1
 #endif 
 
        ! I assume input data is simple precision.
@@ -146,6 +150,16 @@
        do jy=0,ny+1
        do ix=0,nx+1
         dens0(ix,jy,kz) = 0.0 
+       end do
+       end do
+       end do
+#elif weight_filter == 2
+!$omp parallel do shared(emis0,nx,ny,nz), 
+!$omp+ private(ix,jy,kz), default(none)
+       do kz=0,nz+1 
+       do jy=0,ny+1
+       do ix=0,nx+1
+        emis0(ix,jy,kz) = 0.0 
        end do
        end do
        end do
@@ -217,6 +231,31 @@
          call CtoF_order_3d_real_parallel(nx,ny,nz,scr3d)
          dens0(1:nx,1:ny,1:nz) = scr3d(1:nx,1:ny,1:nz)
          call h5dclose_f(attr_id, status)
+#elif weight_filter == 2
+*        Read density and internal energy (if necessary: filter + emissivity-weighting)
+         write(*,*) 'Reading density'
+         call h5dopen_f(file_id, "density", attr_id, status)
+         call h5dget_type_f(attr_id, memtype_id, status)
+         call h5dread_f(attr_id, memtype_id, scr3d, dims3d, status)
+         call CtoF_order_3d_real_parallel(nx,ny,nz,scr3d)
+         emis0(1:nx,1:ny,1:nz) = scr3d(1:nx,1:ny,1:nz)
+         call h5dclose_f(attr_id, status)
+         write(*,*) 'Reading internal energy'
+         call h5dopen_f(file_id, "InternalEnergy", attr_id, status)
+         call h5dget_type_f(attr_id, memtype_id, status)
+         call h5dread_f(attr_id, memtype_id, scr3d, dims3d, status)
+         call CtoF_order_3d_real_parallel(nx,ny,nz,scr3d)
+!$omp parallel do shared(emis0,scr3d,nx,ny,nz), 
+!$omp+ private(ix,jy,kz), default(none)
+         do kz=0,nz+1 
+         do jy=0,ny+1
+         do ix=0,nx+1
+            emis0(ix,jy,kz) = emis(ix,iy,iz)*emis(ix,iy,iz)*
+     &           sqrt(scr3d(ix,iy,iz)) 
+         end do
+         end do
+         end do
+         call h5dclose_f(attr_id, status)
 #endif
 
        end if
@@ -244,6 +283,10 @@
         call p_minmax_ir(dens0,dens1,1,0,nx,ny,nz,nl,patchnx,patchny,
      &                   patchnz,npatch,0,basx,basy)
         write(*,*) 'dens min,max',basx,basy
+#elif weight_filter == 2
+        call p_minmax_ir(emis0,emis1,1,0,nx,ny,nz,nl,patchnx,patchny,
+     &                   patchnz,npatch,0,basx,basy)
+        write(*,*) 'emis min,max',basx,basy
 #endif
         write(*,*)
        end if
