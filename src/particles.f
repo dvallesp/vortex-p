@@ -2484,6 +2484,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,MASAP,VOL,
+!$OMP+                   EMISSIVITY,
 !$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC,TREE,XTREE,
 !$OMP+                   YTREE,ZTREE,PI,FLAG_MASS),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
@@ -2531,6 +2532,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #elif weight_scheme == 2
        DO I=1,CONTA 
         DIST(I)=DIST(I)*VOL(NEIGH(I))
+       END DO
+#elif weight_scheme == 3
+       DO I=1,CONTA
+          DIST(I)=DIST(I)*EMISSIVITY(NEIGH(I))
        END DO
 #endif
 
@@ -2652,7 +2657,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,U2DM,U3DM,
 !$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,VISC0,ABVC,
 !$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,
-!$OMP+                   MASAP,VOL,PI),
+!$OMP+                   MASAP,VOL,EMISSIVITY,PI),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
 !$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
@@ -2698,6 +2703,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #elif weight_scheme == 2
       DO I=1,CONTA 
        DIST(I)=DIST(I)*VOL(NEIGH(I))
+      END DO
+#elif weight_scheme == 3
+      DO I=1,CONTA 
+       DIST(I)=DIST(I)*EMISSIVITY(NEIGH(I))
       END DO
 #endif
 
@@ -2819,7 +2828,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,II1,II2,JJ1,JJ2,KK1,KK2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
 !$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC,
-!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL),
+!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL,
+!$OMP+                   EMISSIVITY),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
 !$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
@@ -2860,6 +2870,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #elif weight_scheme == 2
         DO I=1,CONTA 
          DIST(I)=DIST(I)*VOL(NEIGH(I))
+        END DO
+#elif weight_scheme == 3
+        DO I=1,CONTA 
+         DIST(I)=DIST(I)*EMISSIVITY(NEIGH(I))
         END DO
 #endif
 
@@ -2910,7 +2924,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP PARALLEL DO SHARED(LOW1,LOW2,PATCHNX,PATCHNY,PATCHNZ,CR0AMR1,
 !$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
 !$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,SOLAP,
-!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL),
+!$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL,
+!$OMP+                   EMISSIVITY),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,DIST,NEIGH,DA,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I,
 !$OMP+                    BASMASS,SEARCH,DO_CELL),
@@ -2972,6 +2987,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #elif weight_scheme == 2
           DO I=1,CONTA 
             DIST(I)=DIST(I)*VOL(NEIGH(I))
+          END DO
+#elif weight_scheme == 3
+          DO I=1,CONTA 
+            DIST(I)=DIST(I)*EMISSIVITY(NEIGH(I))
           END DO
 #endif
   

@@ -8,7 +8,7 @@ $(info FFTW=$(FFTW))
 FILTER := $(if $(FILTER),$(FILTER),0)
 $(info FILTER=$(FILTER))
 
-# weighting scheme: number-weighted (0), mass-weighted (1), or volume-weighted (2)
+# weighting scheme: number-weighted (0), mass-weighted (1), volume-weighted (2), or emissivity-weighted (3)
 WEIGHT := $(if $(WEIGHT),$(WEIGHT),0)
 $(info WEIGHT=$(WEIGHT))
 
@@ -16,7 +16,7 @@ $(info WEIGHT=$(WEIGHT))
 KERNEL := $(if $(KERNEL),$(KERNEL),0)
 $(info KERNEL=$(KERNEL))
 
-# weighting scheme for the multiscale filter (0: volume-weighted; 1: mass-weighted)
+# weighting scheme for the multiscale filter (0: volume-weighted; 1: mass-weighted, 2: emissivity-weighted)
 WEIGHT_FILTER := $(if $(WEIGHT_FILTER),$(WEIGHT_FILTER),0)
 $(info WEIGHT_FILTER=$(WEIGHT_FILTER))
 

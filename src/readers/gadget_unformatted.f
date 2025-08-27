@@ -63,7 +63,7 @@
 
       integer npart_gadget(6), nall(6), blocksize
       real*8 massarr(6)
-      integer basint1,basint2,basint3,basint4
+      integer basint1,basint2,basint3,basint4,i
       real*8 bas81,bas82,bas83,bas84,bas85,bas86
       integer low1,low2
       real*4,allocatable::scr4(:)
@@ -147,6 +147,22 @@
       call read_float(fil2,'RHO ',scr4,blocksize)
       write(*,*) ' found for ',(blocksize-8)/4,' particles'
       vol(low1:low2)=scr4(1:npart_gadget(1))
+      deallocate(scr4)
+#elif weight_scheme == 3
+      allocate(scr4(sum(npart_gadget(1:6))))
+      write(*,*) 'reading density ...'
+      call read_float(fil2,'RHO ',scr4,blocksize)
+      write(*,*) ' found for ',(blocksize-8)/4,' particles'
+      emissivity(low1:low2)=scr4(1:npart_gadget(1))
+      write(*,*) 'reading internal energy ...'
+      call read_float(fil2,'U   ',scr4,blocksize)
+      write(*,*) ' found for ',(blocksize-8)/4,' particles'
+      do i=1,sum(npart_gadget(1:6))
+         ! calculate the weight as rho^2*sqrt(T)
+         ! as this is only used as weight, we don't convert values to actual temperatures!
+         emissivity(low1+i-1) = emissivity(low1+i-1)*
+     &        emissivity(low1+i-1)*sqrt(scr4(i))
+      end do
       deallocate(scr4)
 #endif
 

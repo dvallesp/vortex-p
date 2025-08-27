@@ -155,6 +155,8 @@
 
 #if weight_scheme == 2
           deallocate(vol)
+#elif weight_scheme == 3
+          deallocate(emissivity)
 #endif
         end if
 
@@ -167,7 +169,9 @@
 #endif
 
 #if weight_scheme == 2
-        allocate(vol(parti))
+       allocate(vol(parti))
+#elif weight_scheme == 3
+       allocate(emissivity(parti))
 #endif
 
        npart(:)=0
@@ -192,7 +196,9 @@
 !$omp parallel do shared(vol, masap, parti), private(i), default(none)
        do i=1,parti
          vol(i)=masap(i)/vol(i)
-       end do
+      end do
+#elif weight_scheme == 3
+      ! this is claculated already during the reading process.
 #endif 
        
        npart(0)=low2 !retrocompatibility with general reader

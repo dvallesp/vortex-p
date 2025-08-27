@@ -20,7 +20,13 @@
 #else
         ! Dummy variable 
         REAL VOL
-#endif 
+#endif
+
+#if weight_scheme == 3
+        REAL,ALLOCATABLE::EMISSIVITY(:)
+#else
+        REAL EMISSIVITY
+#endif
 
         INTEGER,ALLOCATABLE::LIHAL(:)
         INTEGER,ALLOCATABLE::LIHAL_IX(:),LIHAL_JY(:),LIHAL_KZ(:)
