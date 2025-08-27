@@ -1225,6 +1225,9 @@ C     &                         refine_thr*cellsbox
 *     Local variables
       INTEGER IPATCH,IX,JY,KZ,LOW1,LOW2,IR,IP,II
       REAL BASX,BASY,BASZ,BASXX,BASYY,BASZZ,BAS,BAS2,DXPA,DYPA,DZPA
+#if weight_filter == 2
+      REAL BASEMISS
+#endif
       REAL UBAS(3,3,3),RXBAS(3),RYBAS(3),RZBAS(3),AAA,BBB,CCC
       REAL PATCHLEV(NPALEV)
 
@@ -1295,7 +1298,6 @@ C     &                         refine_thr*cellsbox
         UBAS(1:3,1:3,1:3)=U14(IX-1:IX+1,JY-1:JY+1,KZ-1:KZ+1,IPATCH)
         CALL LININT52D_NEW_REAL(AAA,BBB,CCC,RXBAS,RYBAS,RZBAS,UBAS,
      &                          BASZ)
-
        ELSE
         IF (IX.GT.1.AND.IX.LT.NX.AND.
      &      JY.GT.1.AND.JY.LT.NY.AND.
@@ -2315,12 +2317,20 @@ C     &                         refine_thr*cellsbox
       COMMON /DENSI/ L0,L1
 #endif 
 
+#if weight_filter == 2
+      REAL EMISS0(0:NMAX+1,0:NMAY+1,0:NMAZ+1)
+      REAL EMISS1(NAMRX,NAMRY,NAMRZ,NPALEV)
+      COMMON /EMISS/ EMISS0,EMISS1
+#else
+      REAL EMISS0, EMISS1
+#endif 
+      
       INTEGER IX,JY,KZ,IR,I,J,K,IPATCH,LOW1,LOW2,CONTA,KNEIGHBOURS
       INTEGER N1,N2,N3,II,JJ,KK,JPATCH,I1,I2,J1,J2,K1,K2,STEP
       INTEGER NPART_TOT,II1,II2,JJ1,JJ2,KK1,KK2,IIP1,JJP1,KKP1
       REAL DXPA,DYPA,DZPA,BASX,BASY,BASZ,BAS,RBAS,BASXX,BASYY,BASZZ
       REAL MEDIOLADO0,PI,MINX,MAXX,MINY,MAXY,MINZ,MAXZ,FRAC_INT,H_KERN
-      REAL*8 BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,BASMASS
+      REAL*8 BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,BASMASS,BAS8EMISS
       REAL,ALLOCATABLE::DIST(:)
       INTEGER,ALLOCATABLE::NEIGH(:),LB(:)
       REAL FUIN,U(2,2,2),UW(2,2,2)
@@ -2484,11 +2494,12 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,MASAP,VOL,
-!$OMP+                   EMISSIVITY,
+!$OMP+                   EMISSIVITY,EMISS0,
 !$OMP+                   KNEIGHBOURS,DX,VISC0,ABVC,TREE,XTREE,
 !$OMP+                   YTREE,ZTREE,PI,FLAG_MASS),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
-!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,
+!$OMP+                    BAS8EMISS,DA,SEARCH),
 !$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=1,NZ+1,STEP
       DO JY=1,NY+1,STEP
@@ -2545,6 +2556,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        BAS8Z=0.D0
        BAS8M=0.D0
        BASMASS=0.D0
+       BAS8EMISS=0.D0
        DO I=1,CONTA 
         BAS8=BAS8+DIST(I)
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
@@ -2552,6 +2564,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8Z=BAS8Z+DIST(I)*U4DM(NEIGH(I))
 #if use_filter == 1
         BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
+#endif
+#if filter_weight == 2
+        ! emissivity is always volume weighted
+        ! todo!
+        BAS8EMISS=BAS8EMISS+DIST(I)*EMISSIVITY(NEIGH(I))
 #endif
         !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
         BASMASS=BASMASS+MASAP(NEIGH(I))
@@ -2563,7 +2580,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        VISC0(IX,JY,KZ)=BAS8M/BAS8
 #endif
        !VISC0(IX,JY,KZ)=BAS8M
-
+#if filter_weight == 2
+       ! todo: different weighting
+       EMISS0(IX,IY,IZ)=BAS8EMISS/BAS8
+#endif
 
        IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
 
@@ -2575,7 +2595,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       ! Fill the blanks by interpolation
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,I1,I2,J1,J2,K1,K2,RADX,RADY,
-!$OMP+                   RADZ,U2,U3,U4,L0,DX,DY,DZ,VISC0),
+!$OMP+                   RADZ,U2,U3,U4,L0,DX,DY,DZ,VISC0,
+!$OMP+                   EMISS0),
 !$OMP+            PRIVATE(IX,JY,KZ,II,JJ,KK,IIP1,JJP1,KKP1,BASX,BASY,
 !$OMP+                    BASZ),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
@@ -2644,6 +2665,17 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
 #endif
 
+#if filter_weight == 2
+       EMISS0(IX,JY,KZ)=EMISS0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &                  EMISS0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
+     &                  EMISS0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
+     &                  EMISS0(IIP1,JJP1,KK)* BASX * BASY *(1-BASZ) +
+     &                  EMISS0(II,JJ,KKP1)*(1-BASX)*(1-BASY)* BASZ  +
+     &                  EMISS0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
+     &                  EMISS0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
+     &                  EMISS0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ
+#endif
+
       END DO 
       END DO 
       END DO
@@ -2657,9 +2689,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   JJ2,KK1,KK2,RADX,RADY,RADZ,U2DM,U3DM,
 !$OMP+                   U4DM,L0,U2,U3,U4,KNEIGHBOURS,DX,VISC0,ABVC,
 !$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,
-!$OMP+                   MASAP,VOL,EMISSIVITY,PI),
+!$OMP+                   MASAP,VOL,EMISSIVITY,EMISS0,PI),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
-!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,
+!$OMP+                    BAS8EMISS,DA,SEARCH),
 !$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=K1,K2+1,STEP
       DO JY=J1,J2+1,STEP
@@ -2716,6 +2749,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        BAS8Z=0.D0
        BAS8M=0.D0
        BASMASS=0.D0
+       BAS8EMISS=0.D0
        DO I=1,CONTA 
         BAS8=BAS8+DIST(I)
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
@@ -2726,6 +2760,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
         !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
         BASMASS=BASMASS+MASAP(NEIGH(I))
+#if weight_filter == 2
+        BAS8EMISS=BAS8EMISS+DIST(I)*EMISSIVITY(NEIGH(I))
+#endif
        END DO
        
        U2(IX,JY,KZ)=BAS8X/BAS8
@@ -2735,7 +2772,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        VISC0(IX,JY,KZ)=BAS8M/BAS8
 #endif
        !VISC0(IX,JY,KZ)=BAS8M
-
+#if weight_filter == 2
+       EMISS0(IX,JY,KZ)=BAS8EMISS/BAS8
+#endif
+       
        IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
 
        DEALLOCATE(DIST, NEIGH)
@@ -2747,7 +2787,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 
 !$OMP PARALLEL DO SHARED(NX,NY,NZ,STEP,II1,II2,JJ1,JJ2,KK1,KK2,RADX,
 !$OMP+                   RADY,RADZ,U2,U3,U4,L0,DX,DY,DZ,I1,I2,J1,J2,K1,
-!$OMP+                   K2,VISC0),
+!$OMP+                   K2,VISC0,EMISS0),
 !$OMP+            PRIVATE(IX,JY,KZ,II,JJ,KK,IIP1,JJP1,KKP1,BASX,BASY,
 !$OMP+                    BASZ),
 !$OMP+            DEFAULT(NONE), SCHEDULE(DYNAMIC)
@@ -2816,6 +2856,17 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
 #endif
 
+#if weight_filter == 2
+       EMISS0(IX,JY,KZ)=EMISS0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
+     &                  EMISS0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
+     &                  EMISS0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
+     &                  EMISS0(IIP1,JJP1,KK)* BASX * BASY *(1-BASZ) +
+     &                  EMISS0(II,JJ,KKP1)*(1-BASX)*(1-BASY)* BASZ  +
+     &                  EMISS0(IIP1,JJ,KKP1)* BASX *(1-BASY)* BASZ   +
+     &                  EMISS0(II,JJP1,KKP1)*(1-BASX)* BASY * BASZ   +
+     &                  EMISS0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ       
+#endif
+
       END DO 
       END DO
       END DO
@@ -2829,9 +2880,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   RADZ,U2DM,U3DM,U4DM,L0,U2,U3,U4,
 !$OMP+                   KNEIGHBOURS,DX,CR0AMR,VISC0,ABVC,
 !$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL,
-!$OMP+                   EMISSIVITY),
+!$OMP+                   EMISSIVITY,EMISS0),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
-!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,DA,SEARCH),
+!$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,
+!$OMP+                    BAS8EMISS,DA,SEARCH),
 !$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=KK1,KK2
       DO JY=JJ1,JJ2
@@ -2883,6 +2935,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8Z=0.D0
         BAS8M=0.D0
         BASMASS=0.D0
+        BAS8EMISS=0.D0
         DO I=1,CONTA 
          BAS8=BAS8+DIST(I)
          BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
@@ -2893,6 +2946,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
          !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
          BASMASS=BASMASS+MASAP(NEIGH(I))
+#if weight_filter == 2
+         BAS8EMISS=BAS8EMISS+DIST(I)*EMISSIVITY(NEIGH(I))
+#endif
         END DO
       
         U2(IX,JY,KZ)=BAS8X/BAS8
@@ -2902,7 +2958,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         VISC0(IX,JY,KZ)=BAS8M/BAS8
 #endif
         !VISC0(IX,JY,KZ)=BAS8M
-
+#if weight_filter == 2
+        EMISS0(IX,JY,KZ)=BAS8EMISS/BAS8
+#endif
+        
         IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
 
         DEALLOCATE(DIST, NEIGH)
@@ -2925,10 +2984,10 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   RX,RY,RZ,U2DM,U3DM,U4DM,L1,U12,U13,U14,
 !$OMP+                   KNEIGHBOURS,DXPA,DX,VISC1,ABVC,SOLAP,
 !$OMP+                   TREE,XTREE,YTREE,ZTREE,FLAG_MASS,PI,MASAP,VOL,
-!$OMP+                   EMISSIVITY),
+!$OMP+                   EMISSIVITY,EMISS1),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,DIST,NEIGH,DA,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I,
-!$OMP+                    BASMASS,SEARCH,DO_CELL),
+!$OMP+                    BASMASS,BAS8EMISS,SEARCH,DO_CELL),
 !$OMP+            SCHEDULE(DYNAMIC,1)!, DEFAULT(NONE)
        DO IPATCH=LOW1,LOW2 
             !write(*,*) ir,ipatch
@@ -3000,6 +3059,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           BAS8Z=0.D0
           BAS8M=0.D0
           BASMASS=0.D0
+          BAS8EMISS=0.D0
           DO I=1,CONTA 
            BAS8=BAS8+DIST(I)
            BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
@@ -3010,6 +3070,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
            !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
            BASMASS=BASMASS+MASAP(NEIGH(I))
+#if weight_filter == 2
+           BAS8EMISS=BAS8EMISS+DIST(I)*EMISSIVITY(NEIGH(I))
+#endif
           END DO
 
           DEALLOCATE(DIST, NEIGH)
@@ -3017,6 +3080,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           U12(IX,JY,KZ,IPATCH)=BAS8X/BAS8
           U13(IX,JY,KZ,IPATCH)=BAS8Y/BAS8
           U14(IX,JY,KZ,IPATCH)=BAS8Z/BAS8
+#if weight_filter == 2
+          EMISS1(IX,JY,KZ,IPATCH)=BAS8EMISS/BAS8
+#endif
 
           if (ix.eq.0.or.ix.eq.n1+1.or.
      &        jy.eq.0.or.jy.eq.n2+1.or.
@@ -3155,6 +3221,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        WRITE(*,*) 'Mach min,max',BASX,BASY
       END IF
 #endif
+#if weight_filter == 2
+       CALL P_MINMAX_IR(EMISS0,EMISS1,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,
+     &                  PATCHNZ,NPATCH,0,BASX,BASY)
+      write(*,*) 'emissivity min,max',BASX,BASY
+#endif
 
 
       DO IR=1,NL
@@ -3181,6 +3252,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        ELSE 
         WRITE(*,*) 'Mach min,max',BASX,BASY
        END IF
+#endif
+#if weight_filter == 2
+       CALL P_MINMAX_IR(EMISS0,EMISS1,1,1,NX,NY,NZ,NL,PATCHNX,PATCHNY,
+     &                  PATCHNZ,NPATCH,IR,BASX,BASY)
+       write(*,*) 'emissivity min,max',BASX,BASY
 #endif
       END DO
 
