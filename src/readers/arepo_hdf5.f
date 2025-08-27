@@ -257,6 +257,7 @@
       call h5dget_type_f(attr_id, memtype_id, status)
       call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
       emissivity(low1:low2)=scr4(1:numpart_thisfile(1))
+      call h5dclose_f(attr_id, status)
       write(*,*) 'reading internal energy ...'
       call h5dopen_f(group_id, "InternalEnergy", attr_id, status)
       call h5dget_type_f(attr_id, memtype_id, status)
