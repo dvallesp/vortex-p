@@ -262,6 +262,8 @@
       call h5dopen_f(group_id, "InternalEnergy", attr_id, status)
       call h5dget_type_f(attr_id, memtype_id, status)
       call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
+!$omp parallel do shared(numpart_thisfile, scr4, emissivity, low1), 
+!$omp+            private(i), default(none)
       do i=1,numpart_thisfile(1)
          ! calculate the weight as rho^2*sqrt(T)
          ! as this is only used as weight, we don't convert values to actual temperatures!
