@@ -15,7 +15,7 @@
         REAL ABVC
 #endif
 
-#if weight_scheme == 2
+#if weight_scheme == 2 || weight_filter == 2
         REAL,ALLOCATABLE::VOL(:)
 #else
         ! Dummy variable 

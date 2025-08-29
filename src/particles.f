@@ -1225,9 +1225,6 @@ C     &                         refine_thr*cellsbox
 *     Local variables
       INTEGER IPATCH,IX,JY,KZ,LOW1,LOW2,IR,IP,II
       REAL BASX,BASY,BASZ,BASXX,BASYY,BASZZ,BAS,BAS2,DXPA,DYPA,DZPA
-#if weight_filter == 2
-      REAL BASEMISS
-#endif
       REAL UBAS(3,3,3),RXBAS(3),RYBAS(3),RZBAS(3),AAA,BBB,CCC
       REAL PATCHLEV(NPALEV)
 
@@ -2330,8 +2327,13 @@ C     &                         refine_thr*cellsbox
       INTEGER NPART_TOT,II1,II2,JJ1,JJ2,KK1,KK2,IIP1,JJP1,KKP1
       REAL DXPA,DYPA,DZPA,BASX,BASY,BASZ,BAS,RBAS,BASXX,BASYY,BASZZ
       REAL MEDIOLADO0,PI,MINX,MAXX,MINY,MAXY,MINZ,MAXZ,FRAC_INT,H_KERN
-      REAL*8 BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,BASMASS,BAS8EMISS
+      REAL*8 BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,BASMASS,BAS8EMISS,BAS8_VOL
       REAL,ALLOCATABLE::DIST(:)
+#if weight_filter == 2
+      REAL,ALLOCATABLE::VOL_DIST(:)
+#else
+      REAL VOL_DIST ! dummy variable
+#endif
       INTEGER,ALLOCATABLE::NEIGH(:),LB(:)
       REAL FUIN,U(2,2,2),UW(2,2,2)
       logical do_cell
@@ -2499,7 +2501,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   YTREE,ZTREE,PI,FLAG_MASS),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,
-!$OMP+                    BAS8EMISS,DA,SEARCH),
+!$OMP+                    BAS8EMISS,BAS8_VOL,DA,SEARCH,VOL_DIST),
 !$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=1,NZ+1,STEP
       DO JY=1,NY+1,STEP
@@ -2512,6 +2514,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &     KZ.LT.INT(K2/STEP)*STEP) CYCLE
 
        ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+#if weight_filter == 2
+       ALLOCATE(VOL_DIST(KNEIGHBOURS))
+#endif       
        DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
      &       XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
      &       ZQUERY=DBLE(RADZ(KZ)), K=KNEIGHBOURS)
@@ -2521,12 +2526,18 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        IF (DIST(KNEIGHBOURS).GT.DX) THEN
         CONTA=KNEIGHBOURS 
        ELSE 
+#if weight_filter == 2
+        DEALLOCATE(VOL_DIST)
+#endif       
         DEALLOCATE(DIST,NEIGH)
         DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
      &        XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
      &        ZQUERY=DBLE(RADZ(KZ)), RADIUS=DBLE(DX))
         CONTA = DA%SIZE() 
         ALLOCATE(DIST(CONTA), NEIGH(CONTA))
+#if weight_filter == 2
+        ALLOCATE(VOL_DIST(CONTA))
+#endif       
         DIST = DA%V%VALUES 
         NEIGH = DA%I%VALUES
        END IF
@@ -2536,6 +2547,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        L0(IX,JY,KZ)=H_KERN
 
        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
+#if weight_filter == 2
+       DO I=1,CONTA 
+        VOL_DIST(I)=DIST(I)*VOL(NEIGH(I))
+       END DO
+#endif
 #if weight_scheme == 1
        DO I=1,CONTA
         DIST(I)=DIST(I)*MASAP(NEIGH(I))
@@ -2557,6 +2573,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        BAS8M=0.D0
        BASMASS=0.D0
        BAS8EMISS=0.D0
+       BAS8_VOL=0.D0
        DO I=1,CONTA 
         BAS8=BAS8+DIST(I)
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
@@ -2567,8 +2584,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
 #if filter_weight == 2
         ! emissivity is always volume weighted
-        ! todo!
-        BAS8EMISS=BAS8EMISS+DIST(I)*EMISSIVITY(NEIGH(I))
+        BAS8_VOL=BAS8_VOL+VOL_DIST(I)
+        BAS8EMISS=BAS8EMISS+VOL_DIST(I)*EMISSIVITY(NEIGH(I))
 #endif
         !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
         BASMASS=BASMASS+MASAP(NEIGH(I))
@@ -2582,11 +2599,14 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        !VISC0(IX,JY,KZ)=BAS8M
 #if filter_weight == 2
        ! todo: different weighting
-       EMISS0(IX,IY,IZ)=BAS8EMISS/BAS8
+       EMISS0(IX,IY,IZ)=BAS8EMISS/BAS8_VOL
 #endif
 
        IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
 
+#if weight_filter == 2
+       DEALLOCATE(VOL_DIST)
+#endif
        DEALLOCATE(DIST, NEIGH)
       END DO 
       END DO 
@@ -2692,7 +2712,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   MASAP,VOL,EMISSIVITY,EMISS0,PI),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,
-!$OMP+                    BAS8EMISS,DA,SEARCH),
+!$OMP+                    BAS8EMISS,BAS8_VOL,DA,SEARCH,VOL_DIST),
 !$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=K1,K2+1,STEP
       DO JY=J1,J2+1,STEP
@@ -2705,6 +2725,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &     KZ.LT.INT(KK2/STEP)*STEP) CYCLE
 
        ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+#if weight_filter == 2
+       ALLOCATE(VOL_DIST(KNEIGHBOURS))
+#endif       
        DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
      &       XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
      &       ZQUERY=DBLE(RADZ(KZ)), K=KNEIGHBOURS)
@@ -2714,12 +2737,18 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        IF (DIST(KNEIGHBOURS).GT.DX) THEN
         CONTA=KNEIGHBOURS 
        ELSE 
+#if weight_filter == 2
+        DEALLOCATE(VOL_DIST)
+#endif       
         DEALLOCATE(DIST,NEIGH)
         DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
      &        XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
      &        ZQUERY=DBLE(RADZ(KZ)), RADIUS=DBLE(DX))
         CONTA = DA%SIZE() 
         ALLOCATE(DIST(CONTA), NEIGH(CONTA))
+#if weight_filter == 2
+        ALLOCATE(VOL_DIST(CONTA))
+#endif       
         DIST = DA%V%VALUES 
         NEIGH = DA%I%VALUES
        END IF
@@ -2729,6 +2758,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        L0(IX,JY,KZ)=H_KERN
 
        CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
+#if weight_filter == 2
+       DO I=1,CONTA 
+        VOL_DIST(I)=DIST(I)*VOL(NEIGH(I))
+       END DO
+#endif
 #if weight_scheme == 1
       DO I=1,CONTA
        DIST(I)=DIST(I)*MASAP(NEIGH(I))
@@ -2750,6 +2784,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        BAS8M=0.D0
        BASMASS=0.D0
        BAS8EMISS=0.D0
+       BAS8_VOL=0.D0
        DO I=1,CONTA 
         BAS8=BAS8+DIST(I)
         BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
@@ -2761,7 +2796,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
         BASMASS=BASMASS+MASAP(NEIGH(I))
 #if weight_filter == 2
-        BAS8EMISS=BAS8EMISS+DIST(I)*EMISSIVITY(NEIGH(I))
+        BAS8_VOL=BAS8_VOL+VOL_DIST(I)
+        BAS8EMISS=BAS8EMISS+VOL_DIST(I)*EMISSIVITY(NEIGH(I))
 #endif
        END DO
        
@@ -2773,11 +2809,14 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
        !VISC0(IX,JY,KZ)=BAS8M
 #if weight_filter == 2
-       EMISS0(IX,JY,KZ)=BAS8EMISS/BAS8
+       EMISS0(IX,JY,KZ)=BAS8EMISS/BAS8_VOL
 #endif
        
        IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
 
+#if weight_filter == 2
+       DEALLOCATE(VOL_DIST)
+#endif
        DEALLOCATE(DIST, NEIGH)
       END DO 
       END DO 
@@ -2883,7 +2922,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   EMISSIVITY,EMISS0),
 !$OMP+            PRIVATE(IX,JY,KZ,DIST,NEIGH,CONTA,H_KERN,BAS8,
 !$OMP+                    BAS8X,BAS8Y,BAS8Z,BAS8M,I,BASMASS,
-!$OMP+                    BAS8EMISS,DA,SEARCH),
+!$OMP+                    BAS8EMISS,BAS8_VOL,DA,SEARCH,VOL_DIST),
 !$OMP+            SCHEDULE(DYNAMIC)!, DEFAULT(NONE)
       DO KZ=KK1,KK2
       DO JY=JJ1,JJ2
@@ -2891,6 +2930,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
       DO IX=II1,II2
        IF (CR0AMR(IX,JY,KZ).EQ.1) THEN 
         ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+#if weight_filter == 2
+        ALLOCATE(VOL_DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+#endif
         DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
      &        XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
      &        ZQUERY=DBLE(RADZ(KZ)), K=KNEIGHBOURS)
@@ -2900,12 +2942,18 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         IF (DIST(KNEIGHBOURS).GT.DX) THEN
          CONTA=KNEIGHBOURS 
         ELSE 
+#if weight_filter == 2
+         DEALLOCATE(VOL_DIST)
+#endif       
          DEALLOCATE(DIST,NEIGH)
          DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
      &         XQUERY=DBLE(RADX(IX)), YQUERY=DBLE(RADY(JY)),
      &         ZQUERY=DBLE(RADZ(KZ)), RADIUS=DBLE(DX))
          CONTA = DA%SIZE() 
          ALLOCATE(DISt(CONTA), NEIGH(CONTA))
+#if weight_filter == 2
+         ALLOCATE(VOL_DIST(CONTA))
+#endif       
          DIST = DA%V%VALUES 
          NEIGH = DA%I%VALUES
         END IF
@@ -2915,6 +2963,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         L0(IX,JY,KZ)=H_KERN
 
         CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
+#if weight_filter == 2
+       DO I=1,CONTA 
+        VOL_DIST(I)=DIST(I)*VOL(NEIGH(I))
+       END DO
+#endif
 #if weight_scheme == 1
         DO I=1,CONTA
          DIST(I)=DIST(I)*MASAP(NEIGH(I))
@@ -2936,6 +2989,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
         BAS8M=0.D0
         BASMASS=0.D0
         BAS8EMISS=0.D0
+        BAS8_VOL=0.D0
         DO I=1,CONTA 
          BAS8=BAS8+DIST(I)
          BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
@@ -2947,7 +3001,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
          !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
          BASMASS=BASMASS+MASAP(NEIGH(I))
 #if weight_filter == 2
-         BAS8EMISS=BAS8EMISS+DIST(I)*EMISSIVITY(NEIGH(I))
+         BAS8_VOL=BAS8_VOL+VOL_DIST(I)
+         BAS8EMISS=BAS8EMISS+VOL_DIST(I)*EMISSIVITY(NEIGH(I))
 #endif
         END DO
       
@@ -2959,11 +3014,14 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
         !VISC0(IX,JY,KZ)=BAS8M
 #if weight_filter == 2
-        EMISS0(IX,JY,KZ)=BAS8EMISS/BAS8
+        EMISS0(IX,JY,KZ)=BAS8EMISS/BAS8_VOL
 #endif
         
         IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
 
+#if weight_filter == 2
+        DEALLOCATE(VOL_DIST)
+#endif
         DEALLOCATE(DIST, NEIGH)
        END IF
       END DO 
@@ -2987,7 +3045,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 !$OMP+                   EMISSIVITY,EMISS1),
 !$OMP+            PRIVATE(IPATCH,N1,N2,N3,IX,JY,KZ,DIST,NEIGH,DA,
 !$OMP+                    CONTA,H_KERN,BAS8,BAS8X,BAS8Y,BAS8Z,BAS8M,I,
-!$OMP+                    BASMASS,BAS8EMISS,SEARCH,DO_CELL),
+!$OMP+                    BASMASS,BAS8EMISS,BAS8_VOL,SEARCH,DO_CELL,
+!$OMP+                    VOL_DIST),
 !$OMP+            SCHEDULE(DYNAMIC,1)!, DEFAULT(NONE)
        DO IPATCH=LOW1,LOW2 
             !write(*,*) ir,ipatch
@@ -3015,6 +3074,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           !Q(3)=RZ(KZ,IPATCH)
           
           ALLOCATE(DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+#if weight_filter == 2
+          ALLOCATE(VOL_DIST(KNEIGHBOURS), NEIGH(KNEIGHBOURS))
+#endif
           DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
      &          XQUERY=DBLE(RX(IX,IPATCH)), YQUERY=DBLE(RY(JY,IPATCH)),
      &          ZQUERY=DBLE(RZ(KZ,IPATCH)), K=KNEIGHBOURS)
@@ -3024,12 +3086,18 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           IF (DIST(KNEIGHBOURS).GT.DXPA) THEN
            CONTA=KNEIGHBOURS 
           ELSE 
+#if weight_filter == 2
+           DEALLOCATE(VOL_DIST)
+#endif       
            DEALLOCATE(DIST,NEIGH)
            DA = SEARCH%KNEAREST(TREE, XTREE, YTREE, ZTREE, 
      &           XQUERY=DBLE(RX(IX,IPATCH)), YQUERY=DBLE(RY(JY,IPATCH)),
      &           ZQUERY=DBLE(RZ(KZ,IPATCH)), RADIUS=DBLE(DXPA))
            CONTA = DA%SIZE() 
            ALLOCATE(DIST(CONTA), NEIGH(CONTA))
+#if weight_filter == 2
+           ALLOCATE(VOL_DIST(CONTA))
+#endif
            DIST = DA%V%VALUES 
            NEIGH = DA%I%VALUES
           END IF
@@ -3039,6 +3107,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           !   write(*,*) ipatch,ix,jy,kz,conta,h_kern,dxpa
           !  end if
           CALL KERNEL_FUNC(CONTA,CONTA,H_KERN,DIST)
+#if weight_filter == 2
+          DO I=1,CONTA 
+           VOL_DIST(I)=DIST(I)*VOL(NEIGH(I))
+          END DO
+#endif
 #if weight_scheme == 1
           DO I=1,CONTA
            DIST(I)=DIST(I)*MASAP(NEIGH(I))
@@ -3060,6 +3133,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           BAS8M=0.D0
           BASMASS=0.D0
           BAS8EMISS=0.D0
+          BAS8_VOL=0.D0
           DO I=1,CONTA 
            BAS8=BAS8+DIST(I)
            BAS8X=BAS8X+DIST(I)*U2DM(NEIGH(I))
@@ -3071,17 +3145,21 @@ c      WRITE(*,*) K1,KK1,KK2,K2
            !BAS8M=MAX(BAS8M,ABVC(NEIGH(I)))
            BASMASS=BASMASS+MASAP(NEIGH(I))
 #if weight_filter == 2
-           BAS8EMISS=BAS8EMISS+DIST(I)*EMISSIVITY(NEIGH(I))
+           BAS8_VOL=BAS8_VOL+VOL_DIST(I)
+           BAS8EMISS=BAS8EMISS+VOL_DIST(I)*EMISSIVITY(NEIGH(I))
 #endif
           END DO
 
+#if weight_filter == 2
+          DEALLOCATE(VOL_DIST)
+#endif
           DEALLOCATE(DIST, NEIGH)
         
           U12(IX,JY,KZ,IPATCH)=BAS8X/BAS8
           U13(IX,JY,KZ,IPATCH)=BAS8Y/BAS8
           U14(IX,JY,KZ,IPATCH)=BAS8Z/BAS8
 #if weight_filter == 2
-          EMISS1(IX,JY,KZ,IPATCH)=BAS8EMISS/BAS8
+          EMISS1(IX,JY,KZ,IPATCH)=BAS8EMISS/BAS8_VOL
 #endif
 
           if (ix.eq.0.or.ix.eq.n1+1.or.

@@ -141,14 +141,15 @@
       end if
 #endif
 
-#if weight_scheme == 2
+#if weight_scheme == 2 || weight_filter == 2
       allocate(scr4(sum(npart_gadget(1:6))))
       write(*,*) 'reading density ...'
       call read_float(fil2,'RHO ',scr4,blocksize)
       write(*,*) ' found for ',(blocksize-8)/4,' particles'
       vol(low1:low2)=scr4(1:npart_gadget(1))
       deallocate(scr4)
-#elif weight_scheme == 3
+#endif
+#if weight_scheme == 3
       allocate(scr4(sum(npart_gadget(1:6))))
       write(*,*) 'reading density ...'
       call read_float(fil2,'RHO ',scr4,blocksize)

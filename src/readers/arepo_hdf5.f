@@ -241,7 +241,7 @@
       end if
 #endif
 
-#if weight_scheme == 2
+#if weight_scheme == 2 || weight_filter == 2
       allocate(scr4(numpart_thisfile(1)))
       write(*,*) 'reading density ...'
       call h5dopen_f(group_id, "density", attr_id, status)
@@ -250,7 +250,8 @@
       vol(low1:low2)=scr4(1:numpart_thisfile(1))
       call h5dclose_f(attr_id, status)
       deallocate(scr4)
-#elif weight_scheme == 3
+#endif
+#if weight_scheme == 3
       allocate(scr4(numpart_thisfile(1)))
       write(*,*) 'reading density ...'
       call h5dopen_f(group_id, "density", attr_id, status)
