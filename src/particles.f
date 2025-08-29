@@ -3157,9 +3157,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           U12(IX,JY,KZ,IPATCH)=BAS8X/BAS8
           U13(IX,JY,KZ,IPATCH)=BAS8Y/BAS8
           U14(IX,JY,KZ,IPATCH)=BAS8Z/BAS8
-#if weight_filter == 2
-          EMISS1(IX,JY,KZ,IPATCH)=BAS8EMISS/BAS8_VOL
-#endif
 
           if (ix.eq.0.or.ix.eq.n1+1.or.
      &        jy.eq.0.or.jy.eq.n2+1.or.
@@ -3171,6 +3168,9 @@ c      WRITE(*,*) K1,KK1,KK2,K2
           VISC1(IX,JY,KZ,IPATCH)=BAS8M/BAS8
 #endif
           !VISC1(IX,JY,KZ,IPATCH)=BAS8M
+#if weight_filter == 2
+          EMISS1(IX,JY,KZ,IPATCH)=BAS8EMISS/BAS8_VOL
+#endif
 
           if (flag_mass.eq.0) then
             L1(IX,JY,KZ,IPATCH)=H_KERN
