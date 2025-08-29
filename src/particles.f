@@ -2598,7 +2598,6 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #endif
        !VISC0(IX,JY,KZ)=BAS8M
 #if filter_weight == 2
-       ! todo: different weighting
        EMISS0(IX,IY,IZ)=BAS8EMISS/BAS8_VOL
 #endif
 
