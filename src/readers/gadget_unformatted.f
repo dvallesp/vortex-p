@@ -160,7 +160,7 @@
       write(*,*) ' found for ',(blocksize-8)/4,' particles'
 !$omp parallel do shared(npart_gadget, scr4, emissivity, low1), 
 !$omp+            private(i), default(none)
-      do i=1,sum(npart_gadget(1:6))
+      do i=1,npart_gadget(1)
          ! calculate the weight as rho^2*sqrt(T)
          ! as this is only used as weight, we don't convert values to actual temperatures!
          emissivity(low1+i-1) = emissivity(low1+i-1)*
