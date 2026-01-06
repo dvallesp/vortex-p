@@ -2319,6 +2319,7 @@ C     &                         refine_thr*cellsbox
       REAL EMISS1(NAMRX,NAMRY,NAMRZ,NPALEV)
       COMMON /EMISS/ EMISS0,EMISS1
 #else
+      ! Dummy variables
       REAL EMISS0, EMISS1
 #endif 
       
@@ -2582,7 +2583,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
 #if use_filter == 1
         BAS8M=BAS8M+DIST(I)*ABVC(NEIGH(I))
 #endif
-#if filter_weight == 2
+#if weight_filter == 2
         ! emissivity is always volume weighted
         BAS8_VOL=BAS8_VOL+VOL_DIST(I)
         BAS8EMISS=BAS8EMISS+VOL_DIST(I)*EMISSIVITY(NEIGH(I))
@@ -2597,8 +2598,8 @@ c      WRITE(*,*) K1,KK1,KK2,K2
        VISC0(IX,JY,KZ)=BAS8M/BAS8
 #endif
        !VISC0(IX,JY,KZ)=BAS8M
-#if filter_weight == 2
-       EMISS0(IX,IY,IZ)=BAS8EMISS/BAS8_VOL
+#if weight_filter == 2
+       EMISS0(IX,JY,KZ)=BAS8EMISS/BAS8_VOL
 #endif
 
        IF (FLAG_MASS.EQ.1) L0(IX,JY,KZ)=BASMASS/(4*PI/3)/H_KERN**3
@@ -2684,7 +2685,7 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &                 VISC0(IIP1,JJP1,KKP1)* BASX * BASY * BASZ  
 #endif
 
-#if filter_weight == 2
+#if weight_filter == 2
        EMISS0(IX,JY,KZ)=EMISS0(II,JJ,KK)  *(1-BASX)*(1-BASY)*(1-BASZ) +
      &                  EMISS0(IIP1,JJ,KK)*  BASX  *(1-BASY)*(1-BASZ) +
      &                  EMISS0(II,JJP1,KK)*(1-BASX)* BASY *(1-BASZ) +
@@ -3206,6 +3207,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
      &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
      &    VISC1(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
 #endif
+#if weight_filter == 2
+        CALL SYNC_AMR_FILTER(IR,NPATCH,PARE,PATCHNX,PATCHNY,PATCHNZ,
+     &    PATCHX,PATCHY,PATCHZ,PATCHRX,PATCHRY,PATCHRZ,
+     &    EMISS1(1:NAMRX,1:NAMRY,1:NAMRZ,:),NL)
+#endif
 
         LOW1=SUM(NPATCH(0:IR-1))+1
         LOW2=SUM(NPATCH(0:IR))
@@ -3245,6 +3251,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
              call finer_to_coarser(u,uw,fuin)
              VISC1(II,JJ,KK,JPATCH) = FUIN
 #endif
+#if weight_filter == 2
+             u(1:2,1:2,1:2) = EMISS1(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             EMISS1(II,JJ,KK,JPATCH) = FUIN
+#endif
             else
              uw(1:2,1:2,1:2) = 1.
 
@@ -3268,6 +3279,11 @@ c      WRITE(*,*) K1,KK1,KK2,K2
              u(1:2,1:2,1:2) = VISC1(I:I+1,J:J+1,K:K+1,IPATCH)
              call finer_to_coarser(u,uw,fuin)
              VISC0(II,JJ,KK) = FUIN
+#endif
+#if weight_filter == 2
+             u(1:2,1:2,1:2) = EMISS1(I:I+1,J:J+1,K:K+1,IPATCH)
+             call finer_to_coarser(u,uw,fuin)
+             EMISS0(II,JJ,KK) = FUIN
 #endif
             end if
           END DO
