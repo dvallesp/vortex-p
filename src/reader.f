@@ -239,6 +239,10 @@
         end if
        end if
 #endif
+#if weight_scheme == 3
+       write(*,*) 'emis=',minval(emissivity(low1:low2)),
+     &      maxval(emissivity(low1:low2))
+#endif
 
        if (xmin.lt.ddxl.or.xmax.gt.ddxr.or.
      &     ymin.lt.ddyl.or.ymax.gt.ddyr.or.
@@ -376,6 +380,10 @@
      &                      maxval(abvc(low1:low2))
         end if
        end if
+#endif
+#if weight_scheme == 3
+       write(*,*) 'emis=',minval(emissivity(low1:low2)),
+     &      maxval(emissivity(low1:low2))
 #endif
        
 
