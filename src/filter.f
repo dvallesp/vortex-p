@@ -1049,7 +1049,7 @@ CX !$omp+            reduction(+:l0new,w0,l1new,w1),
 
       lado0 = nx * dx
 
-*     DENS0, DENS1 PROPORTIONAL TO CELLS MASSES or VOLUME!!!
+*     DENS0, DENS1 PROPORTIONAL TO CELLS MASSES, VOLUME, OR EMISSIVITY!!!
       dens0 = 1.0
       do ir=1,nl
        low1=sum(npatch(0:ir-1))+1
