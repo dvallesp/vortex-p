@@ -253,7 +253,7 @@
         dens0(1:nx,1:ny,1:nz) = 1.0 + scr4(1:nx,1:ny,1:nz)
 #elif weight_filter == 2
         read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
-        emissivity0(1:nx,1:ny,1:nz) = scr4(1:nx,1:ny,1:nz)
+        emissivity0(1:nx,1:ny,1:nz) = 1.0 + scr4(1:nx,1:ny,1:nz)
 #else
         read(31)
 #endif 
@@ -306,7 +306,7 @@
           dens1(1:n1,1:n2,1:n3,ip) = 1.0 + scr4(1:n1,1:n2,1:n3)
 #elif weight_filter == 2
           read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
-          emissivity1(1:n1,1:n2,1:n3,ip) = scr4(1:n1,1:n2,1:n3)
+          emissivity1(1:n1,1:n2,1:n3,ip) = 1.0 + scr4(1:n1,1:n2,1:n3)
 #else
           read(31)
 #endif
