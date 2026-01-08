@@ -15,12 +15,18 @@
         REAL ABVC
 #endif
 
-#if weight_scheme == 2
+#if weight_scheme == 2 || weight_filter == 2
         REAL,ALLOCATABLE::VOL(:)
 #else
         ! Dummy variable 
         REAL VOL
-#endif 
+#endif
+
+#if weight_scheme == 3 || weight_filter == 2
+        REAL,ALLOCATABLE::EMISSIVITY(:)
+#else
+        REAL EMISSIVITY
+#endif
 
         INTEGER,ALLOCATABLE::LIHAL(:)
         INTEGER,ALLOCATABLE::LIHAL_IX(:),LIHAL_JY(:),LIHAL_KZ(:)

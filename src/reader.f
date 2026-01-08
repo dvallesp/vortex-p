@@ -153,8 +153,11 @@
           deallocate(abvc)
 #endif
 
-#if weight_scheme == 2
+#if weight_scheme == 2 || weight_filter == 2
           deallocate(vol)
+#endif
+#if weight_scheme == 3 || weight_filter == 2
+          deallocate(emissivity)
 #endif
         end if
 
@@ -166,8 +169,11 @@
        allocate(abvc(parti))
 #endif
 
-#if weight_scheme == 2
-        allocate(vol(parti))
+#if weight_scheme == 2 || weight_filter == 2
+       allocate(vol(parti))
+#endif
+#if weight_scheme == 3 || weight_filter == 2
+       allocate(emissivity(parti))
 #endif
 
        npart(:)=0
@@ -188,11 +194,11 @@
 ************************************************************************
 ************************************************************************
 
-#if weight_scheme == 2
+#if weight_scheme == 2 || weight_filter == 2
 !$omp parallel do shared(vol, masap, parti), private(i), default(none)
        do i=1,parti
          vol(i)=masap(i)/vol(i)
-       end do
+      end do
 #endif 
        
        npart(0)=low2 !retrocompatibility with general reader
@@ -232,6 +238,10 @@
      &                      maxval(abvc(low1:low2))
         end if
        end if
+#endif
+#if weight_scheme == 3 || weight_filter == 2
+       write(*,*) 'emis=',minval(emissivity(low1:low2)),
+     &      maxval(emissivity(low1:low2))
 #endif
 
        if (xmin.lt.ddxl.or.xmax.gt.ddxr.or.
@@ -370,6 +380,10 @@
      &                      maxval(abvc(low1:low2))
         end if
        end if
+#endif
+#if weight_scheme == 3 || weight_filter == 2
+       write(*,*) 'emis=',minval(emissivity(low1:low2)),
+     &      maxval(emissivity(low1:low2))
 #endif
        
 

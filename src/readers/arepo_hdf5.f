@@ -241,13 +241,36 @@
       end if
 #endif
 
-#if weight_scheme == 2
+#if weight_scheme == 2 || weight_filter == 2
       allocate(scr4(NumPart_ThisFile(1)))
       write(*,*) 'reading density ...'
       call h5dopen_f(group_id, "Density", attr_id, status)
       call h5dget_type_f(attr_id, memtype_id, status)
       call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
       vol(low1:low2)=scr4(1:NumPart_ThisFile(1))
+      call h5dclose_f(attr_id, status)
+      deallocate(scr4)
+#endif
+#if weight_scheme == 3
+      allocate(scr4(numpart_thisfile(1)))
+      write(*,*) 'reading density ...'
+      call h5dopen_f(group_id, "density", attr_id, status)
+      call h5dget_type_f(attr_id, memtype_id, status)
+      call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
+      emissivity(low1:low2)=scr4(1:numpart_thisfile(1))
+      call h5dclose_f(attr_id, status)
+      write(*,*) 'reading internal energy ...'
+      call h5dopen_f(group_id, "InternalEnergy", attr_id, status)
+      call h5dget_type_f(attr_id, memtype_id, status)
+      call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
+!$omp parallel do shared(numpart_thisfile, scr4, emissivity, low1), 
+!$omp+            private(i), default(none)
+      do i=1,numpart_thisfile(1)
+         ! calculate the weight as rho^2*sqrt(T)
+         ! as this is only used as weight, we don't convert values to actual temperatures!
+         emissivity(low1+i-1) = emissivity(low1+i-1)*
+     &        emissivity(low1+i-1)*sqrt(scr4(i))
+      end do
       call h5dclose_f(attr_id, status)
       deallocate(scr4)
 #endif

@@ -1013,6 +1013,10 @@ CX !$omp+            reduction(+:l0new,w0,l1new,w1),
       REAL DENSI_IN0(0:nmax+1,0:nmay+1,0:nmaz+1)
       REAL DENSI_IN1(NAMRX,NAMRY,NAMRZ,NPALEV)
       COMMON /DENSI/ DENSI_IN0,DENSI_IN1
+#elif weight_filter == 2
+      REAL EMISS_IN0(0:nmax+1,0:nmay+1,0:nmaz+1)
+      REAL EMISS_IN1(NAMRX,NAMRY,NAMRZ,NPALEV)
+      COMMON /EMISS/ EMISS_IN0,EMISS_IN1
 #endif 
 
 *     Auxiliary variables
@@ -1045,7 +1049,7 @@ CX !$omp+            reduction(+:l0new,w0,l1new,w1),
 
       lado0 = nx * dx
 
-*     DENS0, DENS1 PROPORTIONAL TO CELLS MASSES or VOLUME!!!
+*     DENS0, DENS1 PROPORTIONAL TO CELLS MASSES, VOLUME, OR EMISSIVITY!!!
       dens0 = 1.0
       do ir=1,nl
        low1=sum(npatch(0:ir-1))+1
@@ -1076,6 +1080,27 @@ CX !$omp+            reduction(+:l0new,w0,l1new,w1),
 !$omp+            private(i), default(none)
         do i=low1,low2
           dens1(:,:,:,i) = densi_in1(:,:,:,i) * dens1(:,:,:,i) 
+        end do
+      end do
+#elif weight_filter == 2
+!$omp parallel do shared(nx,ny,nz,emiss_in0,dens0),
+!$omp+            private(i,j,k), 
+!$omp+            default(none)
+      do k=1,nz 
+      do j=1,ny 
+      do i=1,nx 
+        dens0(i,j,k) = emiss_in0(i,j,k) * dens0(i,j,k)
+      end do 
+      end do 
+      end do
+
+      do ir=1,nl 
+        low1=sum(npatch(0:ir-1))+1
+        low2=sum(npatch(0:ir))
+!$omp parallel do shared(low1,low2,emiss_in1,dens1,ir),
+!$omp+            private(i), default(none)
+        do i=low1,low2
+          dens1(:,:,:,i) = emiss_in1(:,:,:,i) * dens1(:,:,:,i) 
         end do
       end do
 #endif 

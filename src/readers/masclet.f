@@ -148,6 +148,10 @@
        real dens0(0:nmax+1,0:nmay+1,0:nmaz+1)
        real dens1(namrx,namry,namrz,npalev)
        common /densi/ dens0,dens1
+#elif weight_filter == 2
+       real emissivity0(0:nmax+1,0:nmay+1,0:nmaz+1)
+       real emissivity1(namrx,namry,namrz,npalev)
+       common /emiss/ emissivity0,emissivity1
 #endif 
 
        integer is_mascletB 
@@ -187,7 +191,17 @@
         dens0(ix,jy,kz) = 0.0 
        end do
        end do
+      end do
+#elif weight_filter == 2
+!$omp parallel do shared(emissivity0,nx,ny,nz), 
+!$omp+ private(ix,jy,kz), default(none)
+       do kz=0,nz+1 
+       do jy=0,ny+1
+       do ix=0,nx+1
+        emissivity0(ix,jy,kz) = 0.0 
        end do
+       end do
+      end do
 #endif
 #endif
 
@@ -215,6 +229,12 @@
        do ip = low1,low2 
         dens1(:,:,:,ip) = 0.0 
        end do
+#elif weight_filter == 2
+!$omp parallel do shared(emissivity1,low1,low2)
+!$omp+ private(ip), default(none)
+       do ip = low1,low2 
+        emissivity1(:,:,:,ip) = 0.0 
+       end do
 #endif
 #endif
 
@@ -231,7 +251,10 @@
 #if weight_filter == 1
         read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
         dens0(1:nx,1:ny,1:nz) = 1.0 + scr4(1:nx,1:ny,1:nz)
-#elif weight_filter == 0 
+#elif weight_filter == 2
+        read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+        emissivity0(1:nx,1:ny,1:nz) = 1.0 + scr4(1:nx,1:ny,1:nz)
+#else
         read(31)
 #endif 
 
@@ -245,7 +268,21 @@
         read(31) ! pressure
         read(31) ! pot 
         read(31) ! opot 
+#if weight_filter == 2
+        read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+!$omp parallel do shared(emissivity0,scr4,nx,ny,nz), 
+!$omp+ private(ix,jy,kz), default(none)
+        do kz=0,nz+1 
+        do jy=0,ny+1
+        do ix=0,nx+1
+           emissivity0(ix,jy,kz) = emissivity0(ix,jy,kz)*
+     &          emissivity0(ix,jy,kz)*sqrt(scr4(ix,jy,kz)
+        end do
+        end do
+        end do
+#else
         read(31) ! temp 
+#endif
         read(31) ! metal 
         read(31) ! cr0 
         if (is_mascletB.eq.1) then
@@ -267,7 +304,10 @@
 #if weight_filter == 1
           read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
           dens1(1:n1,1:n2,1:n3,ip) = 1.0 + scr4(1:n1,1:n2,1:n3)
-#elif weight_filter == 0
+#elif weight_filter == 2
+          read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
+          emissivity1(1:n1,1:n2,1:n3,ip) = 1.0 + scr4(1:n1,1:n2,1:n3)
+#else
           read(31)
 #endif
           read(31) (((scr4(i,j,k),i=1,n1),j=1,n2),k=1,n3)
@@ -280,6 +320,21 @@
           read(31) ! pressure
           read(31) ! pot
           read(31) ! opot
+#if weight_filter == 2
+        read(31) (((scr4(i,j,k),i=1,nx),j=1,ny),k=1,nz)
+!$omp parallel do shared(emissivity1,scr4,n1,n2,n3), 
+!$omp+ private(ix,jy,kz), default(none)
+          do kz=0,n1+1
+          do jy=0,n2+1
+          do ix=0,n3+1
+             emissivity1(ix,jy,kz,ip) = emissivity1(ix,jy,kz,ip)*
+     &            emissivity1(ix,jy,kz,ip)*sqrt(scr4(ix,jy,kz)
+          end do
+          end do
+          end do
+#else
+          read(31) ! temp 
+#endif
           read(31) ! temp
           read(31) ! metal
           read(31) ! cr0
@@ -344,6 +399,10 @@
       call p_minmax_ir(dens0,dens1,1,0,nx,ny,nz,nl,patchnx,patchny,
      &                 patchnz,npatch,0,basx,basy)
       write(*,*) 'dens min,max',basx,basy
+#elif weight_filter == 2
+      call p_minmax_ir(emis0,emis1,1,0,nx,ny,nz,nl,patchnx,patchny,
+     &                 patchnz,npatch,0,basx,basy)
+      write(*,*) 'emis min,max',basx,basy
 #endif
       call p_minmax_ir(u2,u12,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
      &                 npatch,0,basx,basy)
@@ -372,6 +431,10 @@
        call p_minmax_ir(dens0,dens1,1,0,nx,ny,nz,nl,patchnx,patchny,
      &                  patchnz,npatch,ir,basx,basy)
        write(*,*) 'dens min,max',basx,basy
+#elif weight_filter == 2
+       call p_minmax_ir(emis0,emis1,1,0,nx,ny,nz,nl,patchnx,patchny,
+     &                  patchnz,npatch,ir,basx,basy)
+       write(*,*) 'emis min,max',basx,basy
 #endif
        call p_minmax_ir(u2,u12,1,1,nx,ny,nz,nl,patchnx,patchny,patchnz,
      &                  npatch,ir,basx,basy)
