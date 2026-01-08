@@ -156,7 +156,7 @@
 #if weight_scheme == 2 || weight_filter == 2
           deallocate(vol)
 #endif
-#if weight_scheme == 3
+#if weight_scheme == 3 || weight_filter == 2
           deallocate(emissivity)
 #endif
         end if
@@ -172,7 +172,7 @@
 #if weight_scheme == 2 || weight_filter == 2
        allocate(vol(parti))
 #endif
-#if weight_scheme == 3
+#if weight_scheme == 3 || weight_filter == 2
        allocate(emissivity(parti))
 #endif
 
@@ -239,7 +239,7 @@
         end if
        end if
 #endif
-#if weight_scheme == 3
+#if weight_scheme == 3 || weight_filter == 2
        write(*,*) 'emis=',minval(emissivity(low1:low2)),
      &      maxval(emissivity(low1:low2))
 #endif
@@ -381,7 +381,7 @@
         end if
        end if
 #endif
-#if weight_scheme == 3
+#if weight_scheme == 3 || weight_filter == 2
        write(*,*) 'emis=',minval(emissivity(low1:low2)),
      &      maxval(emissivity(low1:low2))
 #endif

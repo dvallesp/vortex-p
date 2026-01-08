@@ -22,7 +22,7 @@
         REAL VOL
 #endif
 
-#if weight_scheme == 3
+#if weight_scheme == 3 || weight_filter == 2
         REAL,ALLOCATABLE::EMISSIVITY(:)
 #else
         REAL EMISSIVITY
