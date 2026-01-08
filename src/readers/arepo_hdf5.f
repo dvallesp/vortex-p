@@ -18,7 +18,7 @@
      & file_space_id
         integer(hid_t) :: memtype_id
         integer :: status
-        integer, dimension(6) :: numpart_thisfile
+        integer, dimension(6) :: NumPart_ThisFile
         integer(hsize_t), dimension(1) :: dims = 6
 
         ! default values for optional parameters
@@ -44,19 +44,19 @@
             stop
           end if
 
-          ! open the header group
-          call h5gopen_f(file_id, "/header", group_id, status)
+          ! open the Header group
+          call h5gopen_f(file_id, "/Header", group_id, status)
           if (status /= 0) then
-            print *, "error opening group: /header"
+            print *, "error opening group: /Header"
             call h5fclose_f(file_id, status)
             stop
           end if
       
-          ! open the numpart_thisfile attribute
-          call h5aopen_f(group_id, "numpart_thisfile",
+          ! open the NumPart_ThisFile attribute
+          call h5aopen_f(group_id, "NumPart_ThisFile",
      &                   attr_id, status)
           if (status /= 0) then
-            print *, "error opening dataset: numpart_thisfile"
+            print *, "error opening dataset: NumPart_ThisFile"
             call h5gclose_f(group_id, status)
             call h5fclose_f(file_id, status)
             stop
@@ -72,28 +72,28 @@
             stop
           end if
       
-          ! read the attribute into the numpart_thisfile array
-          call h5aread_f(attr_id, memtype_id, numpart_thisfile,
+          ! read the attribute into the NumPart_ThisFile array
+          call h5aread_f(attr_id, memtype_id, NumPart_ThisFile,
      &                   dims, status)
 
           if (status /= 0) then
-            print *, "error reading attribute: numpart_thisfile"
+            print *, "error reading attribute: NumPart_ThisFile"
             call h5aclose_f(attr_id, status)
             call h5gclose_f(group_id, status)
             call h5fclose_f(file_id, status)
             stop
           end if
 
-          ! print the contents of numpart_thisfile
-          ! print *, "numpart_thisfile: ", numpart_thisfile
+          ! print the contents of NumPart_ThisFile
+          ! print *, "NumPart_ThisFile: ", NumPart_ThisFile
 
           ! close the dataset, group, and file
           call h5aclose_f(attr_id, status)
           call h5gclose_f(group_id, status)
           call h5fclose_f(file_id, status)
 
-          ! we just read parttype0
-          parti = parti + numpart_thisfile(1)
+          ! we just read PartType0
+          parti = parti + NumPart_ThisFile(1)
         end do 
 
         write(*,*) 'total number of particles: ', parti
@@ -122,7 +122,7 @@
      & file_space_id
       integer(hid_t) :: memtype_id
       integer :: status
-      integer, dimension(6) :: numpart_thisfile
+      integer, dimension(6) :: NumPart_ThisFile
       integer(hsize_t), dimension(1) :: dims1d
       integer(hsize_t), dimension(2) :: dims2d
       
@@ -157,69 +157,69 @@
       end if
 
       dims1d(1) = 6
-      call h5gopen_f(file_id, "/header", group_id, status)
-      call h5aopen_f(group_id, "numpart_thisfile",
+      call h5gopen_f(file_id, "/Header", group_id, status)
+      call h5aopen_f(group_id, "NumPart_ThisFile",
      &                   attr_id, status)
       call h5aget_type_f(attr_id, memtype_id, status)
-      call h5aread_f(attr_id, memtype_id, numpart_thisfile,
+      call h5aread_f(attr_id, memtype_id, NumPart_ThisFile,
      &                   dims1d, status)
 
-      write(*,*) numpart_thisfile(1), 'gas particles'
+      write(*,*) NumPart_ThisFile(1), 'gas particles'
       low1=low2+1
-      low2=low1+numpart_thisfile(1)-1
+      low2=low1+NumPart_ThisFile(1)-1
 
       call h5aclose_f(attr_id, status)
       call h5gclose_f(group_id, status)
 
-      dims1d(1) = numpart_thisfile(1)
-      dims2d(1) = numpart_thisfile(1)
+      dims1d(1) = NumPart_ThisFile(1)
+      dims2d(1) = NumPart_ThisFile(1)
       dims2d(2) = 3
 
-      call h5gopen_f(file_id, "/parttype0",
+      call h5gopen_f(file_id, "/PartType0",
      &                   group_id, status)
       if (status /= 0) then
-        print *, "error opening group: /parttype0"
+        print *, "error opening group: /PartType0"
         call h5fclose_f(file_id, status)
         stop
       end if
       
-      allocate(scr42(3,numpart_thisfile(1)))
+      allocate(scr42(3,NumPart_ThisFile(1)))
 
       write(*,*) 'reading positions ...'
-      call h5dopen_f(group_id, "coordinates", attr_id, status)
+      call h5dopen_f(group_id, "Coordinates", attr_id, status)
       call h5dget_type_f(attr_id, memtype_id, status)
       call h5dread_f(attr_id, memtype_id, scr42, dims2d, status)
-      rxpa(low1:low2)=scr42(1,1:numpart_thisfile(1))
-      rypa(low1:low2)=scr42(2,1:numpart_thisfile(1))
-      rzpa(low1:low2)=scr42(3,1:numpart_thisfile(1))
+      rxpa(low1:low2)=scr42(1,1:NumPart_ThisFile(1))
+      rypa(low1:low2)=scr42(2,1:NumPart_ThisFile(1))
+      rzpa(low1:low2)=scr42(3,1:NumPart_ThisFile(1))
       call h5dclose_f(attr_id, status)
 
       write(*,*) 'reading velocities ...'
-      call h5dopen_f(group_id, "velocities", attr_id, status)
+      call h5dopen_f(group_id, "Velocities", attr_id, status)
       call h5dget_type_f(attr_id, memtype_id, status)
       call h5dread_f(attr_id, memtype_id, scr42, dims2d, status)
-      u2dm(low1:low2)=scr42(1,1:numpart_thisfile(1))
-      u3dm(low1:low2)=scr42(2,1:numpart_thisfile(1))
-      u4dm(low1:low2)=scr42(3,1:numpart_thisfile(1))
+      u2dm(low1:low2)=scr42(1,1:NumPart_ThisFile(1))
+      u3dm(low1:low2)=scr42(2,1:NumPart_ThisFile(1))
+      u4dm(low1:low2)=scr42(3,1:NumPart_ThisFile(1))
       call h5dclose_f(attr_id, status)
 
       deallocate(scr42)
 
-      allocate(scr4(numpart_thisfile(1)))
+      allocate(scr4(NumPart_ThisFile(1)))
       write(*,*) 'reading masses ...'
-      call h5dopen_f(group_id, "masses", attr_id, status)
+      call h5dopen_f(group_id, "Masses", attr_id, status)
       call h5dget_type_f(attr_id, memtype_id, status)
       call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
-      masap(low1:low2)=scr4(1:numpart_thisfile(1))
+      masap(low1:low2)=scr4(1:NumPart_ThisFile(1))
       call h5dclose_f(attr_id, status)
 
       write(*,*) 'reading effective kernel length ...' ! we read volume
-      call h5dopen_f(group_id, "volume", attr_id, status)
+      call h5dopen_f(group_id, "Volume", attr_id, status)
       call h5dget_type_f(attr_id, memtype_id, status)
       call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
-!$omp parallel do shared(numpart_thisfile, scr4, kernel, low1), 
+!$omp parallel do shared(NumPart_ThisFile, scr4, kernel, low1), 
 !$omp+            private(i), default(none)
-      do i=1,numpart_thisfile(1)
+      do i=1,NumPart_ThisFile(1)
         kernel(low1+i-1) = (0.2387*scr4(i))**0.33333
       end do
       call h5dclose_f(attr_id, status)
@@ -227,27 +227,27 @@
 
 #if use_filter == 1
       if (flag_filter.eq.1) then
-        allocate(scr4(numpart_thisfile(1)))
+        allocate(scr4(NumPart_ThisFile(1)))
         if (flag_machfield.eq.0) then
           write(*,*) 'warning! in arepo, we always read mach!'
         end if 
         write(*,*) 'reading mach ...'
-        call h5dopen_f(group_id, "machnumber", attr_id, status)
+        call h5dopen_f(group_id, "Machnumber", attr_id, status)
         call h5dget_type_f(attr_id, memtype_id, status)
         call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
-        abvc(low1:low2)=scr4(1:numpart_thisfile(1))  
+        abvc(low1:low2)=scr4(1:NumPart_ThisFile(1))  
         call h5dclose_f(attr_id, status)         
         deallocate(scr4)      
       end if
 #endif
 
 #if weight_scheme == 2 || weight_filter == 2
-      allocate(scr4(numpart_thisfile(1)))
+      allocate(scr4(NumPart_ThisFile(1)))
       write(*,*) 'reading density ...'
-      call h5dopen_f(group_id, "density", attr_id, status)
+      call h5dopen_f(group_id, "Density", attr_id, status)
       call h5dget_type_f(attr_id, memtype_id, status)
       call h5dread_f(attr_id, memtype_id, scr4, dims1d, status)
-      vol(low1:low2)=scr4(1:numpart_thisfile(1))
+      vol(low1:low2)=scr4(1:NumPart_ThisFile(1))
       call h5dclose_f(attr_id, status)
       deallocate(scr4)
 #endif
